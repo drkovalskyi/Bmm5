@@ -47,9 +47,9 @@ BxToMuMu = cms.EDProducer("BxToMuMuProducer",
     minBKmmMass = cms.double(4.5),
     maxBKmmMass = cms.double(6.0),
     maxTwoTrackDOCA = cms.double(0.1),
-    bdtEvent0 = cms.FileInPath('PhysicsTools/NanoAOD/test/TMVA-100-Events0_BDT.weights.xml'),
-    bdtEvent1 = cms.FileInPath('PhysicsTools/NanoAOD/test/TMVA-100-Events1_BDT.weights.xml'),
-    bdtEvent2 = cms.FileInPath('PhysicsTools/NanoAOD/test/TMVA-100-Events2_BDT.weights.xml'),
+    bdtEvent0 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events0_BDT.weights.xml'),
+    bdtEvent1 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events1_BDT.weights.xml'),
+    bdtEvent2 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events2_BDT.weights.xml'),
     isMC = cms.bool(False)
 )
 
