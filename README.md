@@ -17,8 +17,8 @@ Reference campaign: Run2 NanoAODv5
 
 ## Filtering
 If you want to add event filtering to the commands below you just need to modify the step option the following way
-* Monte Carlo: -step NANO,FILTER:Bmm5/NanoAOD/BxToMuMuFilter_cff.BxToMuMuFilterSequenceMC
-* Data: -step NANO,FILTER:Bmm5/NanoAOD/BxToMuMuFilter_cff.BxToMuMuFilterSequence
+* Monte Carlo: --step NANO,FILTER:Bmm5/NanoAOD/BxToMuMuFilter_cff.BxToMuMuFilterSequenceMC
+* Data: --step NANO,FILTER:Bmm5/NanoAOD/BxToMuMuFilter_cff.BxToMuMuFilterSequence
 
 ## Processing examples
 * Monte Carlo
