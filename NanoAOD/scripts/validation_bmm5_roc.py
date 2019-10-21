@@ -152,34 +152,6 @@ ROOT.gStyle.SetOptStat(0)
 # ROOT.TH1.AddDirectory(False)
 c1 = TCanvas("c1","c1",800,800)
 
-# for study in studies:
-
-#     fBmm4_sig = TFile.Open(study['bmm4_sig_file_name'])
-#     assert(fBmm4_sig)
-#     bmm4_sig_events = fBmm4_sig.Get("candAnaMuMu/events")
-#     assert(bmm4_sig_events)
-
-#     fBmm4_bkg = TFile.Open(study['bmm4_bkg_file_name'])
-#     assert(fBmm4_bkg)
-#     bmm4_bkg_events = fBmm4_bkg.Get("candAnaMuMu/events")
-#     assert(bmm4_bkg_events)
-
-#     fBmm5_sig = TFile.Open(study['bmm5_sig_file_name'])
-#     assert(fBmm5_sig)
-#     bmm5_sig_events = fBmm5_sig.Get("Events")
-#     assert(bmm5_sig_events)
-
-#     fBmm5_bkg = TFile.Open(study['bmm5_bkg_file_name'])
-#     assert(fBmm5_bkg)
-#     bmm5_bkg_events = fBmm5_bkg.Get("Events")
-#     assert(bmm5_bkg_events)
-
-#     plot_data(study['name'], "%s_absolute"%study['hist_name'],"bdt","mm_bdt",30,-1.5,1.5,False)
-#     plot_data(study['name'], "%s_relative"%study['hist_name'],"bdt","mm_bdt",30,-1.5,1.5,True)
-
-# print get_nevents_processed("/afs/cern.ch/work/d/dmytro/projects/NanoAOD/src/BsToMuMu_BMuonFilter.root")
-# print get_nevents_processed("/eos/cms/store/user/dmytro/QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8/crab_NanoAOD_QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8_Bmm5-01/191014_051624/0000/*.root")
-
 for sample in samples:
     process_sample(sample)
     print sample
