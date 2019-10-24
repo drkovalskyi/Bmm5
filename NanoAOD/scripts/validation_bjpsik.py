@@ -122,6 +122,8 @@ plot_generic_1D(bkmm_selection+"&&bkmm_kaon_pt>2","J/#psi from BtoJ/#psiK Kaon_{
 plot_generic_1D(bkmm_selection+"&&abs(bkmm_jpsimc_mass-5.29)<0.05", "J/#psi from BtoJ/#psiK (B_{M}#in[5.24,5.34]);Mass", 
                 "02_mass_jpsi_bmasscut","mm_kin_mass[bkmm_mm_index]",100,2.9,3.3)
 
+plot_generic_1D(bkmm_selection+"&&abs(bkmm_jpsimc_mass-5.29)<0.05","BDT", "09_bdt","mm_bdt[bkmm_mm_index]",100,-1.5,1.5)
+
 # plot_generic_1D("Decay length 3D significance",    "01_decay_length_3D_significance","mm_kin_sl3d",60,0,120)
 # plot_generic_1D("Decay length 3D",                 "01_decay_length_3D","mm_kin_l3d",100,0,1)
 # plot_generic_1D("Decay length XY significance",    "01_decay_length_XY_significance","mm_kin_slxy",60,0,120)
@@ -164,6 +166,5 @@ plot_generic_1D(bkmm_selection+"&&abs(bkmm_jpsimc_mass-5.29)<0.05", "J/#psi from
 # plot_generic_1D("othervtx pt>2.0", "08_othervtx2.0","mm_otherVtxMaxProb2-mm_kin_vtx_prob",100,-1.5,1.5)
 # plot_generic_1D("othervtx prob pt>2.0", "08_othervtx2.0prob","mm_otherVtxMaxProb2",100,-1.5,1.5)
 
-# plot_generic_1D("BDT", "09_bdt","mm_bdt",100,-1.5,1.5)
 
 
