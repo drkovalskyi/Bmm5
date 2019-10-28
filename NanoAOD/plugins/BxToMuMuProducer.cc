@@ -386,7 +386,6 @@ private:
   findTracksCompatibleWithTheVertex(const pat::Muon& muon1,
 				    const pat::Muon& muon2,
 				    const KinematicFitResult& fit,
-				    const reco::BeamSpot& beamSpot,
 				    double maxDoca=0.03 );
   float
   computeTrkMuonIsolation(const pat::Muon& muon, 
@@ -411,17 +410,28 @@ private:
 		     std::vector<const pat::PackedCandidate*> ignoreTracks = 
 		     std::vector<const pat::PackedCandidate*>());
 
+  void 
+  fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
+		   const KinematicFitResult& kinematicMuMuVertexFit,
+		   const pat::Muon& muon1,
+		   const pat::Muon& muon2,
+		   const pat::PackedCandidate & kaon); 
+
   float  computeAnalysisBDT(unsigned int event_idx);
   
   void setupTmvaReader(TMVA::Reader& reader, std::string file);
 
+
   // ----------member data ---------------------------
     
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
+  const reco::BeamSpot* beamSpot_;
+
   edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
   edm::EDGetTokenT<std::vector<pat::Muon>> muonToken_;
   edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandToken_;
   edm::EDGetTokenT<edm::View<reco::GenParticle> >   prunedGenToken_;
+  const edm::View<reco::GenParticle>* prunedGenParticles_;
 
   edm::ESHandle<TransientTrackBuilder> theTTBuilder_;
   edm::ESHandle<MagneticField> bFieldHandle_;
@@ -460,10 +470,12 @@ private:
 
 BxToMuMuProducer::BxToMuMuProducer(const edm::ParameterSet &iConfig):
 beamSpotToken_( consumes<reco::BeamSpot> ( iConfig.getParameter<edm::InputTag>( "beamSpot" ) ) ),
+beamSpot_(nullptr),
 vertexToken_( consumes<reco::VertexCollection> ( iConfig.getParameter<edm::InputTag>( "vertexCollection" ) ) ),
 muonToken_( consumes<std::vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
 pfCandToken_( consumes<edm::View<pat::PackedCandidate>> ( iConfig.getParameter<edm::InputTag>( "PFCandCollection" ) ) ),
 prunedGenToken_( consumes<edm::View<reco::GenParticle>> ( iConfig.getParameter<edm::InputTag>( "prunedGenParticleCollection" ) ) ),
+prunedGenParticles_(nullptr),
 impactPointExtrapolator_(0),
 isMC_(            iConfig.getParameter<bool>( "isMC" ) ),
 ptMinMu_(         iConfig.getParameter<double>( "MuonMinPt" ) ),
@@ -537,7 +549,6 @@ CloseTrackInfo
 BxToMuMuProducer::findTracksCompatibleWithTheVertex(const pat::Muon& muon1,
 						    const pat::Muon& muon2,
 						    const KinematicFitResult& fit, 
-						    const reco::BeamSpot& beamSpot,
 						    double maxDoca)
 {
   CloseTrackInfo result;
@@ -568,7 +579,7 @@ BxToMuMuProducer::findTracksCompatibleWithTheVertex(const pat::Muon& muon1,
     auto fit_result = vertexWithKinematicFitter(muon1, muon2, pfCand);
     if (fit_result.valid()){
       track.svProb = fit_result.vtxProb();
-      track.impactParameterSignificanceBS = pfCand.bestTrack()->dxyError()>0 ? fabs(pfCand.bestTrack()->dxy(beamSpot))/pfCand.bestTrack()->dxyError():0.0;
+      track.impactParameterSignificanceBS = pfCand.bestTrack()->dxyError()>0 ? fabs(pfCand.bestTrack()->dxy(*beamSpot_))/pfCand.bestTrack()->dxyError():0.0;
     }
     result.tracks.push_back(track);
   }
@@ -690,6 +701,61 @@ BxToMuMuProducer::otherVertexMaxProb(const pat::Muon& muon1,
   return max(bestMu1Vtx,bestMu2Vtx);
 }
 
+void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
+					const KinematicFitResult& kinematicMuMuVertexFit,
+					const pat::Muon& muon1,
+					const pat::Muon& muon2,
+					const pat::PackedCandidate & kaon
+					) 
+{
+  btokmmCand.addUserFloat("kaon_pt",     kaon.pt());
+  btokmmCand.addUserFloat("kaon_eta",    kaon.eta());
+  btokmmCand.addUserFloat("kaon_phi",    kaon.phi());
+  btokmmCand.addUserFloat("kaon_dxy_bs", kaon.bestTrack()->dxy(*beamSpot_));
+  btokmmCand.addUserFloat("kaon_sdxy_bs", 
+			  kaon.bestTrack()->dxyError()>0 ? fabs(kaon.bestTrack()->dxy(*beamSpot_))/kaon.bestTrack()->dxyError():0.0);
+  btokmmCand.addUserInt("kaon_charge", kaon.charge());
+  if (isMC_){
+    auto gen_kmm = getGenMatchInfo(*prunedGenParticles_,muon1,muon2,&kaon);
+    btokmmCand.addUserInt(  "gen_kaon_pdgId",  gen_kmm.kaon_pdgId);
+    btokmmCand.addUserInt(  "gen_kaon_mpdgId", gen_kmm.kaon_motherPdgId);
+    btokmmCand.addUserFloat("gen_kaon_pt",     gen_kmm.kaon_pt);
+    btokmmCand.addUserFloat("gen_mass",        gen_kmm.kmm_mass);
+    btokmmCand.addUserFloat("gen_pt",          gen_kmm.kmm_pt);
+    btokmmCand.addUserInt(  "gen_pdgId",       gen_kmm.kmm_pdgId);
+    btokmmCand.addUserFloat("gen_prod_x",      gen_kmm.kmm_prod_vtx.x());
+    btokmmCand.addUserFloat("gen_prod_y",      gen_kmm.kmm_prod_vtx.y());
+    btokmmCand.addUserFloat("gen_prod_z",      gen_kmm.kmm_prod_vtx.z());
+    btokmmCand.addUserFloat("gen_l3d",         (gen_kmm.kmm_prod_vtx-gen_kmm.mm_vtx).r());
+    btokmmCand.addUserFloat("gen_lxy",         (gen_kmm.kmm_prod_vtx-gen_kmm.mm_vtx).rho());
+  }
+
+  // if (kaon.genParticle()){
+  // 	btokmmCand.addUserInt("kaon_mc_pdgId", kaon.genParticle().pdgId());
+  // } else {
+  // 	btokmmCand.addUserInt("kaon_mc_pdgId", 0);
+  // }
+  
+  auto bToKJPsiMuMuNoMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, kaon, false);
+  bToKJPsiMuMuNoMassConstraint.postprocess(*beamSpot_);
+  addFitInfo(btokmmCand, bToKJPsiMuMuNoMassConstraint, "nomc");
+  
+  // worse performing option
+  // auto bToKJPsiMuMuWithMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, kaon, true);
+  // bToKJPsiMuMuWithMassConstraint.postprocess(beamSpot);
+  // addFitInfo(btokmmCand, bToKJPsiMuMuWithMassConstraint, "jpsimc");
+  
+  auto bToKJPsiMuMu_MC = fitBToKJPsiMuMuNew(kinematicMuMuVertexFit.refitTree, kaon, true);
+  bToKJPsiMuMu_MC.postprocess(*beamSpot_);
+  auto bToKJPsiMuMu_MC_displacement = compute3dDisplacement(bToKJPsiMuMu_MC, *pvHandle_.product(),true);
+  addFitInfo(btokmmCand, bToKJPsiMuMu_MC, "jpsimc", bToKJPsiMuMu_MC_displacement);
+  
+  // broken pointing constraint
+  // auto bToKJPsiMuMu_MC_PC = refitWithPointingConstraint(bToKJPsiMuMu_MC.refitTree, primaryVertex);
+  // bToKJPsiMuMu_MC_PC.postprocess(beamSpot);
+  // addFitInfo(btokmmCand, bToKJPsiMuMu_MC_PC, "mcpc");
+
+}
 
 void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
@@ -707,7 +773,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
         edm::LogError("BxToMuMuProducer") << "No beam spot available from EventSetup" ;
     }
     
-    const reco::BeamSpot& beamSpot(*beamSpotHandle);
+    beamSpot_ = beamSpotHandle.product();
     
     iEvent.getByToken(vertexToken_, pvHandle_);
     // const reco::Vertex & primaryVertex = vertexHandle->front();
@@ -718,9 +784,14 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(muonToken_, muonHandle);
     iEvent.getByToken(pfCandToken_, pfCandHandle_);
     
-    edm::Handle<edm::View<reco::GenParticle> > prunedGenParticles;
-    if ( isMC_ ) iEvent.getByToken(prunedGenToken_,prunedGenParticles);
-    
+    edm::Handle<edm::View<reco::GenParticle> > prunedGenParticleHandle;
+    if ( isMC_ ) {
+      iEvent.getByToken(prunedGenToken_,prunedGenParticleHandle);
+      prunedGenParticles_ = prunedGenParticleHandle.product();
+    } else {
+      prunedGenParticles_ = nullptr;
+    }
+
     auto nMuons = muonHandle->size();
     auto nPFCands = pfCandHandle_->size();
     // unsigned int lostTrackNumber = useLostTracks_ ? lostTrackHandle->size() : 0;
@@ -759,7 +830,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 
 	  // Kalman Vertex Fit
 	  auto kalmanMuMuVertexFit = vertexMuonsWithKalmanFitter(muon1, muon2);
-	  kalmanMuMuVertexFit.postprocess(beamSpot);
+	  kalmanMuMuVertexFit.postprocess(*beamSpot_);
 	  dimuonCand.addUserInt(   "kalman_valid",    kalmanMuMuVertexFit.valid);
 	  dimuonCand.addUserFloat( "kalman_vtx_prob", kalmanMuMuVertexFit.vtxProb);
 	  dimuonCand.addUserFloat( "kalman_mass",     kalmanMuMuVertexFit.mass() );
@@ -768,7 +839,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	  
 	  // Kinematic Fits
 	  auto kinematicMuMuVertexFit = vertexMuonsWithKinematicFitter(muon1, muon2);
-	  kinematicMuMuVertexFit.postprocess(beamSpot);
+	  kinematicMuMuVertexFit.postprocess(*beamSpot_);
 	  // printf("kinematicMuMuVertexFit (x,y,z): (%7.3f,%7.3f,%7.3f)\n", 
 	  // 	 kinematicMuMuVertexFit.refitVertex->position().x(),
 	  // 	 kinematicMuMuVertexFit.refitVertex->position().y(),
@@ -777,7 +848,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	  addFitInfo(dimuonCand, kinematicMuMuVertexFit, "kin", displacement3D);
 	  
 	  if (isMC_){
-	    auto gen_mm = getGenMatchInfo(*prunedGenParticles.product(),muon1,muon2);
+	    auto gen_mm = getGenMatchInfo(*prunedGenParticles_,muon1,muon2);
 	    // int mu1_pdgId, mu1_motherPdgId, mu2_pdgId, mu2_motherPdgId, kaon_pdgId, kaon_motherPdgId,
 	    // mm_pdgId, mm_motherPdgId, kmm_pdgId;
 	    // float mu1_pt, mu2_pt, kaon_pt, mm_mass, mm_pt, kmm_mass, kmm_pt;
@@ -802,7 +873,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	  }
 	  
 	  // Look for additional tracks compatible with the dimuon vertex
-	  auto closeTracks = findTracksCompatibleWithTheVertex(muon1,muon2,kinematicMuMuVertexFit,beamSpot);
+	  auto closeTracks = findTracksCompatibleWithTheVertex(muon1,muon2,kinematicMuMuVertexFit);
 	  auto imm = dimuon->size();
 	  for (unsigned int k = 0; k < nPFCands; ++k) {
 	    const pat::PackedCandidate & pfCand = (*pfCandHandle_)[k];
@@ -846,54 +917,10 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	    
 	    pat::CompositeCandidate btokmmCand;
 	    btokmmCand.addUserInt("mm_index", imm);
-	    btokmmCand.addUserFloat("kaon_pt", pfCand.pt());
-	    btokmmCand.addUserFloat("kaon_eta", pfCand.eta());
-	    btokmmCand.addUserFloat("kaon_phi", pfCand.phi());
-	    btokmmCand.addUserFloat("kaon_dxy_bs", pfCand.bestTrack()->dxy(beamSpot));
-	    btokmmCand.addUserFloat("kaon_sdxy_bs", 
-				    pfCand.bestTrack()->dxyError()>0 ? fabs(pfCand.bestTrack()->dxy(beamSpot))/pfCand.bestTrack()->dxyError():0.0);
-	    btokmmCand.addUserInt("kaon_charge", pfCand.charge());
 	    btokmmCand.addUserFloat("kaon_mu1_doca", mu1_kaon_doca);
 	    btokmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon_doca);
 
-	    if (isMC_){
-	      auto gen_kmm = getGenMatchInfo(*prunedGenParticles.product(),muon1,muon2,&pfCand);
-	      btokmmCand.addUserInt(  "gen_kaon_pdgId",  gen_kmm.kaon_pdgId);
-	      btokmmCand.addUserInt(  "gen_kaon_mpdgId", gen_kmm.kaon_motherPdgId);
-	      btokmmCand.addUserFloat("gen_kaon_pt",     gen_kmm.kaon_pt);
-	      btokmmCand.addUserFloat("gen_mass",        gen_kmm.kmm_mass);
-	      btokmmCand.addUserFloat("gen_pt",          gen_kmm.kmm_pt);
-	      btokmmCand.addUserInt(  "gen_pdgId",       gen_kmm.kmm_pdgId);
-	      btokmmCand.addUserFloat("gen_prod_x",      gen_kmm.kmm_prod_vtx.x());
-	      btokmmCand.addUserFloat("gen_prod_y",      gen_kmm.kmm_prod_vtx.y());
-	      btokmmCand.addUserFloat("gen_prod_z",      gen_kmm.kmm_prod_vtx.z());
-	      btokmmCand.addUserFloat("gen_l3d",         (gen_kmm.kmm_prod_vtx-gen_kmm.mm_vtx).r());
-	      btokmmCand.addUserFloat("gen_lxy",         (gen_kmm.kmm_prod_vtx-gen_kmm.mm_vtx).rho());
-	    }
-	    // if (pfCand.genParticle()){
-	    // 	btokmmCand.addUserInt("kaon_mc_pdgId", pfCand.genParticle().pdgId());
-	    // } else {
-	    // 	btokmmCand.addUserInt("kaon_mc_pdgId", 0);
-	    // }
-	    
-	    auto bToKJPsiMuMuNoMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, pfCand, false);
-	    bToKJPsiMuMuNoMassConstraint.postprocess(beamSpot);
-	    addFitInfo(btokmmCand, bToKJPsiMuMuNoMassConstraint, "nomc");
-	      
-	    // worse performing option
-	    // auto bToKJPsiMuMuWithMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, pfCand, true);
-	    // bToKJPsiMuMuWithMassConstraint.postprocess(beamSpot);
-	    // addFitInfo(btokmmCand, bToKJPsiMuMuWithMassConstraint, "jpsimc");
-	    
-	    auto bToKJPsiMuMu_MC = fitBToKJPsiMuMuNew(kinematicMuMuVertexFit.refitTree, pfCand, true);
-	    bToKJPsiMuMu_MC.postprocess(beamSpot);
-	    auto bToKJPsiMuMu_MC_displacement = compute3dDisplacement(bToKJPsiMuMu_MC, *pvHandle_.product(),true);
-	    addFitInfo(btokmmCand, bToKJPsiMuMu_MC, "jpsimc", bToKJPsiMuMu_MC_displacement);
-	      
-	    // broken pointing constraint
-	    // auto bToKJPsiMuMu_MC_PC = refitWithPointingConstraint(bToKJPsiMuMu_MC.refitTree, primaryVertex);
-	    // bToKJPsiMuMu_MC_PC.postprocess(beamSpot);
-	    // addFitInfo(btokmmCand, bToKJPsiMuMu_MC_PC, "mcpc");
+	    fillBtoJpsiKInfo(btokmmCand,kinematicMuMuVertexFit,muon1,muon2,pfCand);
 
 	    btokmm->push_back(btokmmCand);
 	  }                    
