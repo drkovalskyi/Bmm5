@@ -295,6 +295,19 @@ struct CloseTrackInfo{
     }
     return doca;
   }
+
+  void fillCandInfo(pat::CompositeCandidate& cand, int pvIndex, std::string name)
+  {
+    if (name!="") name += "_";
+    cand.addUserInt(   name + "nTrks",       nTracksByVertexProbability(0.1,-1.0,pvIndex) );
+    cand.addUserInt(   name + "nBMTrks",     nTracksByBetterMatch() );
+    cand.addUserInt(   name + "nDisTrks",    nTracksByVertexProbability(0.1, 2.0,pvIndex) );
+    cand.addUserInt(   name + "closetrk",    nTracksByDisplacementSignificance(0.03, -1, pvIndex) );
+    cand.addUserInt(   name + "closetrks1",  nTracksByDisplacementSignificance(0.03, 1, pvIndex) );
+    cand.addUserInt(   name + "closetrks2",  nTracksByDisplacementSignificance(0.03, 2, pvIndex) );
+    cand.addUserInt(   name + "closetrks3",  nTracksByDisplacementSignificance(0.03, 3, pvIndex) );
+    cand.addUserFloat( name + "docatrk",     minDoca(0.03, pvIndex) );
+  }
 };
 
 struct BdtReaderData {
@@ -386,7 +399,9 @@ private:
   findTracksCompatibleWithTheVertex(const pat::Muon& muon1,
 				    const pat::Muon& muon2,
 				    const KinematicFitResult& fit,
-				    double maxDoca=0.03 );
+				    double maxDoca=0.03,
+				    std::vector<const pat::PackedCandidate*> ignoreTracks = 
+				    std::vector<const pat::PackedCandidate*>());
   float
   computeTrkMuonIsolation(const pat::Muon& muon, 
 			  const pat::Muon& the_other_muon,
@@ -412,10 +427,17 @@ private:
 
   void 
   fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
+		   const edm::Event& iEvent,
 		   const KinematicFitResult& kinematicMuMuVertexFit,
 		   const pat::Muon& muon1,
 		   const pat::Muon& muon2,
 		   const pat::PackedCandidate & kaon); 
+  void 
+  fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
+	       const edm::Event& iEvent,
+	       const KinematicFitResult& kinematicMuMuVertexFit,
+	       const pat::Muon& muon1,
+	       const pat::Muon& muon2); 
 
   float  computeAnalysisBDT(unsigned int event_idx);
   
@@ -545,15 +567,26 @@ void addFitInfo(pat::CompositeCandidate& cand, const KinematicFitResult& fit, st
   cand.addUserFloat( name+"_pv2lipErr",   displacement3d.longitudinalImpactParameter2Err);
 }
 
+
 CloseTrackInfo 
 BxToMuMuProducer::findTracksCompatibleWithTheVertex(const pat::Muon& muon1,
 						    const pat::Muon& muon2,
 						    const KinematicFitResult& fit, 
-						    double maxDoca)
+						    double maxDoca,
+						    std::vector<const pat::PackedCandidate*> ignoreTracks)
 {
   CloseTrackInfo result;
   if (not fit.valid()) return result;
   for (const auto& pfCand: *pfCandHandle_.product()){
+    bool ignore_track = false;
+    for (auto trk: ignoreTracks){
+      if (trk==&pfCand){
+	ignore_track = true;
+	break;
+      }
+    }
+    if (ignore_track) continue;
+    
     if (deltaR(muon1, pfCand) < 0.01 || deltaR(muon2, pfCand) < 0.01) continue;
     if (pfCand.charge() == 0 ) continue;
     if (!pfCand.hasTrackDetails()) continue;
@@ -701,7 +734,77 @@ BxToMuMuProducer::otherVertexMaxProb(const pat::Muon& muon1,
   return max(bestMu1Vtx,bestMu2Vtx);
 }
 
+void BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
+				    const edm::Event& iEvent,
+				    const KinematicFitResult& kinematicMuMuVertexFit,
+				    const pat::Muon& muon1,
+				    const pat::Muon& muon2
+				    ) 
+{
+  // printf("kinematicMuMuVertexFit (x,y,z): (%7.3f,%7.3f,%7.3f)\n", 
+  // 	 kinematicMuMuVertexFit.refitVertex->position().x(),
+  // 	 kinematicMuMuVertexFit.refitVertex->position().y(),
+  // 	 kinematicMuMuVertexFit.refitVertex->position().z());
+  auto displacement3D = compute3dDisplacement(kinematicMuMuVertexFit, *pvHandle_.product(),true);
+  addFitInfo(dimuonCand, kinematicMuMuVertexFit, "kin", displacement3D);
+  
+  if (isMC_){
+    auto gen_mm = getGenMatchInfo(*prunedGenParticles_,muon1,muon2);
+    // int mu1_pdgId, mu1_motherPdgId, mu2_pdgId, mu2_motherPdgId, kaon_pdgId, kaon_motherPdgId,
+    // mm_pdgId, mm_motherPdgId, kmm_pdgId;
+    // float mu1_pt, mu2_pt, kaon_pt, mm_mass, mm_pt, kmm_mass, kmm_pt;
+    dimuonCand.addUserInt(  "gen_mu1_pdgId",   gen_mm.mu1_pdgId);
+    dimuonCand.addUserInt(  "gen_mu1_mpdgId",  gen_mm.mu1_motherPdgId);
+    dimuonCand.addUserFloat("gen_mu1_pt",      gen_mm.mu1_pt);
+    dimuonCand.addUserInt(  "gen_mu2_pdgId",   gen_mm.mu2_pdgId);
+    dimuonCand.addUserInt(  "gen_mu2_mpdgId",  gen_mm.mu2_motherPdgId);
+    dimuonCand.addUserFloat("gen_mu2_pt",      gen_mm.mu2_pt);
+    dimuonCand.addUserFloat("gen_mass",        gen_mm.mm_mass);
+    dimuonCand.addUserFloat("gen_pt",          gen_mm.mm_pt);
+    dimuonCand.addUserInt(  "gen_pdgId",       gen_mm.mm_pdgId);
+    dimuonCand.addUserInt(  "gen_mpdgId",      gen_mm.mm_motherPdgId);
+    dimuonCand.addUserFloat("gen_prod_x",      gen_mm.mm_prod_vtx.x());
+    dimuonCand.addUserFloat("gen_prod_y",      gen_mm.mm_prod_vtx.y());
+    dimuonCand.addUserFloat("gen_prod_z",      gen_mm.mm_prod_vtx.z());
+    dimuonCand.addUserFloat("gen_vtx_x",       gen_mm.mm_vtx.x());
+    dimuonCand.addUserFloat("gen_vtx_y",       gen_mm.mm_vtx.y());
+    dimuonCand.addUserFloat("gen_vtx_z",       gen_mm.mm_vtx.z());
+    dimuonCand.addUserFloat("gen_l3d",         (gen_mm.mm_prod_vtx-gen_mm.mm_vtx).r());
+    dimuonCand.addUserFloat("gen_lxy",         (gen_mm.mm_prod_vtx-gen_mm.mm_vtx).rho());
+  }
+
+  int pvIndex = displacement3D.pvIndex;
+
+  // Look for additional tracks compatible with the dimuon vertex
+  auto closeTracks = findTracksCompatibleWithTheVertex(muon1,muon2,kinematicMuMuVertexFit);
+  closeTracks.fillCandInfo(dimuonCand, pvIndex, "");
+
+  dimuonCand.addUserFloat( "m1iso",     computeTrkMuonIsolation(muon1,muon2,pvIndex,0.5,0.5));
+  dimuonCand.addUserFloat( "m2iso",     computeTrkMuonIsolation(muon2,muon1,pvIndex,0.5,0.5));
+  dimuonCand.addUserFloat( "iso",       computeTrkMuMuIsolation(muon2,muon1,pvIndex,0.9,0.7));
+  dimuonCand.addUserFloat( "otherVtxMaxProb", otherVertexMaxProb(muon1,muon2,0.5));
+  dimuonCand.addUserFloat( "otherVtxMaxProb1", otherVertexMaxProb(muon1,muon2,1.0));
+  dimuonCand.addUserFloat( "otherVtxMaxProb2", otherVertexMaxProb(muon1,muon2,2.0));
+
+  // BDT
+  bdtData_.fls3d    = dimuonCand.userFloat("kin_sl3d");
+  bdtData_.alpha    = dimuonCand.userFloat("kin_alpha");
+  bdtData_.pvips    = dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr");
+  bdtData_.iso      = dimuonCand.userFloat("iso");
+  bdtData_.chi2dof  = dimuonCand.userFloat("kin_vtx_chi2dof");
+  bdtData_.docatrk  = dimuonCand.userFloat("docatrk");
+  bdtData_.closetrk = dimuonCand.userInt(  "closetrk");
+  bdtData_.m1iso    = dimuonCand.userFloat("m1iso");
+  bdtData_.m2iso    = dimuonCand.userFloat("m2iso");
+  bdtData_.eta      = dimuonCand.userFloat("kin_eta");	  
+  bdtData_.m        = dimuonCand.userFloat("kin_mass");	  
+
+  dimuonCand.addUserFloat("bdt",computeAnalysisBDT(iEvent.eventAuxiliary().event()%3));
+}
+
+
 void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
+					const edm::Event& iEvent,
 					const KinematicFitResult& kinematicMuMuVertexFit,
 					const pat::Muon& muon1,
 					const pat::Muon& muon2,
@@ -754,6 +857,40 @@ void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
   // auto bToKJPsiMuMu_MC_PC = refitWithPointingConstraint(bToKJPsiMuMu_MC.refitTree, primaryVertex);
   // bToKJPsiMuMu_MC_PC.postprocess(beamSpot);
   // addFitInfo(btokmmCand, bToKJPsiMuMu_MC_PC, "mcpc");
+
+  ///////
+  //// Treat B->JpsiK as B->mm for signal studies in data
+  //
+  std::vector<const pat::PackedCandidate*> ignoreTracks;
+  ignoreTracks.push_back(&kaon);
+
+  int pvIndex = bToKJPsiMuMu_MC_displacement.pvIndex;
+
+  // Look for additional tracks compatible with the dimuon vertex
+  auto closeTracks = findTracksCompatibleWithTheVertex(muon1,muon2,kinematicMuMuVertexFit);
+  closeTracks.fillCandInfo(btokmmCand, pvIndex, "bmm");
+
+  btokmmCand.addUserFloat( "bmm_m1iso",     computeTrkMuonIsolation(muon1,muon2,pvIndex,0.5,0.5,ignoreTracks));
+  btokmmCand.addUserFloat( "bmm_m2iso",     computeTrkMuonIsolation(muon2,muon1,pvIndex,0.5,0.5,ignoreTracks));
+  btokmmCand.addUserFloat( "bmm_iso",       computeTrkMuMuIsolation(muon2,muon1,pvIndex,0.9,0.7,ignoreTracks));
+  btokmmCand.addUserFloat( "bmm_otherVtxMaxProb",  otherVertexMaxProb(muon1,muon2,0.5,0.1,ignoreTracks));
+  btokmmCand.addUserFloat( "bmm_otherVtxMaxProb1", otherVertexMaxProb(muon1,muon2,1.0,0.1,ignoreTracks));
+  btokmmCand.addUserFloat( "bmm_otherVtxMaxProb2", otherVertexMaxProb(muon1,muon2,2.0,0.1,ignoreTracks));
+
+  // BDT
+  bdtData_.fls3d    = btokmmCand.userFloat("jpsimc_sl3d");
+  bdtData_.alpha    = btokmmCand.userFloat("jpsimc_alpha");
+  bdtData_.pvips    = btokmmCand.userFloat("jpsimc_pvip")/btokmmCand.userFloat("jpsimc_pvipErr");
+  bdtData_.iso      = btokmmCand.userFloat("bmm_iso");
+  bdtData_.chi2dof  = btokmmCand.userFloat("jpsimc_vtx_chi2dof");
+  bdtData_.docatrk  = btokmmCand.userFloat("bmm_docatrk");
+  bdtData_.closetrk = btokmmCand.userInt(  "bmm_closetrk");
+  bdtData_.m1iso    = btokmmCand.userFloat("bmm_m1iso");
+  bdtData_.m2iso    = btokmmCand.userFloat("bmm_m2iso");
+  bdtData_.eta      = btokmmCand.userFloat("jpsimc_eta");	  
+  bdtData_.m        = btokmmCand.userFloat("jpsimc_mass");	  
+
+  btokmmCand.addUserFloat("bmm_bdt",computeAnalysisBDT(iEvent.eventAuxiliary().event()%3));
 
 }
 
@@ -840,40 +977,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	  // Kinematic Fits
 	  auto kinematicMuMuVertexFit = vertexMuonsWithKinematicFitter(muon1, muon2);
 	  kinematicMuMuVertexFit.postprocess(*beamSpot_);
-	  // printf("kinematicMuMuVertexFit (x,y,z): (%7.3f,%7.3f,%7.3f)\n", 
-	  // 	 kinematicMuMuVertexFit.refitVertex->position().x(),
-	  // 	 kinematicMuMuVertexFit.refitVertex->position().y(),
-	  // 	 kinematicMuMuVertexFit.refitVertex->position().z());
-	  auto displacement3D = compute3dDisplacement(kinematicMuMuVertexFit, *pvHandle_.product(),true);
-	  addFitInfo(dimuonCand, kinematicMuMuVertexFit, "kin", displacement3D);
 	  
-	  if (isMC_){
-	    auto gen_mm = getGenMatchInfo(*prunedGenParticles_,muon1,muon2);
-	    // int mu1_pdgId, mu1_motherPdgId, mu2_pdgId, mu2_motherPdgId, kaon_pdgId, kaon_motherPdgId,
-	    // mm_pdgId, mm_motherPdgId, kmm_pdgId;
-	    // float mu1_pt, mu2_pt, kaon_pt, mm_mass, mm_pt, kmm_mass, kmm_pt;
-	    dimuonCand.addUserInt(  "gen_mu1_pdgId",   gen_mm.mu1_pdgId);
-	    dimuonCand.addUserInt(  "gen_mu1_mpdgId",  gen_mm.mu1_motherPdgId);
-	    dimuonCand.addUserFloat("gen_mu1_pt",      gen_mm.mu1_pt);
-	    dimuonCand.addUserInt(  "gen_mu2_pdgId",   gen_mm.mu2_pdgId);
-	    dimuonCand.addUserInt(  "gen_mu2_mpdgId",  gen_mm.mu2_motherPdgId);
-	    dimuonCand.addUserFloat("gen_mu2_pt",      gen_mm.mu2_pt);
-	    dimuonCand.addUserFloat("gen_mass",        gen_mm.mm_mass);
-	    dimuonCand.addUserFloat("gen_pt",          gen_mm.mm_pt);
-	    dimuonCand.addUserInt(  "gen_pdgId",       gen_mm.mm_pdgId);
-	    dimuonCand.addUserInt(  "gen_mpdgId",      gen_mm.mm_motherPdgId);
-	    dimuonCand.addUserFloat("gen_prod_x",      gen_mm.mm_prod_vtx.x());
-	    dimuonCand.addUserFloat("gen_prod_y",      gen_mm.mm_prod_vtx.y());
-	    dimuonCand.addUserFloat("gen_prod_z",      gen_mm.mm_prod_vtx.z());
-	    dimuonCand.addUserFloat("gen_vtx_x",       gen_mm.mm_vtx.x());
-	    dimuonCand.addUserFloat("gen_vtx_y",       gen_mm.mm_vtx.y());
-	    dimuonCand.addUserFloat("gen_vtx_z",       gen_mm.mm_vtx.z());
-	    dimuonCand.addUserFloat("gen_l3d",         (gen_mm.mm_prod_vtx-gen_mm.mm_vtx).r());
-	    dimuonCand.addUserFloat("gen_lxy",         (gen_mm.mm_prod_vtx-gen_mm.mm_vtx).rho());
-	  }
-	  
-	  // Look for additional tracks compatible with the dimuon vertex
-	  auto closeTracks = findTracksCompatibleWithTheVertex(muon1,muon2,kinematicMuMuVertexFit);
 	  auto imm = dimuon->size();
 	  for (unsigned int k = 0; k < nPFCands; ++k) {
 	    const pat::PackedCandidate & pfCand = (*pfCandHandle_)[k];
@@ -920,40 +1024,13 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	    btokmmCand.addUserFloat("kaon_mu1_doca", mu1_kaon_doca);
 	    btokmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon_doca);
 
-	    fillBtoJpsiKInfo(btokmmCand,kinematicMuMuVertexFit,muon1,muon2,pfCand);
+	    fillBtoJpsiKInfo(btokmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,pfCand);
 
 	    btokmm->push_back(btokmmCand);
 	  }                    
-	  int pvIndex = displacement3D.pvIndex;
-	  dimuonCand.addUserInt( "nTrks",       closeTracks.nTracksByVertexProbability(0.1,-1.0,pvIndex) );
-	  dimuonCand.addUserInt( "nBMTrks",     closeTracks.nTracksByBetterMatch() );
-	  dimuonCand.addUserInt( "nDisTrks",    closeTracks.nTracksByVertexProbability(0.1, 2.0,pvIndex) );
-	  dimuonCand.addUserInt( "closetrk",    closeTracks.nTracksByDisplacementSignificance(0.03, -1, pvIndex) );
-	  dimuonCand.addUserInt( "closetrks1",  closeTracks.nTracksByDisplacementSignificance(0.03, 1, pvIndex) );
-	  dimuonCand.addUserInt( "closetrks2",  closeTracks.nTracksByDisplacementSignificance(0.03, 2, pvIndex) );
-	  dimuonCand.addUserInt( "closetrks3",  closeTracks.nTracksByDisplacementSignificance(0.03, 3, pvIndex) );
-	  dimuonCand.addUserFloat( "docatrk",   closeTracks.minDoca(0.03, pvIndex) );
-	  dimuonCand.addUserFloat( "m1iso",     computeTrkMuonIsolation(muon1,muon2,pvIndex,0.5,0.5));
-	  dimuonCand.addUserFloat( "m2iso",     computeTrkMuonIsolation(muon2,muon1,pvIndex,0.5,0.5));
-	  dimuonCand.addUserFloat( "iso",       computeTrkMuMuIsolation(muon2,muon1,pvIndex,0.9,0.7));
-	  dimuonCand.addUserFloat( "otherVtxMaxProb", otherVertexMaxProb(muon1,muon2,0.5));
-	  dimuonCand.addUserFloat( "otherVtxMaxProb1", otherVertexMaxProb(muon1,muon2,1.0));
-	  dimuonCand.addUserFloat( "otherVtxMaxProb2", otherVertexMaxProb(muon1,muon2,2.0));
 
-	  // BDT
-	  bdtData_.fls3d    = dimuonCand.userFloat("kin_sl3d");
-	  bdtData_.alpha    = dimuonCand.userFloat("kin_alpha");
-	  bdtData_.pvips    = dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr");
-	  bdtData_.iso      = dimuonCand.userFloat("iso");
-	  bdtData_.chi2dof  = dimuonCand.userFloat("kin_vtx_chi2dof");
-	  bdtData_.docatrk  = dimuonCand.userFloat("docatrk");
-	  bdtData_.closetrk = dimuonCand.userInt("closetrk");
-	  bdtData_.m1iso    = dimuonCand.userFloat("m1iso");
-	  bdtData_.m2iso    = dimuonCand.userFloat("m2iso");
-	  bdtData_.eta      = dimuonCand.userFloat("kin_eta");	  
-	  bdtData_.m        = dimuonCand.userFloat("kin_mass");	  
+	  fillMuMuInfo(dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2);
 
-	  dimuonCand.addUserFloat("bdt",computeAnalysisBDT(iEvent.eventAuxiliary().event()%3));
 	  dimuon->push_back(dimuonCand);
 	}
       }
