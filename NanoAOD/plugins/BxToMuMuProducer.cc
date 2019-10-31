@@ -897,11 +897,11 @@ void BxToMuMuProducer::fillBDTForBtoJpsiKThatEmulatesBmm(pat::CompositeCandidate
   btokmmCand.addUserFloat( "bmm_otherVtxMaxProb2", otherVertexMaxProb(muon1,muon2,2.0,0.1,ignoreTracks));
 
   // BDT
-  bdtData_.fls3d    = btokmmCand.userFloat("jpsimc_sl3d");
+  bdtData_.fls3d    = dimuonCand.userFloat("kin_sl3d");
   bdtData_.alpha    = btokmmCand.userFloat("jpsimc_alpha");
   bdtData_.pvips    = btokmmCand.userFloat("jpsimc_pvip")/btokmmCand.userFloat("jpsimc_pvipErr");
   bdtData_.iso      = btokmmCand.userFloat("bmm_iso");
-  bdtData_.chi2dof  = btokmmCand.userFloat("jpsimc_vtx_chi2dof");
+  bdtData_.chi2dof  = dimuonCand.userFloat("kin_vtx_chi2dof");
   bdtData_.docatrk  = btokmmCand.userFloat("bmm_docatrk");
   bdtData_.closetrk = btokmmCand.userInt(  "bmm_closetrk");
   bdtData_.m1iso    = btokmmCand.userFloat("bmm_m1iso");
