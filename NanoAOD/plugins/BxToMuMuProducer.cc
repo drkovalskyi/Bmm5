@@ -432,6 +432,16 @@ private:
 		   const pat::Muon& muon1,
 		   const pat::Muon& muon2,
 		   const pat::PackedCandidate & kaon); 
+  
+  void 
+  fillBDTForBtoJpsiKThatEmulatesBmm(pat::CompositeCandidate& btokmmCand,
+				    const pat::CompositeCandidate& dimuonCand,
+				    const edm::Event& iEvent,
+				    const KinematicFitResult& kinematicMuMuVertexFit,
+				    const pat::Muon& muon1,
+				    const pat::Muon& muon2,
+				    const pat::PackedCandidate & kaon);
+ 
   void 
   fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
 	       const edm::Event& iEvent,
@@ -565,8 +575,8 @@ void addFitInfo(pat::CompositeCandidate& cand, const KinematicFitResult& fit, st
   cand.addUserFloat( name+"_pvlipErr",    displacement3d.longitudinalImpactParameterErr);
   cand.addUserFloat( name+"_pv2lip",      displacement3d.longitudinalImpactParameter2);
   cand.addUserFloat( name+"_pv2lipErr",   displacement3d.longitudinalImpactParameter2Err);
+  cand.addUserInt(   name+"_pvIndex",     displacement3d.pvIndex);
 }
-
 
 CloseTrackInfo 
 BxToMuMuProducer::findTracksCompatibleWithTheVertex(const pat::Muon& muon1,
@@ -802,7 +812,6 @@ void BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
   dimuonCand.addUserFloat("bdt",computeAnalysisBDT(iEvent.eventAuxiliary().event()%3));
 }
 
-
 void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
 					const edm::Event& iEvent,
 					const KinematicFitResult& kinematicMuMuVertexFit,
@@ -857,14 +866,24 @@ void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
   // auto bToKJPsiMuMu_MC_PC = refitWithPointingConstraint(bToKJPsiMuMu_MC.refitTree, primaryVertex);
   // bToKJPsiMuMu_MC_PC.postprocess(beamSpot);
   // addFitInfo(btokmmCand, bToKJPsiMuMu_MC_PC, "mcpc");
+}
 
+void BxToMuMuProducer::fillBDTForBtoJpsiKThatEmulatesBmm(pat::CompositeCandidate& btokmmCand,
+							 const pat::CompositeCandidate& dimuonCand,
+							 const edm::Event& iEvent,
+							 const KinematicFitResult& kinematicMuMuVertexFit,
+							 const pat::Muon& muon1,
+							 const pat::Muon& muon2,
+							 const pat::PackedCandidate & kaon
+					) 
+{
   ///////
   //// Treat B->JpsiK as B->mm for signal studies in data
   //
   std::vector<const pat::PackedCandidate*> ignoreTracks;
   ignoreTracks.push_back(&kaon);
 
-  int pvIndex = bToKJPsiMuMu_MC_displacement.pvIndex;
+  int pvIndex = btokmmCand.userInt("jpsimc_pvIndex");
 
   // Look for additional tracks compatible with the dimuon vertex
   auto closeTracks = findTracksCompatibleWithTheVertex(muon1,muon2,kinematicMuMuVertexFit);
@@ -978,6 +997,8 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	  auto kinematicMuMuVertexFit = vertexMuonsWithKinematicFitter(muon1, muon2);
 	  kinematicMuMuVertexFit.postprocess(*beamSpot_);
 	  
+	  fillMuMuInfo(dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2);
+
 	  auto imm = dimuon->size();
 	  for (unsigned int k = 0; k < nPFCands; ++k) {
 	    const pat::PackedCandidate & pfCand = (*pfCandHandle_)[k];
@@ -1025,11 +1046,10 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	    btokmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon_doca);
 
 	    fillBtoJpsiKInfo(btokmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,pfCand);
+	    fillBDTForBtoJpsiKThatEmulatesBmm(btokmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,pfCand);
 
 	    btokmm->push_back(btokmmCand);
 	  }                    
-
-	  fillMuMuInfo(dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2);
 
 	  dimuon->push_back(dimuonCand);
 	}
