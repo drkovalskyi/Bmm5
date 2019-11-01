@@ -7,11 +7,13 @@ output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_dev/bjpsik_
 
 mm_selection = "mm_kin_sl3d>4&&mm_kin_vtx_prob>0.1"
 mm_selection += "&&mm_kin_mass<6.0"
+mm_selection += "&&mm_gen_mass>0"
 mm_selection += "&&abs(Muon_eta[mm_mu1_index])<1.4 && abs(Muon_eta[mm_mu2_index])<1.4&&Muon_pt[mm_mu1_index]>4 && Muon_pt[mm_mu2_index]>4&&mm_kin_valid>0&&Muon_softMva[mm_mu1_index]>0.45 && Muon_softMva[mm_mu2_index]>0.45"
 
 bkmm_selection = "bkmm_kaon_sdxy_bs>5&&bkmm_kaon_pt>1&&abs(bkmm_kaon_eta)<1.4" 
-bkmm_selection += "&&bkmm_jpsimc_vtx_prob>0.1&&bkmm_jpsimc_sl3d>4"
-bkmm_selection += "&&bkmm_jpsimc_mass<6.0"
+bkmm_selection += "&&mm_kin_sl3d[bkmm_mm_index]>4&&mm_kin_vtx_prob[bkmm_mm_index]>0.1"
+# bkmm_selection += "&&abs(bkmm_jpsimc_mass-5.29)<0.05"
+bkmm_selection += "&&bkmm_gen_mass>0"
 bkmm_selection += "&&abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 && abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4&&Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 && Muon_pt[mm_mu2_index[bkmm_mm_index]]>4&&Muon_softMva[mm_mu1_index[bkmm_mm_index]]>0.45 && Muon_softMva[mm_mu2_index[bkmm_mm_index]]>0.45"
 
 samples = {
@@ -33,9 +35,10 @@ samples = {
     },
     'BuToJpsiK_RunIIAutumn18MiniAOD_102X':{
         'files':[
-            '/afs/cern.ch/work/d/dmytro/projects/NanoAOD-CentOS7/src/BuToJpsiK_BMuonFilter_RunIIAutumn18MiniAOD.root'
+            # '/afs/cern.ch/work/d/dmytro/projects/NanoAOD-CentOS7/src/BuToJpsiK_BMuonFilter_RunIIAutumn18MiniAOD.root'
+            '/afs/cern.ch/work/d/dmytro/projects/NanoAOD-CentOS7/src/output.root'
         ],
-        'color':ROOT.kBlack,
+        'color':ROOT.kRed,
         'type':'bjpsik'
     }
 }
@@ -115,6 +118,22 @@ selections = {
     'bjpsik':bkmm_selection
 }
 
-plot_generic_1D(selections,"BDT Matched", "09_bdt_matched",{'bmm':'mm_bdt','bjpsik':'bkmm_bmm_bdt'},100,-1.5,1.5)
+plot_generic_1D(selections,"MuMu;P_{T}, [GeV]", "01_mm_pt",{'bmm':'mm_kin_pt','bjpsik':'mm_kin_pt[bkmm_mm_index]'},100,0,100)
 
+plot_generic_1D(selections,"MuMu vertex displacement significance", "02_sl3d",{'bmm':'mm_kin_sl3d','bjpsik':'mm_kin_sl3d[bkmm_mm_index]'},100,0,100)
+plot_generic_1D(selections,"Alpha", "02_alpha",{'bmm':'mm_kin_alpha','bjpsik':'bkmm_jpsimc_alpha'},100,0,0.3)
+plot_generic_1D(selections,"Impact Parameter significance", "02_ips",{
+    'bmm':'mm_kin_pvip/mm_kin_pvipErr',
+    'bjpsik':'bkmm_jpsimc_pvip/bkmm_jpsimc_pvipErr[bkmm_mm_index]'},100,0,10.0)
+plot_generic_1D(selections,"MuMu Isolation", "02_iso",{'bmm':'mm_iso','bjpsik':'bkmm_bmm_iso'},100,0,1.5)
+plot_generic_1D(selections,"Chi2dof", "02_chi2dof",{'bmm':'mm_kin_vtx_chi2dof','bjpsik':'mm_kin_vtx_chi2dof[bkmm_mm_index]'},100,0,1.5)
+plot_generic_1D(selections,"docatrk", "02_docatrk",{'bmm':'mm_docatrk','bjpsik':'bkmm_bmm_docatrk'},100,0,0.1)
+plot_generic_1D(selections,"closetrk","02_closetrk",{'bmm':'mm_closetrk','bjpsik':'bkmm_bmm_closetrk'},10,0,10)
+plot_generic_1D(selections,"Mu1 Isolation", "02_m1iso",{'bmm':'mm_m1iso','bjpsik':'bkmm_bmm_m1iso'},100,0,1.5)
+plot_generic_1D(selections,"Mu2 Isolation", "02_m2iso",{'bmm':'mm_m2iso','bjpsik':'bkmm_bmm_m2iso'},100,0,1.5)
+
+plot_generic_1D(selections,"BDT Matched", "09_bdt_matched",{'bmm':'mm_bdt','bjpsik':'bkmm_bmm_bdt'},100,-1.5,1.5)
 plot_generic_1D(selections,"BDT Raw", "09_bdt_raw",{'bmm':'mm_bdt','bjpsik':'mm_bdt[bkmm_mm_index]'},100,-1.5,1.5)
+
+
+# plot_generic_1D(selections,"BDT Raw", "02_mm_pt",{'bmm':'mm_pt','bjpsik':'mm_pt[bkmm_mm_index]'},100,0,100)
