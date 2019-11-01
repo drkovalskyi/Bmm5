@@ -886,7 +886,7 @@ void BxToMuMuProducer::fillBDTForBtoJpsiKThatEmulatesBmm(pat::CompositeCandidate
   int pvIndex = btokmmCand.userInt("jpsimc_pvIndex");
 
   // Look for additional tracks compatible with the dimuon vertex
-  auto closeTracks = findTracksCompatibleWithTheVertex(muon1,muon2,kinematicMuMuVertexFit);
+  auto closeTracks = findTracksCompatibleWithTheVertex(muon1,muon2,kinematicMuMuVertexFit,0.03,ignoreTracks);
   closeTracks.fillCandInfo(btokmmCand, pvIndex, "bmm");
 
   btokmmCand.addUserFloat( "bmm_m1iso",     computeTrkMuonIsolation(muon1,muon2,pvIndex,0.5,0.5,ignoreTracks));
