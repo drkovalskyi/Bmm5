@@ -848,19 +848,20 @@ void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
   // 	btokmmCand.addUserInt("kaon_mc_pdgId", 0);
   // }
   
-  auto bToKJPsiMuMuNoMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, kaon, false);
-  bToKJPsiMuMuNoMassConstraint.postprocess(*beamSpot_);
-  addFitInfo(btokmmCand, bToKJPsiMuMuNoMassConstraint, "nomc");
+  auto bToKJPsiMuMu_NoMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, kaon, false);
+  bToKJPsiMuMu_NoMassConstraint.postprocess(*beamSpot_);
+  auto bToKJPsiMuMu_NoMassConstraint_displacement = compute3dDisplacement(bToKJPsiMuMu_NoMassConstraint, *pvHandle_.product(),true);
+  addFitInfo(btokmmCand, bToKJPsiMuMu_NoMassConstraint, "nomc", bToKJPsiMuMu_NoMassConstraint_displacement);
   
   // worse performing option
   // auto bToKJPsiMuMuWithMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, kaon, true);
   // bToKJPsiMuMuWithMassConstraint.postprocess(beamSpot);
   // addFitInfo(btokmmCand, bToKJPsiMuMuWithMassConstraint, "jpsimc");
   
-  auto bToKJPsiMuMu_MC = fitBToKJPsiMuMuNew(kinematicMuMuVertexFit.refitTree, kaon, true);
-  bToKJPsiMuMu_MC.postprocess(*beamSpot_);
-  auto bToKJPsiMuMu_MC_displacement = compute3dDisplacement(bToKJPsiMuMu_MC, *pvHandle_.product(),true);
-  addFitInfo(btokmmCand, bToKJPsiMuMu_MC, "jpsimc", bToKJPsiMuMu_MC_displacement);
+  auto bToKJPsiMuMu_MassConstraint = fitBToKJPsiMuMuNew(kinematicMuMuVertexFit.refitTree, kaon, true);
+  bToKJPsiMuMu_MassConstraint.postprocess(*beamSpot_);
+  auto bToKJPsiMuMu_MassConstraint_displacement = compute3dDisplacement(bToKJPsiMuMu_MassConstraint, *pvHandle_.product(),true);
+  addFitInfo(btokmmCand, bToKJPsiMuMu_MassConstraint, "jpsimc", bToKJPsiMuMu_MassConstraint_displacement);
   
   // broken pointing constraint
   // auto bToKJPsiMuMu_MC_PC = refitWithPointingConstraint(bToKJPsiMuMu_MC.refitTree, primaryVertex);
@@ -900,6 +901,9 @@ void BxToMuMuProducer::fillBDTForBtoJpsiKThatEmulatesBmm(pat::CompositeCandidate
   bdtData_.fls3d    = dimuonCand.userFloat("kin_sl3d");
   bdtData_.alpha    = btokmmCand.userFloat("jpsimc_alpha");
   bdtData_.pvips    = btokmmCand.userFloat("jpsimc_pvip")/btokmmCand.userFloat("jpsimc_pvipErr");
+  // One can use bkmm without mass constraint, but it doesn't help
+  // bdtData_.alpha    = btokmmCand.userFloat("nomc_alpha");
+  // bdtData_.pvips    = btokmmCand.userFloat("nomc_pvip")/btokmmCand.userFloat("nomc_pvipErr");
   bdtData_.iso      = btokmmCand.userFloat("bmm_iso");
   bdtData_.chi2dof  = dimuonCand.userFloat("kin_vtx_chi2dof");
   bdtData_.docatrk  = btokmmCand.userFloat("bmm_docatrk");
