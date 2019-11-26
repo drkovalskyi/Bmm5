@@ -1,19 +1,20 @@
 # Bmm5
 ## Bx to mumu analysis code based on MiniAOD input data in CMS experiment at CERN
-Recommended release: CMSSW_10_2_15
 
-Supported CMSSW releases: 10_2_X
+Production configuration for Run NanoAODv6 with the new B-jet
+reggression and Bmm5 NanoAODv6-V01 analysis code
 
-Build Instructions 
-* scram p CMSSW CMSSW_10_2_15
-* cd CMSSW_10_2_15/src/
+## Build Instructions 
+* scram p CMSSW CMSSW_10_2_18
+* cd CMSSW_10_2_18/src/
 * cmsenv
-* git clone git@github.com:drkovalskyi/Bmm5.git
-  * If you want to check out a specific tag you can do instead
-    * git clone git@github.com:drkovalskyi/Bmm5.git --branch NonoAODv5-V01
+* git cms-init
+* git remote add mithep git@github.com:MiT-HEP/cmssw.git
+* git cms-addpkg PhysicsTools/NanoAOD
+* git fetch mithep
+* git checkout -t mithep/Bmm5-CMSSW_10_2_18
+* git clone git@github.com:drkovalskyi/Bmm5.git --branch NanoAODv6-V01
 * scram b -j 8
-
-Reference campaign: Run2 NanoAODv5
 
 ## Filtering
 If you want to add event filtering to the commands below you just need to modify the step option the following way
