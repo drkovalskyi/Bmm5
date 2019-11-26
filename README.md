@@ -23,8 +23,16 @@ If you want to add event filtering to the commands below you just need to modify
 
 ## Processing examples
 * Monte Carlo
-  * **RunIIAutumn18NanoAODv5**: 
-    * cmsDriver.py step1 --filein /store/user/dmytro/tmp/store+mc+RunIIAutumn18MiniAOD+QCD_Pt-50to80_EMEnriched_TuneCP5_13TeV_pythia8+MINIAODSIM+102X_upgrade2018_realistic_v15-v1+120000+E5F6DFC8-65CF-2A41-B0BE-E82E041CB012.root --fileout file:output.root --mc --eventcontent NANOAODSIM --datatier NANOAODSIM --conditions 102X_upgrade2018_realistic_v19 --step NANO --nThreads 2 --era Run2_2018,run2_nanoAOD_102Xv1 --python_filename nano_RunIIAutumn18NanoAODv5.py --no_exec -n 1000 --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBxToMuMu --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"
+  * **RunIIAutumn18NanoAODv6**: 
+    * era: Run2_2018,run2_nanoAOD_102Xv1
+    * conditions: 102X_upgrade2018_realistic_v20
+    * cmsDriver.py step1 --filein /store/user/dmytro/tmp/store+mc+RunIIAutumn18MiniAOD+QCD_Pt-50to80_EMEnriched_TuneCP5_13TeV_pythia8+MINIAODSIM+102X_upgrade2018_realistic_v15-v1+120000+E5F6DFC8-65CF-2A41-B0BE-E82E041CB012.root --fileout file:output.root --mc --eventcontent NANOAODSIM --datatier NANOAODSIM --conditions 102X_upgrade2018_realistic_v20 --step NANO --nThreads 2 --era Run2_2018,run2_nanoAOD_102Xv1 --python_filename RunIIAutumn18NanoAOD.py --no_exec -n 1000 --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBxToMuMu --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"
+  * **RunIIFall17NanoAODv6**: 
+    * era: Run2_2017,run2_nanoAOD_94XMiniAODv2
+    * conditions: 102X_mc2017_realistic_v7
+  * **RunIISummer16NanoAODv6**:
+    * era: Run2_2016,run2_nanoAOD_94X2016
+    * conditions: 102X_mcRun2_asymptotic_v7
 * Data (Nano1June2019)
   * **Run2016 (B-H)**
     * era: Run2_2016,run2_nanoAOD_94X2016
