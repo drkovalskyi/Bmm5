@@ -314,9 +314,63 @@ BxToMuMuBToKKmumuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProd
     variables = BxToMuMuBToKKmumuMcTableVariables
 )
 
+##################################################################################
+###
+###                              Gen Summary Info
+###
+##################################################################################
 
+BxToMuMuGen = cms.EDProducer("GenBmmProducer")
+
+BxToMuMuGenVars = cms.PSet(
+    # bhadron
+    pdgId        = Var("userInt('pdgId')",         int, doc = "PDG id of the b-hadron"),
+    pt           = Var("userFloat('pt')",        float, doc = "Pt of the b-hadron"),
+    eta          = Var("userFloat('eta')",       float, doc = "Eta of the b-hadron"),
+    phi          = Var("userFloat('phi')",       float, doc = "Phi of the b-hadron"),
+    mass         = Var("userFloat('mass')",      float, doc = "Mass of the b-hadron"),
+
+    # dimuon
+    mu1_pdgId        = Var("userInt('mu1_pdgId')",         int, doc = "PDG id of mu1"),
+    mu1_pt           = Var("userFloat('mu1_pt')",        float, doc = "Pt of mu1"),
+    mu1_eta          = Var("userFloat('mu1_eta')",       float, doc = "Eta of mu1"),
+    mu1_phi          = Var("userFloat('mu1_phi')",       float, doc = "Phi of mu1"),
+    mu2_pdgId        = Var("userInt('mu2_pdgId')",         int, doc = "PDG id of mu2"),
+    mu2_pt           = Var("userFloat('mu2_pt')",        float, doc = "Pt of mu2"),
+    mu2_eta          = Var("userFloat('mu2_eta')",       float, doc = "Eta of mu2"),
+    mu2_phi          = Var("userFloat('mu2_phi')",       float, doc = "Phi of mu2"),
+    dimuon_mass      = Var("userFloat('dimuon_mass')",   float, doc = "Mass of dimuon"),
+
+    # kaons
+    kaon1_pdgId        = Var("userInt('kaon1_pdgId')",         int, doc = "PDG id of kaon1"),
+    kaon1_pt           = Var("userFloat('kaon1_pt')",        float, doc = "Pt of kaon1"),
+    kaon1_eta          = Var("userFloat('kaon1_eta')",       float, doc = "Eta of kaon1"),
+    kaon1_phi          = Var("userFloat('kaon1_phi')",       float, doc = "Phi of kaon1"),
+    kaon2_pdgId        = Var("userInt('kaon2_pdgId')",         int, doc = "PDG id of kaon2"),
+    kaon2_pt           = Var("userFloat('kaon2_pt')",        float, doc = "Pt of kaon2"),
+    kaon2_eta          = Var("userFloat('kaon2_eta')",       float, doc = "Eta of kaon2"),
+    kaon2_phi          = Var("userFloat('kaon2_phi')",       float, doc = "Phi of kaon2"),
+    kk_mass            = Var("userFloat('kk_mass')",         float, doc = "Mass of kk"),
+    
+    # radiation
+    rad_p            = Var("userFloat('rad_p')",         float, doc = "P of radiation sum"),
+    rad_pt           = Var("userFloat('rad_pt')",        float, doc = "Pt of radiation sum"),
+    rad_eta          = Var("userFloat('rad_eta')",       float, doc = "Eta of radiation sum"),
+    rad_phi          = Var("userFloat('rad_phi')",       float, doc = "Phi of radiation sum"),
+
+)
+
+BxToMuMuGenTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("BxToMuMuGen","genbmm"),
+    cut=cms.string(""),
+    name=cms.string("genbmm"),
+    doc=cms.string("GenInfo Variables for Bmm5"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = BxToMuMuGenVars
+)
 
 BxToMuMuSequence   = cms.Sequence(BxToMuMu)
-BxToMuMuMcSequence = cms.Sequence(BxToMuMuMc)
+BxToMuMuMcSequence = cms.Sequence(BxToMuMuMc * BxToMuMuGen)
 BxToMuMuTables     = cms.Sequence(BxToMuMuDiMuonTable   * BxToMuMuBToKmumuTable * BxToMuMuBToKKmumuTable)
-BxToMuMuMcTables   = cms.Sequence(BxToMuMuDiMuonMcTable * BxToMuMuBToKmumuMcTable * BxToMuMuBToKKmumuMcTable)
+BxToMuMuMcTables   = cms.Sequence(BxToMuMuDiMuonMcTable * BxToMuMuBToKmumuMcTable * BxToMuMuBToKKmumuMcTable * BxToMuMuGenTable)
