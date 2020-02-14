@@ -39,21 +39,11 @@
 #include <TLorentzVector.h>
 #include <TVector.h>
 #include <TMatrix.h>
+#include <algorithm>
 
 // 
-// BxToMuMuProducer is designed for Bs/d->mumu analysis and it stores the following 
-// signatures:
-// - Vertexed dimuon pairs
-// - BtoKmm 
-// 
-
-// TODO
-// - add pointing constraint
-// - m1 and m2 isolation
-// - bkmm pt
-// - bkmm eta
-// - othervtx
-// - Delta_Chi2 ?
+// BxToMuMuProducer is designed for Bs/d->mumu analysis
+//
 
 typedef reco::Candidate::LorentzVector LorentzVector;
 
@@ -917,18 +907,21 @@ void BxToMuMuProducer::fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
   bCand.addUserInt("kaon2_charge", kaon2.charge());
 
   if (isMC_){
-    auto gen_kmm = getGenMatchInfo(*prunedGenParticles_,muon1,muon2,&kaon1);
-    bCand.addUserInt(  "gen_kaon_pdgId",  gen_kmm.kaon1_pdgId);
-    bCand.addUserInt(  "gen_kaon_mpdgId", gen_kmm.kaon1_motherPdgId);
-    bCand.addUserFloat("gen_kaon_pt",     gen_kmm.kaon1_pt);
-    bCand.addUserFloat("gen_mass",        gen_kmm.kmm_mass);
-    bCand.addUserFloat("gen_pt",          gen_kmm.kmm_pt);
-    bCand.addUserInt(  "gen_pdgId",       gen_kmm.kmm_pdgId);
-    bCand.addUserFloat("gen_prod_x",      gen_kmm.kmm_prod_vtx.x());
-    bCand.addUserFloat("gen_prod_y",      gen_kmm.kmm_prod_vtx.y());
-    bCand.addUserFloat("gen_prod_z",      gen_kmm.kmm_prod_vtx.z());
-    bCand.addUserFloat("gen_l3d",         (gen_kmm.kmm_prod_vtx-gen_kmm.mm_vtx).r());
-    bCand.addUserFloat("gen_lxy",         (gen_kmm.kmm_prod_vtx-gen_kmm.mm_vtx).rho());
+    auto gen_info = getGenMatchInfo(*prunedGenParticles_,muon1,muon2,&kaon1,&kaon2);
+    bCand.addUserInt(  "gen_kaon1_pdgId",  gen_info.kaon1_pdgId);
+    bCand.addUserInt(  "gen_kaon1_mpdgId", gen_info.kaon1_motherPdgId);
+    bCand.addUserFloat("gen_kaon1_pt",     gen_info.kaon1_pt);
+    bCand.addUserInt(  "gen_kaon2_pdgId",  gen_info.kaon2_pdgId);
+    bCand.addUserInt(  "gen_kaon2_mpdgId", gen_info.kaon2_motherPdgId);
+    bCand.addUserFloat("gen_kaon2_pt",     gen_info.kaon2_pt);
+    bCand.addUserFloat("gen_mass",         gen_info.kkmm_mass);
+    bCand.addUserFloat("gen_pt",           gen_info.kkmm_pt);
+    bCand.addUserInt(  "gen_pdgId",        gen_info.kkmm_pdgId);
+    bCand.addUserFloat("gen_prod_x",       gen_info.kkmm_prod_vtx.x());
+    bCand.addUserFloat("gen_prod_y",       gen_info.kkmm_prod_vtx.y());
+    bCand.addUserFloat("gen_prod_z",       gen_info.kkmm_prod_vtx.z());
+    bCand.addUserFloat("gen_l3d",         (gen_info.kkmm_prod_vtx-gen_info.mm_vtx).r());
+    bCand.addUserFloat("gen_lxy",         (gen_info.kkmm_prod_vtx-gen_info.mm_vtx).rho());
   }
 
   auto bToKKJPsiMuMu = fitBToKKMuMu(kinematicMuMuVertexFit.refitTree, kaon1, kaon2, true);
@@ -1528,11 +1521,90 @@ pair<double,double> BxToMuMuProducer::computeDCA(const pat::PackedCandidate &kao
     
   return DCA;
 }
+namespace{
 
-bool dr_match(const LorentzVector& reco , const LorentzVector& gen){
-  if (fabs(reco.pt()-gen.pt())/gen.pt()<0.1 and deltaR(reco,gen)<0.02)
+  bool dr_match(const LorentzVector& reco , const LorentzVector& gen){
+    if (fabs(reco.pt()-gen.pt())/gen.pt()<0.1 and deltaR(reco,gen)<0.02)
+      return true;
+    return false;
+  }
+
+  std::vector<unsigned int> 
+    get_depth_from_permutation(const std::vector<unsigned int>& elements){
+    std::vector<unsigned int> result;
+    unsigned int counter(0);
+    for (auto element: elements){
+      if (element==0){
+	counter++;
+      } else {
+	result.push_back(counter);
+	counter = 0;
+      }
+    }
+    result.push_back(counter);
+    return result;
+  }
+
+  bool is_acceptable(const reco::Candidate* cand){
+    if ( not cand) return false; 
+    // skip quarks
+    if ( abs(cand->pdgId())<10 ) return false;
+    // skip protons
+    if ( abs(cand->pdgId())==2212 ) return false;
+    // skip gluons
+    if ( abs(cand->pdgId())==21 ) return false;
     return true;
-  return false;
+  }
+
+  // depth 0 - first mother
+
+  const reco::Candidate* get_mother(const reco::Candidate* cand, unsigned int depth){
+    if (not cand) return 0;
+    const reco::Candidate* mother = cand->mother();
+    unsigned int i = 0;
+    while ( is_acceptable(mother) and i<depth ){
+      i++;
+      mother = mother->mother();
+    }
+    if (is_acceptable(mother))
+      return mother;
+    else
+      return 0;
+  }
+
+  const reco::Candidate* 
+    find_common_ancestor(const std::vector<const reco::Candidate*>& particles, 
+			 unsigned int max_depth=10){
+    auto n = particles.size();
+    for (unsigned int depth=0; depth<max_depth; ++depth){
+      // make a list of elements (0) and separators (1) and
+      // find all possible permutations of the elements
+      std::vector<unsigned int> elements;
+      for (unsigned int i=0; i<depth; ++i)
+	elements.push_back(0);
+      for (unsigned int i=0; i<n-1; ++i)
+	elements.push_back(1);
+      do {
+	auto depth_vector = get_depth_from_permutation(elements);
+	const reco::Candidate* common_mother(0);
+	for (unsigned int i=0; i<n; ++i){
+	  auto mother = get_mother(particles[i],depth_vector[i]);
+	  if (not mother) {
+	    common_mother = 0;
+	    break;
+	  }
+	  if (not common_mother) common_mother = mother;
+	  if (common_mother != mother) {
+	    common_mother = 0;
+	    break;
+	  }	  
+	}
+	if (common_mother) return common_mother;
+      } while(std::next_permutation(elements.begin(), elements.end()));
+    }
+    return 0;
+  }
+
 }
 
 GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticle>& genParticles,
@@ -1547,6 +1619,7 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticl
   const reco::GenParticle* mc_kaon1(0);
   const reco::GenParticle* mc_kaon2(0);
   const reco::Candidate*   mm_mother(0);
+  std::vector<const reco::Candidate*> daughters;
   if (muon1.genParticle()){
     // should we use sim instead for more information?
     mc_mu1 = muon1.genParticle();
@@ -1555,7 +1628,7 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticl
     if (muon1.genParticle()->mother()){
       result.mu1_motherPdgId = muon1.genParticle()->mother()->pdgId();
     }
-    // printf("mc_mu1 pt: %7.4f \tvertex(rho,z): (%7.4f,%7.4f)\n", mc_mu1->pt(), mc_mu1->vertex().rho(), mc_mu1->vertex().z());
+    daughters.push_back(mc_mu1);
   }
   if (muon2.genParticle()){
     mc_mu2 = muon2.genParticle();
@@ -1564,7 +1637,7 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticl
     if (muon2.genParticle()->mother()){
       result.mu2_motherPdgId = muon2.genParticle()->mother()->pdgId();
     }
-    // printf("mc_mu2 pt: %7.4f \tvertex(rho,z): (%7.4f,%7.4f)\n", mc_mu2->pt(), mc_mu2->vertex().rho(), mc_mu2->vertex().z());
+    daughters.push_back(mc_mu2);
   }
   if ( mc_mu1 and mc_mu2 ){
     if ( (mc_mu1->vertex()-mc_mu2->vertex()).r() < 1e-4)
@@ -1582,15 +1655,12 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticl
       result.mm_prod_vtx  = primary->vertex();
     }
   }
-  // Note: Idealy we should match both kaons to originate from
-  //       one mother, but it's easier and more generic to leave
-  //       it for later. Therefore the first kaon provide kmm 
-  //       gen info and the second is matched only for kkmm. 
-
+  
   if (kaon1){
     for (auto const & genParticle: genParticles){
       if (dr_match(kaon1->p4(),genParticle.p4())){
 	mc_kaon1 = &genParticle;
+	daughters.push_back(mc_kaon1);
 	result.kaon1_pdgId = genParticle.pdgId();
 	result.kaon1_pt    = genParticle.pt();
 	if (genParticle.mother()){
@@ -1599,13 +1669,13 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticl
 	break;
       }
     }
-    if (mm_mother and mc_kaon1 and mc_kaon1->mother()){
-      if (mm_mother == mc_kaon1->mother() or 
-	  mm_mother->mother() == mc_kaon1->mother()){
-	result.kmm_pdgId    = mc_kaon1->mother()->pdgId();
-	result.kmm_mass     = mc_kaon1->mother()->mass();
-	result.kmm_pt       = mc_kaon1->mother()->pt();
-	result.kmm_prod_vtx = mc_kaon1->mother()->vertex();
+    if (daughters.size()==3){
+      const auto* mother = find_common_ancestor(daughters);
+      if (mother){
+	result.kmm_pdgId    = mother->pdgId();
+	result.kmm_mass     = mother->mass();
+	result.kmm_pt       = mother->pt();
+	result.kmm_prod_vtx = mother->vertex();
       }
     }
   }
@@ -1613,6 +1683,7 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticl
     for (auto const & genParticle: genParticles){
       if (dr_match(kaon2->p4(),genParticle.p4())){
 	mc_kaon2 = &genParticle;
+	daughters.push_back(mc_kaon2);
 	result.kaon2_pdgId = genParticle.pdgId();
 	result.kaon2_pt    = genParticle.pt();
 	if (genParticle.mother()){
@@ -1621,13 +1692,13 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticl
 	break;
       }
     }
-    if (mm_mother and mc_kaon2 and mc_kaon2->mother()){
-      if (mm_mother == mc_kaon2->mother() or 
-	  mm_mother->mother() == mc_kaon2->mother()){
-	result.kkmm_pdgId    = mc_kaon2->mother()->pdgId();
-	result.kkmm_mass     = mc_kaon2->mother()->mass();
-	result.kkmm_pt       = mc_kaon2->mother()->pt();
-	result.kkmm_prod_vtx = mc_kaon2->mother()->vertex();
+    if (daughters.size()==4){
+      const auto* mother = find_common_ancestor(daughters);
+      if (mother){
+	result.kkmm_pdgId    = mother->pdgId();
+	result.kkmm_mass     = mother->mass();
+	result.kkmm_pt       = mother->pt();
+	result.kkmm_prod_vtx = mother->vertex();
       }
     }
   }
