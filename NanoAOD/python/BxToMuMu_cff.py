@@ -268,6 +268,8 @@ BxToMuMuBToKKmumuTableVariables =  merge_psets(
         kaon2_phi       = Var("userFloat('kaon2_phi')",        float, doc = "Kaon2 phi"),
         kaon2_dxy_bs    = Var("userFloat('kaon2_dxy_bs')",     float, doc = "Kaon2 impact parameter wrt the beam spot"),
         kaon2_sdxy_bs   = Var("userFloat('kaon2_sdxy_bs')",    float, doc = "Kaon2 impact parameter significance wrt the beam spot"),
+        kk_mass         = Var("userFloat('kk_mass')",          float, doc = "Mass of two kaons"),
+        jpsikk_kk_mass = Var("userFloat('jpsikk_kk_mass')",    float, doc = "Mass of two kaons refitted"),
         # kaon2_mu1_doca  = Var("userFloat('kaon2_mu1_doca')",   float, doc = "Kaon2 distance of closest approach to muon1"),
         # kaon2_mu2_doca  = Var("userFloat('kaon2_mu2_doca')",   float, doc = "Kaon2 distance of closest approach to muon2"),
     #     bmm_nTrks      = Var("userInt('bmm_nTrks')",         int,   doc = "Number of tracks compatible with the vertex by vertex probability (BtoJpsiK as Bmm)"),

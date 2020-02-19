@@ -102,6 +102,22 @@ struct KinematicFitResult{
     return refitMother->currentState().mass();
   }
 
+  float refit_mass(unsigned int i, unsigned int j) const
+  {
+    if ( not valid() ) return -1.0;
+    if (i >= refitDaughters.size()) return -2.0;
+    if (j >= refitDaughters.size()) return -3.0;
+    if (refitDaughters.at(i)->currentState().globalMomentum().mag2()<0) return -4.0;
+    if (refitDaughters.at(j)->currentState().globalMomentum().mag2()<0) return -5.0;
+    auto momentum = refitDaughters.at(i)->currentState().globalMomentum() + 
+      refitDaughters.at(j)->currentState().globalMomentum();
+    auto energy1 = sqrt(refitDaughters.at(i)->currentState().globalMomentum().mag2() + 
+			pow(refitDaughters.at(i)->currentState().mass(),2));
+    auto energy2 = sqrt(refitDaughters.at(j)->currentState().globalMomentum().mag2() + 
+			pow(refitDaughters.at(j)->currentState().mass(),2));
+    return sqrt(pow(energy1+energy2,2)-momentum.mag2());
+  }
+
   GlobalVector p3() const
   {
     if ( not valid() ) return GlobalVector();
@@ -905,6 +921,7 @@ void BxToMuMuProducer::fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
   bCand.addUserFloat("kaon2_sdxy_bs", 
 			  kaon2.bestTrack()->dxyError()>0 ? fabs(kaon2.bestTrack()->dxy(*beamSpot_))/kaon2.bestTrack()->dxyError():0.0);
   bCand.addUserInt("kaon2_charge", kaon2.charge());
+  bCand.addUserFloat("kk_mass",    (kaon1.p4()+kaon2.p4()).mass());
 
   if (isMC_){
     auto gen_info = getGenMatchInfo(*prunedGenParticles_,muon1,muon2,&kaon1,&kaon2);
@@ -928,6 +945,7 @@ void BxToMuMuProducer::fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
   bToKKJPsiMuMu.postprocess(*beamSpot_);
   auto bToKKJPsiMuMu_displacement = compute3dDisplacement(bToKKJPsiMuMu, *pvHandle_.product(),true);
   addFitInfo(bCand, bToKKJPsiMuMu, "jpsikk", bToKKJPsiMuMu_displacement);
+  bCand.addUserFloat("jpsikk_kk_mass",    bToKKJPsiMuMu.refit_mass(1,2));
 }
 
 
@@ -1068,7 +1086,8 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 
 	  auto imm = dimuon->size();
 	  for (unsigned int k = 0; k < nPFCands; ++k) {
-	    const pat::PackedCandidate & kaonCand1 = (*pfCandHandle_)[k];
+	    pat::PackedCandidate kaonCand1((*pfCandHandle_)[k]);
+	    kaonCand1.setMass(KaonMass_);
 	    if (deltaR(muon1, kaonCand1) < 0.01 || deltaR(muon2, kaonCand1) < 0.01) continue;
 	    if (kaonCand1.charge() == 0 ) continue;
 	    if (!kaonCand1.hasTrackDetails()) continue;
@@ -1120,7 +1139,8 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 
 	    if (goodBtoJpsiKK){ // good candidate to consider for JpsiKK
 	      for (unsigned int k2 = k+1; k2 < nPFCands; ++k2) { // only works if selection requirements for both kaons are identical
-		const pat::PackedCandidate & kaonCand2 = (*pfCandHandle_)[k2];
+		pat::PackedCandidate kaonCand2((*pfCandHandle_)[k2]);
+		kaonCand2.setMass(KaonMass_);
 		if (deltaR(muon1, kaonCand2) < 0.01 || deltaR(muon2, kaonCand2) < 0.01) continue;
 		if (kaonCand2.charge() == 0 ) continue;
 		if (!kaonCand2.hasTrackDetails()) continue;
