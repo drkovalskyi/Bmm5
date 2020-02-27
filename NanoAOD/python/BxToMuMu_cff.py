@@ -91,12 +91,6 @@ kinematic_pset = cms.PSet(
     kin_pvlipErr = Var("userFloat('kin_pvlipErr')",    float, doc = "Kinematic fit: longitudinal impact parameter uncertainty wrt Primary Vertex"),
     kin_pv2lip   = Var("userFloat('kin_pv2lip')",       float, doc = "Kinematic fit: longitudinal impact parameter wrt Second best Primary Vertex"),
     kin_pv2lipErr = Var("userFloat('kin_pv2lipErr')",    float, doc = "Kinematic fit: longitudinal impact parameter uncertainty wrt Second best Primary Vertex"),
-    kin_mu1pt    = Var("userFloat('kin_mu1pt')",       float, doc = "Kinematic fit: refitted muon 1 pt"),
-    kin_mu1eta   = Var("userFloat('kin_mu1eta')",      float, doc = "Kinematic fit: refitted muon 1 eta"),
-    kin_mu1phi   = Var("userFloat('kin_mu1phi')",      float, doc = "Kinematic fit: refitted muon 1 phi"),
-    kin_mu2pt    = Var("userFloat('kin_mu2pt')",       float, doc = "Kinematic fit: refitted muon 2 pt"),
-    kin_mu2eta   = Var("userFloat('kin_mu2eta')",      float, doc = "Kinematic fit: refitted muon 2 eta"),
-    kin_mu2phi   = Var("userFloat('kin_mu2phi')",      float, doc = "Kinematic fit: refitted muon 2 phi"),
 )
 
 BxToMuMuDiMuonTableVariables = merge_psets(
@@ -126,6 +120,13 @@ BxToMuMuDiMuonTableVariables = merge_psets(
         kal_mass     = Var("userFloat('kalman_mass')",     float, doc = "Kalman vertex refitted mass"),
         kal_lxy      = Var("userFloat('kalman_lxy')",      float, doc = "Kalman fit vertex displacement in XY plane"),
         kal_slxy     = Var("userFloat('kalman_sigLxy')",   float, doc = "Kalman fit vertex displacement significance in XY plane"),
+        # Kinematic Fit daugter info
+        kin_mu1pt    = Var("userFloat('kin_mu1pt')",       float, doc = "Kinematic fit: refitted muon 1 pt"),
+        kin_mu1eta   = Var("userFloat('kin_mu1eta')",      float, doc = "Kinematic fit: refitted muon 1 eta"),
+        kin_mu1phi   = Var("userFloat('kin_mu1phi')",      float, doc = "Kinematic fit: refitted muon 1 phi"),
+        kin_mu2pt    = Var("userFloat('kin_mu2pt')",       float, doc = "Kinematic fit: refitted muon 2 pt"),
+        kin_mu2eta   = Var("userFloat('kin_mu2eta')",      float, doc = "Kinematic fit: refitted muon 2 eta"),
+        kin_mu2phi   = Var("userFloat('kin_mu2phi')",      float, doc = "Kinematic fit: refitted muon 2 phi"),
         ),
     kinematic_pset
 )
@@ -203,6 +204,13 @@ BxToMuMuBToKmumuTableVariables =  merge_psets(
         bmm_m2iso      = Var("userFloat('bmm_m2iso')",       float, doc = "Muon isolation the way it's done in Bmm4 (BtoJpsiK as Bmm)"),
         bmm_iso        = Var("userFloat('bmm_iso')",         float, doc = "B isolation the way it's done in Bmm4 (BtoJpsiK as Bmm)"),
         bmm_bdt        = Var("userFloat('bmm_bdt')",         float, doc = "BDT (BtoJpsiK as Bmm)"),
+        # Kinematic Fit daugter info
+        nomc_kaon1pt    = Var("userFloat('nomc_kaon1pt')",       float, doc = "Kinematic fit (no Jpsi mass constraint): refitted kaon 1 pt"),
+        nomc_kaon1eta   = Var("userFloat('nomc_kaon1eta')",      float, doc = "Kinematic fit (no Jpsi mass constraint): refitted kaon 1 eta"),
+        nomc_kaon1phi   = Var("userFloat('nomc_kaon1phi')",      float, doc = "Kinematic fit (no Jpsi mass constraint): refitted kaon 1 phi"),
+        jpsimc_kaon1pt    = Var("userFloat('jpsimc_kaon1pt')",       float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 pt"),
+        jpsimc_kaon1eta   = Var("userFloat('jpsimc_kaon1eta')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 eta"),
+        jpsimc_kaon1phi   = Var("userFloat('jpsimc_kaon1phi')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 phi"),
     )
 )
 
@@ -270,6 +278,11 @@ BxToMuMuBToKKmumuTableVariables =  merge_psets(
         kaon2_sdxy_bs   = Var("userFloat('kaon2_sdxy_bs')",    float, doc = "Kaon2 impact parameter significance wrt the beam spot"),
         kk_mass         = Var("userFloat('kk_mass')",          float, doc = "Mass of two kaons"),
         jpsikk_kk_mass = Var("userFloat('jpsikk_kk_mass')",    float, doc = "Mass of two kaons refitted"),
+        # Kinematic Fit daugter info
+        jpsikk_kaon1pt    = Var("userFloat('jpsikk_kaon1pt')",       float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 pt"),
+        jpsikk_kaon1eta   = Var("userFloat('jpsikk_kaon1eta')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 eta"),
+        jpsikk_kaon1phi   = Var("userFloat('jpsikk_kaon1phi')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 phi"),
+
         # kaon2_mu1_doca  = Var("userFloat('kaon2_mu1_doca')",   float, doc = "Kaon2 distance of closest approach to muon1"),
         # kaon2_mu2_doca  = Var("userFloat('kaon2_mu2_doca')",   float, doc = "Kaon2 distance of closest approach to muon2"),
     #     bmm_nTrks      = Var("userInt('bmm_nTrks')",         int,   doc = "Number of tracks compatible with the vertex by vertex probability (BtoJpsiK as Bmm)"),

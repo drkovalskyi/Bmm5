@@ -47,6 +47,18 @@
 
 typedef reco::Candidate::LorentzVector LorentzVector;
 
+namespace {
+  const float MuonMass_    = 0.10565837;
+  const float MuonMassErr_ = 3.5*1e-9;
+  const float KaonMass_    = 0.493677;
+  const float KaonMassErr_ = 1.6e-5;
+  const float pionMass_    = 0.139570;
+  const float pionMassErr_ = 3.5e-7;
+  const float JPsiMass_    = 3.0969;
+  const float JPsiMassErr_ = 92.9e-6;
+};
+
+
 struct KinematicFitResult{
   bool treeIsValid;
   bool vertexIsValid;
@@ -514,15 +526,6 @@ private:
   TMVA::Reader  bdtReader1_;
   TMVA::Reader  bdtReader2_;
     
-  float MuonMass_    = 0.10565837;
-  float MuonMassErr_ = 3.5*1e-9;
-  float KaonMass_    = 0.493677;
-  float KaonMassErr_ = 1.6e-5;
-  float pionMass_    = 0.139570;
-  float pionMassErr_ = 3.5e-7;
-  float JPsiMass_    = 3.0969;
-  float JPsiMassErr_ = 92.9e-6;
-
 };
 
 BxToMuMuProducer::BxToMuMuProducer(const edm::ParameterSet &iConfig):
@@ -566,44 +569,71 @@ bool BxToMuMuProducer::isGoodMuon(const pat::Muon& muon){
   return true;
 }
 
-void addFitInfo(pat::CompositeCandidate& cand, const KinematicFitResult& fit, std::string name, 
-		const DisplacementInformationIn3D& displacement3d = DisplacementInformationIn3D() ){
-  cand.addUserInt(   name+"_valid",       fit.valid() );
-  cand.addUserFloat( name+"_vtx_prob",    fit.vtxProb() );
-  cand.addUserFloat( name+"_vtx_chi2dof", fit.chi2()>0?fit.chi2()/fit.ndof():-1);
-  cand.addUserFloat( name+"_mass",        fit.mass() );
-  cand.addUserFloat( name+"_massErr",     fit.massErr() );
-  cand.addUserFloat( name+"_lxy",         fit.lxy );
-  cand.addUserFloat( name+"_sigLxy",      fit.sigLxy );
-  cand.addUserFloat( name+"_cosAlphaXY",  fit.cosAlpha );
-  cand.addUserFloat( name+"_alpha",       fabs(displacement3d.cosAlpha)<=1?acos(displacement3d.cosAlpha):-999. );
-  cand.addUserFloat( name+"_vtx_x",       fit.valid()?fit.refitVertex->position().x():0 );
-  cand.addUserFloat( name+"_vtx_xErr",    fit.valid()?sqrt(fit.refitVertex->error().cxx()):0 );
-  cand.addUserFloat( name+"_vtx_y",       fit.valid()?fit.refitVertex->position().y():0 );
-  cand.addUserFloat( name+"_vtx_yErr",    fit.valid()?sqrt(fit.refitVertex->error().cyy()):0 );
-  cand.addUserFloat( name+"_vtx_z",       fit.valid()?fit.refitVertex->position().z():0 );
-  cand.addUserFloat( name+"_vtx_zErr",    fit.valid()?sqrt(fit.refitVertex->error().czz()):0 );
-  cand.addUserFloat( name+"_pt",          fit.p3().perp() );
-  cand.addUserFloat( name+"_eta",         fit.p3().eta() );
-  cand.addUserFloat( name+"_mu1pt",       fit.dau_p3(0).perp() );
-  cand.addUserFloat( name+"_mu1eta",      fit.dau_p3(0).eta() );
-  cand.addUserFloat( name+"_mu1phi",      fit.dau_p3(0).phi() );
-  cand.addUserFloat( name+"_mu2pt",       fit.dau_p3(1).perp() );
-  cand.addUserFloat( name+"_mu2eta",      fit.dau_p3(1).eta() );
-  cand.addUserFloat( name+"_mu2phi",      fit.dau_p3(1).phi() );
-  
-  // IP info
-  cand.addUserFloat( name+"_l3d",         displacement3d.decayLength);
-  cand.addUserFloat( name+"_sl3d",        displacement3d.decayLengthErr>0?displacement3d.decayLength/displacement3d.decayLengthErr:0);
-  cand.addUserFloat( name+"_pv_z",        displacement3d.pv?displacement3d.pv->position().z():0);
-  cand.addUserFloat( name+"_pv_zErr",     displacement3d.pv?displacement3d.pv->zError():0);
-  cand.addUserFloat( name+"_pvip",        displacement3d.distaceOfClosestApproach);
-  cand.addUserFloat( name+"_pvipErr",     displacement3d.distaceOfClosestApproachErr);
-  cand.addUserFloat( name+"_pvlip",       displacement3d.longitudinalImpactParameter);
-  cand.addUserFloat( name+"_pvlipErr",    displacement3d.longitudinalImpactParameterErr);
-  cand.addUserFloat( name+"_pv2lip",      displacement3d.longitudinalImpactParameter2);
-  cand.addUserFloat( name+"_pv2lipErr",   displacement3d.longitudinalImpactParameter2Err);
-  cand.addUserInt(   name+"_pvIndex",     displacement3d.pvIndex);
+namespace {
+  void addFitInfo(pat::CompositeCandidate& cand, const KinematicFitResult& fit, std::string name, 
+		  const DisplacementInformationIn3D& displacement3d = DisplacementInformationIn3D() ){
+    cand.addUserInt(   name+"_valid",       fit.valid() );
+    cand.addUserFloat( name+"_vtx_prob",    fit.vtxProb() );
+    cand.addUserFloat( name+"_vtx_chi2dof", fit.chi2()>0?fit.chi2()/fit.ndof():-1);
+    cand.addUserFloat( name+"_mass",        fit.mass() );
+    cand.addUserFloat( name+"_massErr",     fit.massErr() );
+    cand.addUserFloat( name+"_lxy",         fit.lxy );
+    cand.addUserFloat( name+"_sigLxy",      fit.sigLxy );
+    cand.addUserFloat( name+"_cosAlphaXY",  fit.cosAlpha );
+    cand.addUserFloat( name+"_alpha",       fabs(displacement3d.cosAlpha)<=1?acos(displacement3d.cosAlpha):-999. );
+    cand.addUserFloat( name+"_vtx_x",       fit.valid()?fit.refitVertex->position().x():0 );
+    cand.addUserFloat( name+"_vtx_xErr",    fit.valid()?sqrt(fit.refitVertex->error().cxx()):0 );
+    cand.addUserFloat( name+"_vtx_y",       fit.valid()?fit.refitVertex->position().y():0 );
+    cand.addUserFloat( name+"_vtx_yErr",    fit.valid()?sqrt(fit.refitVertex->error().cyy()):0 );
+    cand.addUserFloat( name+"_vtx_z",       fit.valid()?fit.refitVertex->position().z():0 );
+    cand.addUserFloat( name+"_vtx_zErr",    fit.valid()?sqrt(fit.refitVertex->error().czz()):0 );
+    cand.addUserFloat( name+"_pt",          fit.p3().perp() );
+    cand.addUserFloat( name+"_eta",         fit.p3().eta() );
+    
+    // IP info
+    cand.addUserFloat( name+"_l3d",         displacement3d.decayLength);
+    cand.addUserFloat( name+"_sl3d",        displacement3d.decayLengthErr>0?displacement3d.decayLength/displacement3d.decayLengthErr:0);
+    cand.addUserFloat( name+"_pv_z",        displacement3d.pv?displacement3d.pv->position().z():0);
+    cand.addUserFloat( name+"_pv_zErr",     displacement3d.pv?displacement3d.pv->zError():0);
+    cand.addUserFloat( name+"_pvip",        displacement3d.distaceOfClosestApproach);
+    cand.addUserFloat( name+"_pvipErr",     displacement3d.distaceOfClosestApproachErr);
+    cand.addUserFloat( name+"_pvlip",       displacement3d.longitudinalImpactParameter);
+    cand.addUserFloat( name+"_pvlipErr",    displacement3d.longitudinalImpactParameterErr);
+    cand.addUserFloat( name+"_pv2lip",      displacement3d.longitudinalImpactParameter2);
+    cand.addUserFloat( name+"_pv2lipErr",   displacement3d.longitudinalImpactParameter2Err);
+    cand.addUserInt(   name+"_pvIndex",     displacement3d.pvIndex);
+
+    // Refitted daughter information
+    std::vector<GlobalVector> muons;
+    std::vector<GlobalVector> kaons;
+    for (auto dau: fit.refitDaughters){
+      if (fabs(dau->currentState().mass()-MuonMass_)<0.001)
+	muons.push_back(dau->currentState().globalMomentum());
+      if (fabs(dau->currentState().mass()-KaonMass_)<0.001)
+	kaons.push_back(dau->currentState().globalMomentum());
+    }
+    std::cout << "Daughter info availability for " << name << " :" << std::endl;
+    std::cout << "\tmuons: " << muons.size() << std::endl;
+    std::cout << "\tkaons: " << kaons.size() << std::endl;
+    if (muons.size()==2){
+      cand.addUserFloat( name+"_mu1pt",       muons.at(0).perp() );
+      cand.addUserFloat( name+"_mu1eta",      muons.at(0).eta() );
+      cand.addUserFloat( name+"_mu1phi",      muons.at(0).phi() );
+      cand.addUserFloat( name+"_mu2pt",       muons.at(1).perp() );
+      cand.addUserFloat( name+"_mu2eta",      muons.at(1).eta() );
+      cand.addUserFloat( name+"_mu2phi",      muons.at(1).phi() );
+    }
+    if (kaons.size()>0){
+      cand.addUserFloat( name+"_kaon1pt",       kaons.at(0).perp() );
+      cand.addUserFloat( name+"_kaon1eta",      kaons.at(0).eta() );
+      cand.addUserFloat( name+"_kaon1phi",      kaons.at(0).phi() );
+      if (kaons.size()>1){
+	cand.addUserFloat( name+"_kaon2pt",       kaons.at(1).perp() );
+	cand.addUserFloat( name+"_kaon2eta",      kaons.at(1).eta() );
+	cand.addUserFloat( name+"_kaon2phi",      kaons.at(1).phi() );
+      }
+    }
+  }
 }
 
 CloseTrackInfo 
@@ -1251,10 +1281,10 @@ BxToMuMuProducer::vertexWithKinematicFitter(std::vector<const reco::Track*> trks
 
   double chi = 0.;
   double ndf = 0.;
-
+  float muonMassErr(MuonMassErr_);
   for (unsigned int i=0; i<trks.size(); ++i){
     transTrks.push_back((*theTTBuilder_).build(trks[i]));
-    particles.push_back(factory.particle(transTrks.back(),masses[i],chi,ndf,MuonMassErr_));
+    particles.push_back(factory.particle(transTrks.back(),masses[i],chi,ndf,muonMassErr));
   }
 
   RefCountedKinematicTree vertexFitTree = fitter.fit(particles);
@@ -1336,7 +1366,8 @@ BxToMuMuProducer::fitBToKJPsiMuMu( RefCountedKinematicParticle refitMuMu,
   }
 
   BToKMuMuParticles.push_back(partFactory.particle(mmTT,MuMu_mass,chi,ndf,MuMu_mass_err));
-  BToKMuMuParticles.push_back(partFactory.particle(kaonTT,KaonMass_,chi,ndf,KaonMassErr_));
+  float kaonMassErr(KaonMassErr_);
+  BToKMuMuParticles.push_back(partFactory.particle(kaonTT,KaonMass_,chi,ndf,kaonMassErr));
 
   RefCountedKinematicTree vertexFitTree = fitter.fit(BToKMuMuParticles);
   KinematicFitResult result; 
@@ -1395,7 +1426,8 @@ BxToMuMuProducer::fitBToKJPsiMuMuNew( RefCountedKinematicTree jpsiTree,
 
   jpsiTree->movePointerToTheTop();
   BToKMuMuParticles.push_back(jpsiTree->currentParticle());
-  BToKMuMuParticles.push_back(partFactory.particle(kaonTT,KaonMass_,chi,ndf,KaonMassErr_));
+  float kaonMassErr(KaonMassErr_);
+  BToKMuMuParticles.push_back(partFactory.particle(kaonTT,KaonMass_,chi,ndf,kaonMassErr));
 
   RefCountedKinematicTree vertexFitTree = fitter.fit(BToKMuMuParticles);
 
@@ -1454,9 +1486,10 @@ BxToMuMuProducer::fitBToKKMuMu( RefCountedKinematicTree jpsiTree,
   double ndf = 0.;
 
   jpsiTree->movePointerToTheTop();
+  float kaonMassErr(KaonMassErr_);
   BToKKMuMuParticles.push_back(jpsiTree->currentParticle());
-  BToKKMuMuParticles.push_back(partFactory.particle(kaonTT1,KaonMass_,chi,ndf,KaonMassErr_));
-  BToKKMuMuParticles.push_back(partFactory.particle(kaonTT2,KaonMass_,chi,ndf,KaonMassErr_));
+  BToKKMuMuParticles.push_back(partFactory.particle(kaonTT1,KaonMass_,chi,ndf,kaonMassErr));
+  BToKKMuMuParticles.push_back(partFactory.particle(kaonTT2,KaonMass_,chi,ndf,kaonMassErr));
 
   RefCountedKinematicTree vertexFitTree = fitter.fit(BToKKMuMuParticles);
 
