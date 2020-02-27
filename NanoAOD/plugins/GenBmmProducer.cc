@@ -54,11 +54,13 @@ GenBmmProducer::GenBmmProducer(const edm::ParameterSet &iConfig):
   packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( edm::InputTag( "packedGenParticles" ) ) )
 {
   produces<pat::CompositeCandidateCollection>("genbmm");
+  produces<pat::CompositeCandidateCollection>("gensummary");
 }
 
 void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // Output collection
   auto b2kkmm = std::make_unique<pat::CompositeCandidateCollection>();
+  auto genbinfo = std::make_unique<pat::CompositeCandidateCollection>();
     
   edm::Handle<std::vector<reco::GenParticle> > pruned;
   iEvent.getByToken(prunedGenToken_,pruned);
@@ -76,17 +78,24 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
 
   std::vector<const reco::Candidate*> b_hadrons;
   
-  for (auto const & bHadron: *pruned){
+  unsigned int n_bs(0);
+  unsigned int n_anti_bs(0);
+  for (auto const & cand: *pruned){
+    if (cand.status()>=21 and cand.status()<=29){
+      if (cand.pdgId()==5) n_bs++;
+      if (cand.pdgId()==-5) n_anti_bs++;
+    }
+
     // keep only interesting b-hadrons
-    if( abs(bHadron.pdgId()) != 521     // B+/-
-	and abs(bHadron.pdgId()) != 511 // B
-	and abs(bHadron.pdgId()) != 531 )// Bs 
+    if( abs(cand.pdgId()) != 521     // B+/-
+	and abs(cand.pdgId()) != 511 // B
+	and abs(cand.pdgId()) != 531 )// Bs 
       continue;
 
     // check direct daughter infor for signs of neutral B oscilations
     bool final_b = true;
-    for (auto const& daughter: bHadron.daughterRefVector()){
-      if (daughter->pdgId() == -bHadron.pdgId()){
+    for (auto const& daughter: cand.daughterRefVector()){
+      if (daughter->pdgId() == -cand.pdgId()){
 	final_b = false;
 	break;
       }
@@ -102,7 +111,7 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
 
     for (auto const& cand: *packed){
       auto mother = cand.mother(0);
-      if (mother and isAncestor(&bHadron,mother)){
+      if (mother and isAncestor(&cand,mother)){
 	if (cand.pdgId()!=22){
 	  signature *= cand.pdgId();
 	  if (abs(cand.pdgId()) == 13)  muons.push_back(&cand);
@@ -121,11 +130,11 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
 
     // fill information
     pat::CompositeCandidate bCand;
-    bCand.addUserInt("pdgId",  bHadron.pdgId());
-    bCand.addUserFloat("pt",   bHadron.pt());
-    bCand.addUserFloat("eta",  bHadron.eta());
-    bCand.addUserFloat("phi",  bHadron.phi());
-    bCand.addUserFloat("mass", bHadron.mass());
+    bCand.addUserInt("pdgId",  cand.pdgId());
+    bCand.addUserFloat("pt",   cand.pt());
+    bCand.addUserFloat("eta",  cand.eta());
+    bCand.addUserFloat("phi",  cand.phi());
+    bCand.addUserFloat("mass", cand.mass());
 
     // dimuon info
     std::sort(muons.begin(), muons.end(), order_by_pt);
@@ -160,7 +169,25 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     b2kkmm->push_back(bCand);
 
   }
+  // fill information
+  pat::CompositeCandidate bgen;
+  bgen.addUserInt("n_b",  n_bs);
+  bgen.addUserInt("n_anti_b",  n_anti_bs);
+  
+  unsigned int processType(0);
+  if (n_bs==0 and n_anti_bs==0){
+    processType = 42; // gluon splitting
+  }else{
+    if (n_bs==0 or n_anti_bs==0){
+      processType = 41; // flavor excitation
+    }else{
+      processType = 40; // gluon fusion
+    }
+  }
+  bgen.addUserInt("process_type",processType);
+  genbinfo->push_back(bgen);
 
   iEvent.put(std::move(b2kkmm),"genbmm");
+  iEvent.put(std::move(genbinfo),"gensummary");
 }
 DEFINE_FWK_MODULE(GenBmmProducer);

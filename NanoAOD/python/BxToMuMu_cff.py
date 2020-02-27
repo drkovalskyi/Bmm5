@@ -396,7 +396,23 @@ BxToMuMuGenTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer",
     variables = BxToMuMuGenVars
 )
 
+BxToMuMuGenSummaryVars = cms.PSet(
+    n_b          = Var("userInt('n_b')",          int, doc = "Number of b-quarks in hard scatter"),
+    n_anti_b     = Var("userInt('n_anti_b')",     int, doc = "Number of anti b-quarks in hard scatter"),
+    process_type = Var("userInt('process_type')", int, doc = "Process type for Bmm analysis")
+)
+
+BxToMuMuGenSummaryTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("BxToMuMuGen","gensummary"),
+    cut=cms.string(""),
+    name=cms.string("gensummary"),
+    doc=cms.string("GenInfo Variables for Bmm5"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = BxToMuMuGenSummaryVars
+)
+
 BxToMuMuSequence   = cms.Sequence(BxToMuMu)
-BxToMuMuMcSequence = cms.Sequence(BxToMuMuMc * BxToMuMuGen)
+BxToMuMuMcSequence = cms.Sequence(BxToMuMuMc * BxToMuMuGen )
 BxToMuMuTables     = cms.Sequence(BxToMuMuDiMuonTable   * BxToMuMuBToKmumuTable * BxToMuMuBToKKmumuTable)
-BxToMuMuMcTables   = cms.Sequence(BxToMuMuDiMuonMcTable * BxToMuMuBToKmumuMcTable * BxToMuMuBToKKmumuMcTable * BxToMuMuGenTable)
+BxToMuMuMcTables   = cms.Sequence(BxToMuMuDiMuonMcTable * BxToMuMuBToKmumuMcTable * BxToMuMuBToKKmumuMcTable * BxToMuMuGenTable * BxToMuMuGenSummaryTable)
