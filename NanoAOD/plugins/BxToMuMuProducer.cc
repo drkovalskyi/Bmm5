@@ -612,9 +612,9 @@ namespace {
       if (fabs(dau->currentState().mass()-KaonMass_)<0.001)
 	kaons.push_back(dau->currentState().globalMomentum());
     }
-    std::cout << "Daughter info availability for " << name << " :" << std::endl;
-    std::cout << "\tmuons: " << muons.size() << std::endl;
-    std::cout << "\tkaons: " << kaons.size() << std::endl;
+    // std::cout << "Daughter info availability for " << name << " :" << std::endl;
+    // std::cout << "\tmuons: " << muons.size() << std::endl;
+    // std::cout << "\tkaons: " << kaons.size() << std::endl;
     if (muons.size()==2){
       cand.addUserFloat( name+"_mu1pt",       muons.at(0).perp() );
       cand.addUserFloat( name+"_mu1eta",      muons.at(0).eta() );
