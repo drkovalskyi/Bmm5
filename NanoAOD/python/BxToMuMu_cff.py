@@ -286,6 +286,9 @@ BxToMuMuBToKKmumuTableVariables =  merge_psets(
         jpsikk_kaon1pt    = Var("userFloat('jpsikk_kaon1pt')",       float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 pt"),
         jpsikk_kaon1eta   = Var("userFloat('jpsikk_kaon1eta')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 eta"),
         jpsikk_kaon1phi   = Var("userFloat('jpsikk_kaon1phi')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 phi"),
+        jpsikk_kaon2pt    = Var("userFloat('jpsikk_kaon2pt')",       float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 2 pt"),
+        jpsikk_kaon2eta   = Var("userFloat('jpsikk_kaon2eta')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 2 eta"),
+        jpsikk_kaon2phi   = Var("userFloat('jpsikk_kaon2phi')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 2 phi"),
 
         # kaon2_mu1_doca  = Var("userFloat('kaon2_mu1_doca')",   float, doc = "Kaon2 distance of closest approach to muon1"),
         # kaon2_mu2_doca  = Var("userFloat('kaon2_mu2_doca')",   float, doc = "Kaon2 distance of closest approach to muon2"),

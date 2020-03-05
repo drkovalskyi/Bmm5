@@ -573,7 +573,9 @@ bool BxToMuMuProducer::isGoodMuon(const pat::Muon& muon){
 
 namespace {
   void addFitInfo(pat::CompositeCandidate& cand, const KinematicFitResult& fit, std::string name, 
-		  const DisplacementInformationIn3D& displacement3d = DisplacementInformationIn3D() ){
+		  const DisplacementInformationIn3D& displacement3d = DisplacementInformationIn3D(),
+		  int firstMuonDaughterIndex = -1, int secondMuonDaughterIndex = -1,
+		  int firstKaonDaughterIndex = -1, int secondKaonDaughterIndex = -1 ){
     cand.addUserInt(   name+"_valid",       fit.valid() );
     cand.addUserFloat( name+"_vtx_prob",    fit.vtxProb() );
     cand.addUserFloat( name+"_vtx_chi2dof", fit.chi2()>0?fit.chi2()/fit.ndof():-1);
@@ -612,34 +614,25 @@ namespace {
     cand.addUserFloat( name+"_tauxye",      displacement3d.decayTimeXYError);
 
     // Refitted daughter information
-    std::vector<GlobalVector> muons;
-    std::vector<GlobalVector> kaons;
-    for (auto dau: fit.refitDaughters){
-      if (fabs(dau->currentState().mass()-MuonMass_)<0.001)
-	muons.push_back(dau->currentState().globalMomentum());
-      if (fabs(dau->currentState().mass()-KaonMass_)<0.001)
-	kaons.push_back(dau->currentState().globalMomentum());
+    if (firstMuonDaughterIndex>=0){
+      cand.addUserFloat( name+"_mu1pt",       fit.dau_p3(firstMuonDaughterIndex).perp() );
+      cand.addUserFloat( name+"_mu1eta",      fit.dau_p3(firstMuonDaughterIndex).eta() );
+      cand.addUserFloat( name+"_mu1phi",      fit.dau_p3(firstMuonDaughterIndex).phi() );
     }
-    // std::cout << "Daughter info availability for " << name << " :" << std::endl;
-    // std::cout << "\tmuons: " << muons.size() << std::endl;
-    // std::cout << "\tkaons: " << kaons.size() << std::endl;
-    if (muons.size()==2){
-      cand.addUserFloat( name+"_mu1pt",       muons.at(0).perp() );
-      cand.addUserFloat( name+"_mu1eta",      muons.at(0).eta() );
-      cand.addUserFloat( name+"_mu1phi",      muons.at(0).phi() );
-      cand.addUserFloat( name+"_mu2pt",       muons.at(1).perp() );
-      cand.addUserFloat( name+"_mu2eta",      muons.at(1).eta() );
-      cand.addUserFloat( name+"_mu2phi",      muons.at(1).phi() );
+    if (secondMuonDaughterIndex>=0){
+      cand.addUserFloat( name+"_mu2pt",       fit.dau_p3(secondMuonDaughterIndex).perp() );
+      cand.addUserFloat( name+"_mu2eta",      fit.dau_p3(secondMuonDaughterIndex).eta() );
+      cand.addUserFloat( name+"_mu2phi",      fit.dau_p3(secondMuonDaughterIndex).phi() );
     }
-    if (kaons.size()>0){
-      cand.addUserFloat( name+"_kaon1pt",       kaons.at(0).perp() );
-      cand.addUserFloat( name+"_kaon1eta",      kaons.at(0).eta() );
-      cand.addUserFloat( name+"_kaon1phi",      kaons.at(0).phi() );
-      if (kaons.size()>1){
-	cand.addUserFloat( name+"_kaon2pt",       kaons.at(1).perp() );
-	cand.addUserFloat( name+"_kaon2eta",      kaons.at(1).eta() );
-	cand.addUserFloat( name+"_kaon2phi",      kaons.at(1).phi() );
-      }
+    if (firstKaonDaughterIndex>=0){
+      cand.addUserFloat( name+"_kaon1pt",     fit.dau_p3(firstKaonDaughterIndex).perp() );
+      cand.addUserFloat( name+"_kaon1eta",    fit.dau_p3(firstKaonDaughterIndex).eta() );
+      cand.addUserFloat( name+"_kaon1phi",    fit.dau_p3(firstKaonDaughterIndex).phi() );
+    }
+    if (secondKaonDaughterIndex>=0){
+      cand.addUserFloat( name+"_kaon2pt",     fit.dau_p3(secondKaonDaughterIndex).perp() );
+      cand.addUserFloat( name+"_kaon2eta",    fit.dau_p3(secondKaonDaughterIndex).eta() );
+      cand.addUserFloat( name+"_kaon2phi",    fit.dau_p3(secondKaonDaughterIndex).phi() );
     }
   }
 }
@@ -822,7 +815,7 @@ void BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
   // 	 kinematicMuMuVertexFit.refitVertex->position().y(),
   // 	 kinematicMuMuVertexFit.refitVertex->position().z());
   auto displacement3D = compute3dDisplacement(kinematicMuMuVertexFit, *pvHandle_.product(),true);
-  addFitInfo(dimuonCand, kinematicMuMuVertexFit, "kin", displacement3D);
+  addFitInfo(dimuonCand, kinematicMuMuVertexFit, "kin", displacement3D,0,1);
   
   if (isMC_){
     auto gen_mm = getGenMatchInfo(*prunedGenParticles_,muon1,muon2);
@@ -917,7 +910,7 @@ void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
   auto bToKJPsiMuMu_NoMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, kaon, false);
   bToKJPsiMuMu_NoMassConstraint.postprocess(*beamSpot_);
   auto bToKJPsiMuMu_NoMassConstraint_displacement = compute3dDisplacement(bToKJPsiMuMu_NoMassConstraint, *pvHandle_.product(),true);
-  addFitInfo(btokmmCand, bToKJPsiMuMu_NoMassConstraint, "nomc", bToKJPsiMuMu_NoMassConstraint_displacement);
+  addFitInfo(btokmmCand, bToKJPsiMuMu_NoMassConstraint, "nomc", bToKJPsiMuMu_NoMassConstraint_displacement,-1,-1,1);
   
   // worse performing option
   // auto bToKJPsiMuMuWithMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, kaon, true);
@@ -927,7 +920,7 @@ void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
   auto bToKJPsiMuMu_MassConstraint = fitBToKJPsiMuMuNew(kinematicMuMuVertexFit.refitTree, kaon, true);
   bToKJPsiMuMu_MassConstraint.postprocess(*beamSpot_);
   auto bToKJPsiMuMu_MassConstraint_displacement = compute3dDisplacement(bToKJPsiMuMu_MassConstraint, *pvHandle_.product(),true);
-  addFitInfo(btokmmCand, bToKJPsiMuMu_MassConstraint, "jpsimc", bToKJPsiMuMu_MassConstraint_displacement);
+  addFitInfo(btokmmCand, bToKJPsiMuMu_MassConstraint, "jpsimc", bToKJPsiMuMu_MassConstraint_displacement,-1,-1,1);
   
   // broken pointing constraint
   // auto bToKJPsiMuMu_MC_PC = refitWithPointingConstraint(bToKJPsiMuMu_MC.refitTree, primaryVertex);
@@ -982,7 +975,7 @@ void BxToMuMuProducer::fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
   auto bToKKJPsiMuMu = fitBToKKMuMu(kinematicMuMuVertexFit.refitTree, kaon1, kaon2, true);
   bToKKJPsiMuMu.postprocess(*beamSpot_);
   auto bToKKJPsiMuMu_displacement = compute3dDisplacement(bToKKJPsiMuMu, *pvHandle_.product(),true);
-  addFitInfo(bCand, bToKKJPsiMuMu, "jpsikk", bToKKJPsiMuMu_displacement);
+  addFitInfo(bCand, bToKKJPsiMuMu, "jpsikk", bToKKJPsiMuMu_displacement,-1,-1,1,2);
   bCand.addUserFloat("jpsikk_kk_mass",    bToKKJPsiMuMu.refit_mass(1,2));
 }
 
