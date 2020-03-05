@@ -99,13 +99,14 @@ struct KinematicFitResult{
     lxyErr = sqrt( v*(errVtx*v) + v*(errBS*v) ) / lxy;
     if (lxyErr > 0) sigLxy = lxy/lxyErr;
     
-    // compute cosAlpha
+    // compute cosAlpha 2D wrt BeamSpot
     v[0] = refitVertex->position().x()-beamSpot.position().x();
     v[1] = refitVertex->position().y()-beamSpot.position().y();
     TVector w(2);
     w[0] = refitMother->currentState().globalMomentum().x();
     w[1] = refitMother->currentState().globalMomentum().y();
     cosAlpha = v*w/sqrt(v.Norm2Sqr()*w.Norm2Sqr());
+
   }
   
   float mass() const
@@ -206,14 +207,15 @@ struct DisplacementInformationIn3D{
     distaceOfClosestApproach2, distaceOfClosestApproach2Err, 
     longitudinalImpactParameter, longitudinalImpactParameterErr,
     longitudinalImpactParameter2, longitudinalImpactParameter2Err,
-    cosAlpha;
+    cosAlpha,cosAlphaXY,decayTime,decayTimeError,decayTimeXY,decayTimeXYError;
   const reco::Vertex *pv,*pv2;
   int pvIndex,pv2Index;
   DisplacementInformationIn3D():decayLength(-1.0),decayLengthErr(0.),decayLength2(-1.0),decayLength2Err(0.),
 				distaceOfClosestApproach(-1.0),distaceOfClosestApproachErr(0.0),
 				distaceOfClosestApproach2(-1.0),distaceOfClosestApproach2Err(0.0),
 				longitudinalImpactParameter2(0.0), longitudinalImpactParameter2Err(0.), 
-				cosAlpha(-999.),
+				cosAlpha(-999.),cosAlphaXY(-999.),decayTime(-999.),decayTimeError(-999.),
+				decayTimeXY(-999.),decayTimeXYError(-999.),
 				pv(0),pv2(0),
 				pvIndex(-1),pv2Index(-1)
   {};
@@ -602,6 +604,12 @@ namespace {
     cand.addUserFloat( name+"_pv2lip",      displacement3d.longitudinalImpactParameter2);
     cand.addUserFloat( name+"_pv2lipErr",   displacement3d.longitudinalImpactParameter2Err);
     cand.addUserInt(   name+"_pvIndex",     displacement3d.pvIndex);
+
+    // DecayTime
+    cand.addUserFloat( name+"_tau",         displacement3d.decayTime);
+    cand.addUserFloat( name+"_taue",        displacement3d.decayTimeError);
+    cand.addUserFloat( name+"_tauxy",       displacement3d.decayTimeXY);
+    cand.addUserFloat( name+"_tauxye",      displacement3d.decayTimeXYError);
 
     // Refitted daughter information
     std::vector<GlobalVector> muons;
@@ -1796,6 +1804,82 @@ BxToMuMuProducer::distanceOfClosestApproach( const reco::Track* track,
   return doca;
 }
 
+namespace {
+  typedef ROOT::Math::SMatrix<double,3,3,ROOT::Math::MatRepSym<double,3> > cov33_t;
+  typedef ROOT::Math::SMatrix<double,6,6,ROOT::Math::MatRepSym<double,6> > cov66_t;
+  typedef ROOT::Math::SMatrix<double,7,7,ROOT::Math::MatRepSym<double,7> > cov77_t;
+  typedef ROOT::Math::SMatrix<double,9,9,ROOT::Math::MatRepSym<double,9> > cov99_t;
+  typedef ROOT::Math::SVector<double,9> jac9_t;
+  
+  cov33_t GlobalError2SMatrix_33(GlobalError m_in) 
+  {
+    cov33_t m_out;
+    for (int i=0; i<3; i++) {
+      for (int j=i; j<3; j++)  {
+	m_out(i,j) = m_in.matrix()(i,j);
+      }
+    }
+    return m_out;
+  }
+  
+  cov99_t makeCovarianceMatrix(const cov33_t cov_vtx1,
+			       const cov77_t cov_vtx2) 
+  {
+    cov99_t cov;
+    cov.Place_at(cov_vtx1,0,0);
+    cov.Place_at(cov_vtx2.Sub<cov66_t>(0,0),3,3);
+    return cov;
+  }
+
+  jac9_t makeJacobianVector3d(const AlgebraicVector3 &vtx1, 
+			      const AlgebraicVector3 &vtx2, 
+			      const AlgebraicVector3 &momentum) 
+  {
+    jac9_t jac;
+    const AlgebraicVector3 dist = vtx2 - vtx1;
+    const double factor2 = 1. / ROOT::Math::Mag2(momentum);
+    const double lifetime = ROOT::Math::Dot(dist, momentum) * factor2;
+    jac.Place_at(-momentum*factor2,0);
+    jac.Place_at( momentum*factor2,3);
+    jac.Place_at( factor2*(dist-2*lifetime*momentum*factor2),6);
+    return jac;
+  }
+  
+  jac9_t makeJacobianVector3d(const ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>,
+			      ROOT::Math::DefaultCoordinateSystemTag> &vtx1,
+			      const GlobalPoint &vtx2, const TVector3 &tv3momentum) 
+  {
+    return makeJacobianVector3d(AlgebraicVector3(vtx1.X(),vtx1.Y(),vtx1.Z()),
+				AlgebraicVector3(vtx2.x(),vtx2.y(),vtx2.z()),
+				AlgebraicVector3(tv3momentum.x(),tv3momentum.y(),tv3momentum.z()));
+  }
+
+  jac9_t makeJacobianVector2d(const AlgebraicVector3 &vtx1, const AlgebraicVector3 &vtx2,
+			      const AlgebraicVector3 &momentum) {
+    jac9_t jac;
+    const double momentumMag = ROOT::Math::Mag(momentum);
+    const AlgebraicVector3 dist = vtx2 - vtx1;
+    const double distMag = ROOT::Math::Mag(dist);
+    const double factorPositionComponent = 1./(distMag*momentumMag);
+    const double factorMomentumComponent = 1./pow(momentumMag,3);
+    jac(0)=-dist(0)*factorPositionComponent;
+    jac(1)=-dist(1)*factorPositionComponent;
+    jac(3)= dist(0)*factorPositionComponent;
+    jac(4)= dist(1)*factorPositionComponent;
+    jac(6)= momentum(0)*factorMomentumComponent;
+    jac(7)= momentum(1)*factorMomentumComponent;
+    return jac;
+  }
+  
+  jac9_t makeJacobianVector2d(const ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>,
+			      ROOT::Math::DefaultCoordinateSystemTag> &vtx1,
+			      const GlobalPoint &vtx2, const TVector3 &tv3momentum) {
+    return makeJacobianVector2d(AlgebraicVector3(vtx1.X(),vtx1.Y(),vtx1.Z()),
+				AlgebraicVector3(vtx2.x(),vtx2.y(),vtx2.z()),
+				AlgebraicVector3(tv3momentum.x(),tv3momentum.y(),tv3momentum.z()));
+  }
+}
+
 DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const KinematicFitResult& fit,
 								    const reco::VertexCollection& vertices,
 								    bool closestIn3D)
@@ -1881,6 +1965,9 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
   result.decayLength    = dist.value();
   result.decayLengthErr = dist.error();
   
+  VertexDistanceXY distanceXY;
+  auto distXY = distanceXY.distance(*bestVertex, fit.refitVertex->vertexState() );
+
   if (bestVertex2){
     auto impactParameter3D2 = IPTools::absoluteImpactParameter3D(candTransientTrack, *bestVertex2);
     auto impactParameterZ2  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), *bestVertex2);
@@ -1900,6 +1987,7 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
     auto dist = distance3D.distance(*bestVertex2, fit.refitVertex->vertexState() );
     result.decayLength2    = dist.value();
     result.decayLength2Err = dist.error();
+
   }
 
   // cosAlpha
@@ -1912,7 +2000,26 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
 	      fit.refitVertex->vertexState().position().y(), 
 	      fit.refitVertex->vertexState().position().z());
   TVector3 pDiff = p2-p1;
+  TVector3 pDiffXY = TVector3(pDiff.X(), pDiff.Y(), 0.);
+  TVector3 ptrans  = TVector3(plab.X(), plab.Y(), 0.);
   result.cosAlpha  = plab.Dot(pDiff) / (plab.Mag() * pDiff.Mag());
+  result.cosAlphaXY  = ptrans.Dot(pDiffXY) / (ptrans.Mag() * pDiffXY.Mag());
+
+  // compute decayTime information
+
+  const double massOverC = fit.mass()/TMath::Ccgs();
+
+  // get covariance matrix for error propagation in decayTime calculation
+  auto vtxDistanceCov = makeCovarianceMatrix(GlobalError2SMatrix_33(bestVertex->error()),
+					     fit.refitMother->currentState().kinematicParametersError().matrix());
+  auto vtxDistanceJac3d = makeJacobianVector3d(bestVertex->position(), fit.refitVertex->vertexState().position(), plab);
+  auto vtxDistanceJac2d = makeJacobianVector2d(bestVertex->position(), fit.refitVertex->vertexState().position(), plab);
+
+  result.decayTime = dist.value() / plab.Mag() * result.cosAlpha * massOverC;
+  result.decayTimeError = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac3d)) * massOverC;
+
+  result.decayTimeXY = distXY.value() / plab.Perp() * result.cosAlphaXY * massOverC;
+  result.decayTimeXYError = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac2d)) * massOverC;
     
   return result;
 }
