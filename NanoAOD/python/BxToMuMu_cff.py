@@ -154,6 +154,7 @@ BxToMuMuDiMuonMcTableVariables = merge_psets(
         gen_vtx_z      = Var("userFloat('gen_vtx_z')",      float,   doc = "Gen match: dimuon vertex z"),
         gen_l3d        = Var("userFloat('gen_l3d')",        float,   doc = "Gen match: dimuon decay legnth 3D"),
         gen_lxy        = Var("userFloat('gen_lxy')",        float,   doc = "Gen match: dimuon decay legnth XY"),
+        gen_tau        = Var("userFloat('gen_tau')",        float,   doc = "Gen match: dimuon decay time 3D"),
         ),
 )
 
@@ -232,6 +233,7 @@ BxToMuMuBToKmumuMcTableVariables = merge_psets(
         gen_prod_z      = Var("userFloat('gen_prod_z')",      float, doc = "Gen match: kmm mother production vertex z"),
         gen_l3d         = Var("userFloat('gen_l3d')",         float, doc = "Gen match: kmm decay legnth 3D"),
         gen_lxy         = Var("userFloat('gen_lxy')",         float, doc = "Gen match: kmm decay legnth XY"),
+        gen_tau         = Var("userFloat('gen_tau')",         float, doc = "Gen match: kmm decay time 3D"),
     )
 )
         
@@ -324,6 +326,7 @@ BxToMuMuBToKKmumuMcTableVariables = merge_psets(
         gen_prod_z      = Var("userFloat('gen_prod_z')",      float, doc = "Gen match: kkmm mother production vertex z"),
         gen_l3d         = Var("userFloat('gen_l3d')",         float, doc = "Gen match: kkmm decay legnth 3D"),
         gen_lxy         = Var("userFloat('gen_lxy')",         float, doc = "Gen match: kkmm decay legnth XY"),
+        gen_tau         = Var("userFloat('gen_tau')",         float, doc = "Gen match: kkmm decay time 3D"),
     )
 )
 
