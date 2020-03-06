@@ -601,6 +601,7 @@ namespace {
     cand.addUserFloat( name+"_vtx_zErr",    fit.valid()?sqrt(fit.refitVertex->error().czz()):0 );
     cand.addUserFloat( name+"_pt",          fit.p3().perp() );
     cand.addUserFloat( name+"_eta",         fit.p3().eta() );
+    cand.addUserFloat( name+"_phi",         fit.p3().phi() );
     
     // IP info
     cand.addUserFloat( name+"_l3d",         displacement3d.decayLength);
