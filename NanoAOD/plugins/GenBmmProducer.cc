@@ -109,15 +109,15 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     std::vector<const reco::Candidate*> kaons;
     LorentzVector radiation;
 
-    for (auto const& cand: *packed){
-      auto mother = cand.mother(0);
+    for (auto const& dau: *packed){
+      auto mother = dau.mother(0);
       if (mother and isAncestor(&cand,mother)){
-	if (cand.pdgId()!=22){
-	  signature *= cand.pdgId();
-	  if (abs(cand.pdgId()) == 13)  muons.push_back(&cand);
-	  if (abs(cand.pdgId()) == 321) kaons.push_back(&cand);
+	if (dau.pdgId()!=22){
+	  signature *= dau.pdgId();
+	  if (abs(dau.pdgId()) == 13)  muons.push_back(&dau);
+	  if (abs(dau.pdgId()) == 321) kaons.push_back(&dau);
 	} else {
-	  radiation += cand.p4();
+	  radiation += dau.p4();
 	}
       }
     }
@@ -125,7 +125,7 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     // skip irrelevant signatures
     if ( (signature != 13*13*321*321)      // kkmm
 	 and (abs(signature) != 13*13*321) // kmm
-	 and (signature != 13*13) )        // mm
+	 and (signature != -13*13) )        // mm
       continue;
 
     // fill information
