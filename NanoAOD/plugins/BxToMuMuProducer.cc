@@ -418,6 +418,9 @@ private:
   float 
   distanceOfClosestApproach( const reco::Track* track1,
 			     const reco::Track* track2 );
+  float 
+  distanceOfClosestApproach( const reco::GenParticle* track1,
+			     const reco::GenParticle* track2);
   // Track to vertex DOCA
   Measurement1D
   distanceOfClosestApproach( const reco::Track* track,
@@ -868,6 +871,13 @@ void BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
     dimuonCand.addUserFloat("gen_l3d",         (gen_mm.mm_prod_vtx-gen_mm.mm_vtx).r());
     dimuonCand.addUserFloat("gen_lxy",         (gen_mm.mm_prod_vtx-gen_mm.mm_vtx).rho());
     dimuonCand.addUserFloat("gen_tau",         computeDecayTime(gen_mm));
+    
+    double mm_doca = -1;
+    if (gen_mm.mc_mu1 and gen_mm.mc_mu2)
+      mm_doca = distanceOfClosestApproach(gen_mm.mc_mu1,
+					  gen_mm.mc_mu2);
+    dimuonCand.addUserFloat("gen_doca",        mm_doca);
+    
     
   }
 
@@ -1786,6 +1796,26 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticl
   
 
   return result;
+}
+
+float BxToMuMuProducer::distanceOfClosestApproach( const reco::GenParticle* track1,
+						   const reco::GenParticle* track2)
+{
+  TwoTrackMinimumDistance md;
+  GlobalPoint trk1_pos(track1->vertex().x(), 
+		       track1->vertex().y(), 
+		       track1->vertex().z());
+  GlobalVector trk1_mom(track1->px(),track1->py(),track1->pz());
+
+  GlobalTrajectoryParameters trk1(trk1_pos,trk1_mom,track1->charge(),bFieldHandle_.product());
+  GlobalPoint trk2_pos(track2->vertex().x(), 
+		       track2->vertex().y(), 
+		       track2->vertex().z());
+  GlobalVector trk2_mom(track2->px(),track2->py(),track2->pz());
+
+  GlobalTrajectoryParameters trk2(trk2_pos,trk2_mom,track2->charge(),bFieldHandle_.product());
+  if ( not md.calculate( trk1, trk2 ) ) return -1.0;
+  return md.distance();
 }
 
 float BxToMuMuProducer::distanceOfClosestApproach( const reco::Track* track1,

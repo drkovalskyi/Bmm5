@@ -156,6 +156,7 @@ BxToMuMuDiMuonMcTableVariables = merge_psets(
         gen_l3d        = Var("userFloat('gen_l3d')",        float,   doc = "Gen match: dimuon decay legnth 3D"),
         gen_lxy        = Var("userFloat('gen_lxy')",        float,   doc = "Gen match: dimuon decay legnth XY"),
         gen_tau        = Var("userFloat('gen_tau')",        float,   doc = "Gen match: dimuon decay time 3D"),
+        gen_doca       = Var("userFloat('gen_doca')",       float,   doc = "Gen match: dimuon distance of closest approach"),
         ),
 )
 
