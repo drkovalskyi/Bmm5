@@ -1,5 +1,11 @@
 # Changelog
 
+## New developments
+
+### Added
+	- Generator level filter for Bmm signature to effectively select relevant QCD events
+	- MC production config files
+
 ## [NanoAODv6-V05] - 2020/03/16
 
 ### Fixed
