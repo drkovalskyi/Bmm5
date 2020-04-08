@@ -9,7 +9,6 @@ reggression and Bmm5 NanoAODv6-V05 analysis code
 * cd CMSSW_10_2_18/src/
 * cmsenv
 * git cms-init
-* git remote add mithep git@github.com:MiT-HEP/cmssw.git
 * git cms-addpkg PhysicsTools/NanoAOD
 * git fetch mithep
 * git checkout -t mithep/Bmm5-CMSSW_10_2_18
