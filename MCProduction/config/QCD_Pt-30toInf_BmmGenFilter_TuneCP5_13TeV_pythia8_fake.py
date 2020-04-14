@@ -2,7 +2,7 @@
 # using: 
 # Revision: 1.19 
 # Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
-# with command line options: step1 --filein file:QCD_Pt-30toInf_BmmGenFilter_TuneCP5_13TeV_pythia8-RunIIAutumn18DRPremix-AODSIM.root --fileout file:QCD_Pt-30toInf_BmmGenFilter_TuneCP5_13TeV_pythia8-RunIIAutumn18MiniAOD.root --mc --eventcontent MINIAODSIM --runUnscheduled --datatier MINIAODSIM --conditions 102X_upgrade2018_realistic_v15 --step PAT --nThreads 1 --geometry DB:Extended --era Run2_2018 --python_filename QCD_Pt-30toInf_BmmGenFilter_TuneCP5_13TeV_pythia8-RunIIAutumn18MiniAOD_cfg.py --no_exec --customise Configuration/DataProcessing/Utils.addMonitoring -n -1
+# with command line options: step1 --filein file:QCD_Pt-30toInf_BmmGenFilter_TuneCP5_13TeV_pythia8-RunIIAutumn18DRPremix-AODSIM.root --fileout file:QCD_Pt-30toInf_BmmGenFilter_TuneCP5_13TeV_pythia8-RunIIAutumn18MiniAOD.root --mc --eventcontent MINIAODSIM --runUnscheduled --datatier MINIAODSIM --conditions 102X_upgrade2018_realistic_v15 --step PAT --nThreads 8 --geometry DB:Extended --era Run2_2018 --python_filename fake.py --no_exec --customise Configuration/DataProcessing/Utils.addMonitoring -n -1
 import FWCore.ParameterSet.Config as cms
 
 from Configuration.StandardSequences.Eras import eras
@@ -150,6 +150,10 @@ process.schedule = cms.Schedule(process.Flag_HBHENoiseFilter,process.Flag_HBHENo
 process.schedule.associate(process.patTask)
 from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)
+
+#Setup FWK for multithreaded
+process.options.numberOfThreads=cms.untracked.uint32(4)
+process.options.numberOfStreams=cms.untracked.uint32(0)
 
 # customisation of the process.
 

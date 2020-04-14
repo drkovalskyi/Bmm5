@@ -7,6 +7,8 @@ config = config()
 ##  General
 ##
 
+task = "4"
+
 # A name the user gives to it's request/task. Used by CRAB to create a
 # project directory (named crab_<requestName>) where files
 # corresponding to this particular task will be stored. Defaults to
@@ -14,7 +16,7 @@ config = config()
 # <YYYYMMDD>_<hhmmss> and corresponds to the submission time. The
 # maximum allowed length is 100 characters matching 'a-zA-Z0-9\-_:'
 # pattern.
-config.General.requestName = 'QCD_Pt-30toInf_BmmGenFilter_v10'
+config.General.requestName = 'QCD_Pt-30toInf_BmmGenFilter_t'+task
 
 # The area (full or relative path) where to create the CRAB project
 # directory. If the area doesn't exist, CRAB will try to create it
@@ -57,7 +59,12 @@ config.JobType.outputFiles = []
 
 # Maximum amount of memory (in MB) a job is allowed to use. Defaults
 # to 2000.  
-config.JobType.maxMemoryMB = 2000
+config.JobType.maxMemoryMB = 8000
+
+# Number of requested cores per job. Defaults to 1. If you increase
+# this value to run multi-threaded cmsRun, you may need to increase
+# maxMemoryMB as well
+config.JobType.numCores = 4
 
 # The name of the CMSSW parameter-set configuration file that should
 # be run via cmsRun. Defaults to 'pset.py'.
@@ -83,11 +90,6 @@ config.JobType.inputFiles = [
 # A user script that should be run on the worker node instead of the
 # default cmsRun.
 config.JobType.scriptExe = 'QCD_Pt-30toInf_BmmGenFilter_TuneCP5_13TeV_pythia8-RunIIFall18GS-RunIIAutumn18DRPremix-RunIIAutumn18MiniAOD_scriptExe.sh'
-
-# Number of requested cores per job. Defaults to 1. If you increase
-# this value to run multi-threaded cmsRun, you may need to increase
-# maxMemoryMB as well
-config.JobType.numCores = 1
 
 config.JobType.allowUndistributedCMSSW = True
 
@@ -135,7 +137,7 @@ config.Data.outputPrimaryDataset = 'QCD_Pt-30toInf_BmmGenFilter_TuneCP5_13TeV_py
 # A custom string used in both, the LFN of the output files (even if
 # Data.publication = False) and the publication dataset name (if
 # Data.publication = True)
-config.Data.outputDatasetTag ='RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15'
+config.Data.outputDatasetTag ='RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_t'+task
 
 ##
 ## Site
