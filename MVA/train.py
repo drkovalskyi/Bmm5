@@ -1,20 +1,21 @@
 # import os
-import sys
-import pickle
+import sys, pickle, json
 
 import numpy as np
 import uproot
 from sklearn.model_selection import train_test_split
 
-
 # from tqdm import tqdm
 import xgboost as xgb
-
-# from sklearn.metrics import roc_curve, roc_auc_score
-
-# from utils import write_json, json_to_cfunc
+from sklearn.metrics import roc_curve, roc_auc_score
 
 from pprint import pprint
+
+import matplotlib as mpl
+# https://matplotlib.org/faq/usage_faq.html
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+
 
 def load_data(fname):
     """Load ROOT data and turn MVA tree into an array.
@@ -36,6 +37,14 @@ def merge_data(datasets):
         dataset[branch] = np.concatenate([ds[branch] for ds in datasets],axis=None)
     return dataset
 
+def load_datasets(file_list=[]):
+    """Load and merge ROOT trees with MVA data into a single dataset."""
+    datasets = []
+    for f in file_list:
+        datasets.append(load_data(f))
+    return merge_data(datasets)
+
+
 def get_true_classification(data):
     """Make a column representing the true classification of events.
     
@@ -56,7 +65,8 @@ def get_train_and_test_datasets_split_randomly(data):
     x_train, x_test, y_train, y_test = train_test_split(x_data, y_data, test_size=0.25, random_state=42)
     return x_train,x_test,y_train,y_test
 
-def _select_events(data,condition):
+def select_events(data,condition):
+    """Select events"""
     selected_data = dict()
     indices = np.where(condition)[0]
     for branch in data:
@@ -76,8 +86,8 @@ def get_train_and_test_datasets_split_be_event_number(data,n=4,index=0):
     (1-1/4)=75% of available data with modulus not equal to index is
     used in the training data set.
     """
-    train_data = _select_events(data,data['evt_event']%n!=index)
-    test_data  = _select_events(data,data['evt_event']%n==index)
+    train_data = select_events(data,data['evt_event']%n!=index)
+    test_data  = select_events(data,data['evt_event']%n==index)
     y_train = get_true_classification(train_data)
     y_test  = get_true_classification(test_data)
     x_train = get_feature_data(train_data, feature_names)
@@ -168,10 +178,10 @@ def get_parametrs():
     
     return param
 
-def train(x_train,x_test,y_train,y_test):
+def train(x_train,x_test,y_train,y_test,model_name="test"):
     """Train a model."""
-    dtrain = xgb.DMatrix( x_train, label=y_train)
-    dtest = xgb.DMatrix( x_test, label=y_test)
+    dtrain = xgb.DMatrix( x_train, label=y_train, feature_names=feature_names)
+    dtest = xgb.DMatrix( x_test, label=y_test, feature_names=feature_names)
     evallist  = [(dtrain,'train'), (dtest,'eval')]
 
     num_round = 200
@@ -187,12 +197,14 @@ def train(x_train,x_test,y_train,y_test):
     # instances) / sum(positive instances). See Parameters Tuning for more
     # discussion.
     # https://xgboost.readthedocs.io/en/latest/tutorials/param_tuning.html
-    param["scale_pos_weight"] = sumw_neg/float(sumw_pos)
+
+    target_s_over_b = 0.001
+
+    param["scale_pos_weight"] = sumw_neg/float(sumw_pos)*target_s_over_b
     pprint(param)
 
-    pklname = "train.pkl"
     bst = xgb.train( param.items(), dtrain, num_round, evallist, early_stopping_rounds=10 )
-    bst.feature_names = feature_names
+    # bst.feature_names = feature_names
     max_length = max([len(s) for s in feature_names])
     feature_format = "%"+"%u"%max_length+"s"
     scores = bst.get_score(importance_type='gain')
@@ -202,9 +214,87 @@ def train(x_train,x_test,y_train,y_test):
             print (feature_format+" %0.1f") % (name,scores[name])
         else:
             print (feature_format+" unused") % name
-    pickle.dump(bst,open(pklname,"wb"))
+    pickle.dump({'model':bst,'feature_names':feature_names},open("%s.pkl"%model_name,"wb"))
+    bst.dump_model("%s.txt"%model_name)
+    bst.save_model("%s.model"%model_name)
+    json.dump(feature_names,open("%s.features"%model_name,"w"))
+
     # write_json("model.json", bst, feature_names)
     # json_to_cfunc("model.json", fname_out="func.h")
+    return bst,dtrain,dtest
+
+def make_validation_plots(bst,dtrain,dtest,model_name="test"):
+    y_pred_train = bst.predict(dtrain)
+    y_pred_test  = bst.predict( dtest)
+
+    fig, ax = plt.subplots()
+    preds_bkg_test  = y_pred_test[y_test==0]
+    preds_sig_test  = y_pred_test[y_test==1]
+    preds_bkg_train = y_pred_train[y_train==0]
+    preds_sig_train = y_pred_train[y_train==1]
+    
+    density = True
+    bins = np.linspace(0.0,1,50)
+    edges = 0.5*(bins[:-1]+bins[1:])
+    
+    from scipy import stats
+    pks_bkg = stats.ks_2samp(preds_bkg_train,preds_bkg_test)[1]
+    pks_sig = stats.ks_2samp(preds_sig_train,preds_sig_test)[1]
+
+    counts_train_bkg,_,_ = ax.hist(preds_bkg_train, bins=bins,histtype="stepfilled",alpha=0.45, normed=density, label="bkg, train",color=["b"])
+    counts_train_sig,_,_ = ax.hist(preds_sig_train, bins=bins,histtype="stepfilled",alpha=0.45, normed=density, label="sig, train",color=["r"])
+    counts_test_bkg,_,_ = ax.hist(preds_bkg_test, bins=bins,histtype="step",alpha=1.0, normed=density, label="bkg, test (KS prob = {:.2f})".format(pks_bkg),color=["b"], lw=1.5, linestyle="solid")
+    counts_test_sig,_,_= ax.hist(preds_sig_test, bins=bins,histtype="step",alpha=1.0, normed=density, label="sig, test (KS prob = {:.2f})".format(pks_sig),color=["r"], lw=1.5, linestyle="solid")
+
+    ax.set_yscale("log")
+    ax.legend()
+
+    ax.set_ylim([0.01,ax.get_ylim()[1]])
+    fig.set_tight_layout(True)
+    fig.savefig("%s-validation-disc.pdf"%model_name)
+
+    fpr_test,tpr_test,_ = roc_curve(y_test, y_pred_test)
+    fpr_train,tpr_train,_ = roc_curve(y_train, y_pred_train)
+    auc_test = roc_auc_score(y_test, y_pred_test)
+    auc_train = roc_auc_score(y_train, y_pred_train)
+    fig, ax = plt.subplots()
+    plt.grid(which='both', axis='both')
+    ax.plot(fpr_test,tpr_test, label="test AUC = {:.6f}".format(auc_test))
+    ax.plot(fpr_train,tpr_train, label="train AUC = {:.6f}".format(auc_train))
+    ax.set_xlabel("bkg eff")
+    ax.set_ylabel("sig eff")
+    ax.set_xlim([0.00001,0.1])
+    ax.set_ylim([0.2,1.0])
+    ax.set_title("ROC curves")
+    ax.legend()
+    fig.set_tight_layout(True)
+    ax.set_yscale("log")
+    ax.set_xscale("log")
+    fig.savefig("%s-validation-roc.pdf"%model_name)
+
+def prepare_dataset():
+    all_data = load_datasets([
+        # "python/BdToMuMu_BMuonFilter_RunIIAutumn18MiniAOD.root",
+        # "python/BsToMuMu.root",
+        "python/BsToMuMu_BMuonFilter_RunIIAutumn18MiniAOD.root",
+        "python/Charmonium+Run2018A.root",
+        "python/Charmonium+Run2018B.root",
+        "python/Charmonium+Run2018C.root",
+        "python/Charmonium+Run2018D.root",
+        # "python/BsToMuMu_BMuonFilter_RunIIFall17MiniAODv2.root",
+        "python/Charmonium+Run2017B.root",
+        "python/Charmonium+Run2017C.root",
+        "python/Charmonium+Run2017D.root",
+        "python/Charmonium+Run2017E.root",
+        "python/Charmonium+Run2017F.root"
+    ])
+    print "Total number of events:", len(all_data['evt_event'])
+
+    data = select_events(all_data,all_data['HLT_DoubleMu4_3_Bs']>0)
+
+    print "Number of events selected for training:", len(data['evt_event'])
+        
+    return data
     
 feature_names = [
     #
@@ -214,31 +304,40 @@ feature_names = [
     "mm_kin_alpha",   # used in old BDT
     "mm_kin_alphaXY",
     "mm_kin_spvip",   # used in old BDT
+    "mm_kin_pvip",   
     "mm_iso",         # used in old BDT
     ### good
     "mm_m1iso",       # used in old BDT
     "mm_m2iso",       # used in old BDT
     "mm_kin_sl3d",    # used in old BDT
+    "mm_kin_vtx_chi2dof", # used in old BDT
     ### weak 
     "mm_nBMTrks",    
-    "mm_kin_vtx_chi2dof", # used in old BDT
     # "mm_mu2_pt",
     "mm_closetrks1",
     "mm_nDisTrks",
+    # "mm_kin_pt"
     ### very weak (in order of decreasing contribution)
     # "mm_mu2_eta",
     # "mm_docatrk",     # used in old BDT
     # "mm_closetrk",    # used in old BDT
     # "mm_kin_eta",     # used in old BDT
-    ### new 
+    # "mm_kin_spvlip",   
+    # "mm_kin_pvlip",   
+    ### new
 ]
 
-signal     = load_data("python/BsToMuMu.root")
-background = load_data("python/QCD_Pt-80to120_MuEnrichedPt5_RunIIAutumn18MiniAOD.root")
 
-data = merge_data([signal,background])
 
-x_train, x_test, y_train, y_test = get_train_and_test_datasets_split_randomly(data)
-# x_train, x_test, y_train, y_test = get_train_and_test_datasets_split_be_event_number(data)
-train(x_train, x_test, y_train, y_test)
+if __name__ == "__main__":
+
+    data = prepare_dataset()
+
+    # x_train, x_test, y_train, y_test = get_train_and_test_datasets_split_randomly(data)
+    x_train, x_test, y_train, y_test = get_train_and_test_datasets_split_be_event_number(data,3,0)
+
+    print "Number of signal/background events in training sample: %u/%u",  (sum(y_train==True),sum(y_train==False) )
+    model_name = "Run2017-2018-20200415-Event0"
+    bst,dtrain,dtest = train(x_train, x_test, y_train, y_test,model_name)
+    make_validation_plots(bst,dtrain,dtest,model_name)
 
