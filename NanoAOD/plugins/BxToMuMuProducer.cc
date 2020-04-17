@@ -41,6 +41,8 @@
 #include <TMatrix.h>
 #include <algorithm>
 
+#include "Bmm5/NanoAOD/interface/XGBooster.h"
+
 // 
 // BxToMuMuProducer is designed for Bs/d->mumu analysis
 //
@@ -538,7 +540,7 @@ private:
   TMVA::Reader  bdtReader0_;
   TMVA::Reader  bdtReader1_;
   TMVA::Reader  bdtReader2_;
-    
+  std::vector<XGBooster> xgBoosters_;
 };
 
 BxToMuMuProducer::BxToMuMuProducer(const edm::ParameterSet &iConfig):
@@ -572,6 +574,18 @@ bdtReader2_("!Color:Silent")
     setupTmvaReader(bdtReader0_,(iConfig.getParameter<edm::FileInPath>("bdtEvent0")).fullPath());
     setupTmvaReader(bdtReader1_,(iConfig.getParameter<edm::FileInPath>("bdtEvent1")).fullPath());
     setupTmvaReader(bdtReader2_,(iConfig.getParameter<edm::FileInPath>("bdtEvent2")).fullPath());
+
+    xgBoosters_.push_back(XGBooster(iConfig.getParameter<edm::FileInPath>("xgbEvent0").fullPath()));
+    xgBoosters_.push_back(XGBooster(iConfig.getParameter<edm::FileInPath>("xgbEvent1").fullPath()));
+    xgBoosters_.push_back(XGBooster(iConfig.getParameter<edm::FileInPath>("xgbEvent2").fullPath()));
+
+    // XGBooster
+    std::vector<std::string> features = {"mm_kin_alpha", "mm_kin_alphaXY", "mm_kin_spvip", "mm_kin_pvip", "mm_iso", 
+					 "mm_m1iso", "mm_m2iso", "mm_kin_sl3d", "mm_kin_vtx_chi2dof", "mm_nBMTrks", 
+					 "mm_closetrks1", "mm_nDisTrks"};
+    for (auto& xgBooster: xgBoosters_)
+      for (const auto& feature: features)
+	xgBooster.addFeature(feature);
 }
 
 bool BxToMuMuProducer::isGoodMuon(const pat::Muon& muon){
@@ -908,6 +922,37 @@ void BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
   bdtData_.m        = dimuonCand.userFloat("kin_mass");	  
 
   dimuonCand.addUserFloat("bdt",computeAnalysisBDT(iEvent.eventAuxiliary().event()%3));
+
+  // XGBoost
+  unsigned int xg_index = iEvent.eventAuxiliary().event()%3;
+  xgBoosters_.at(xg_index).set("mm_kin_alpha",       dimuonCand.userFloat("kin_alpha"));
+  xgBoosters_.at(xg_index).set("mm_kin_alphaXY",     dimuonCand.userFloat("kin_cosAlphaXY"));
+  xgBoosters_.at(xg_index).set("mm_kin_spvip",       dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr"));
+  xgBoosters_.at(xg_index).set("mm_kin_pvip",        dimuonCand.userFloat("kin_pvip"));
+  xgBoosters_.at(xg_index).set("mm_iso",             dimuonCand.userFloat("iso"));
+  xgBoosters_.at(xg_index).set("mm_m1iso",           dimuonCand.userFloat("m1iso"));
+  xgBoosters_.at(xg_index).set("mm_m2iso",           dimuonCand.userFloat("m2iso"));
+  xgBoosters_.at(xg_index).set("mm_kin_sl3d",        dimuonCand.userFloat("kin_sl3d"));
+  xgBoosters_.at(xg_index).set("mm_nBMTrks",         dimuonCand.userInt(  "nBMTrks"));
+  xgBoosters_.at(xg_index).set("mm_kin_vtx_chi2dof", dimuonCand.userFloat("kin_vtx_chi2dof"));
+  xgBoosters_.at(xg_index).set("mm_closetrks1",      dimuonCand.userInt(  "closetrk"));
+  xgBoosters_.at(xg_index).set("mm_nDisTrks",        dimuonCand.userInt(  "nDisTrks"));
+  
+  dimuonCand.addUserFloat("mva", xgBoosters_.at(xg_index).predict());
+
+  // std::cout << "\n\nmm_kin_alpha: " <<        dimuonCand.userFloat("kin_alpha") << std::endl;
+  // std::cout << "mm_kin_alphaXY: " <<      dimuonCand.userFloat("kin_cosAlphaXY") << std::endl;
+  // std::cout << "mm_kin_spvip: " <<        dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr") << std::endl;
+  // std::cout << "mm_kin_pvip: " <<         dimuonCand.userFloat("kin_pvip") << std::endl;
+  // std::cout << "mm_iso: " <<              dimuonCand.userFloat("iso") << std::endl;
+  // std::cout << "mm_m1iso: " <<            dimuonCand.userFloat("m1iso") << std::endl;
+  // std::cout << "mm_m2iso: " <<            dimuonCand.userFloat("m2iso") << std::endl;
+  // std::cout << "mm_kin_sl3d: " <<         dimuonCand.userFloat("kin_sl3d") << std::endl;
+  // std::cout << "mm_nBMTrks: " <<          dimuonCand.userInt(  "nBMTrks") << std::endl;
+  // std::cout << "mm_kin_vtx_chi2dof: " <<  dimuonCand.userFloat("kin_vtx_chi2dof") << std::endl;
+  // std::cout << "mm_closetrks1: " <<       dimuonCand.userInt(  "closetrk") << std::endl;
+  // std::cout << "mm_nDisTrks: " <<         dimuonCand.userInt(  "nDisTrks") << std::endl;
+  // std::cout << "mva: " <<  xgBoosters_.at(xg_index).predict() << std::endl;
 }
 
 void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
@@ -1066,7 +1111,6 @@ void BxToMuMuProducer::fillBDTForBtoJpsiKThatEmulatesBmm(pat::CompositeCandidate
   bdtData_.m        = btokmmCand.userFloat("jpsimc_mass");	  
 
   btokmmCand.addUserFloat("bmm_bdt",computeAnalysisBDT(iEvent.eventAuxiliary().event()%3));
-
 }
 
 void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {

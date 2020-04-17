@@ -58,6 +58,9 @@ BxToMuMu = cms.EDProducer("BxToMuMuProducer",
     bdtEvent0 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events0_BDT.weights.xml'),
     bdtEvent1 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events1_BDT.weights.xml'),
     bdtEvent2 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events2_BDT.weights.xml'),
+    xgbEvent0 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200415-Event0.model'),
+    xgbEvent1 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200415-Event1.model'),
+    xgbEvent2 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200415-Event2.model'),
     isMC = cms.bool(False)
 )
 
@@ -115,7 +118,8 @@ BxToMuMuDiMuonTableVariables = merge_psets(
         m1iso        = Var("userFloat('m1iso')",           float, doc = "Muon isolation the way it's done in Bmm4"),
         m2iso        = Var("userFloat('m2iso')",           float, doc = "Muon isolation the way it's done in Bmm4"),
         iso          = Var("userFloat('iso')",             float, doc = "B isolation the way it's done in Bmm4"),
-        bdt          = Var("userFloat('bdt')",             float, doc = "BDT"),
+        bdt          = Var("userFloat('bdt')",             float, doc = "Bmm4 BDT"),
+        mva          = Var("userFloat('mva')",             float, doc = "XGBoost based Bmm5 MVA"),
         otherVtxMaxProb = Var("userFloat('otherVtxMaxProb')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=0.5GeV"),
         otherVtxMaxProb1 = Var("userFloat('otherVtxMaxProb1')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=1.0GeV"),
         otherVtxMaxProb2 = Var("userFloat('otherVtxMaxProb2')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=2.0GeV"),
