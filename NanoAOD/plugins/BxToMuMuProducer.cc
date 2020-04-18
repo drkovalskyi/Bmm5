@@ -911,7 +911,7 @@ void BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
   // BDT
   bdtData_.fls3d    = dimuonCand.userFloat("kin_sl3d");
   bdtData_.alpha    = dimuonCand.userFloat("kin_alpha");
-  bdtData_.pvips    = dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr");
+  bdtData_.pvips    = dimuonCand.userFloat("kin_pvipErr")>0?dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr"):999.;
   bdtData_.iso      = dimuonCand.userFloat("iso");
   bdtData_.chi2dof  = dimuonCand.userFloat("kin_vtx_chi2dof");
   bdtData_.docatrk  = dimuonCand.userFloat("docatrk");
@@ -927,7 +927,7 @@ void BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
   unsigned int xg_index = iEvent.eventAuxiliary().event()%3;
   xgBoosters_.at(xg_index).set("mm_kin_alpha",       dimuonCand.userFloat("kin_alpha"));
   xgBoosters_.at(xg_index).set("mm_kin_alphaXY",     dimuonCand.userFloat("kin_cosAlphaXY"));
-  xgBoosters_.at(xg_index).set("mm_kin_spvip",       dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr"));
+  xgBoosters_.at(xg_index).set("mm_kin_spvip",       dimuonCand.userFloat("kin_pvipErr")>0?dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr"):999.);
   xgBoosters_.at(xg_index).set("mm_kin_pvip",        dimuonCand.userFloat("kin_pvip"));
   xgBoosters_.at(xg_index).set("mm_iso",             dimuonCand.userFloat("iso"));
   xgBoosters_.at(xg_index).set("mm_m1iso",           dimuonCand.userFloat("m1iso"));
@@ -942,7 +942,8 @@ void BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
 
   // std::cout << "\n\nmm_kin_alpha: " <<        dimuonCand.userFloat("kin_alpha") << std::endl;
   // std::cout << "mm_kin_alphaXY: " <<      dimuonCand.userFloat("kin_cosAlphaXY") << std::endl;
-  // std::cout << "mm_kin_spvip: " <<        dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr") << std::endl;
+  // std::cout << "mm_kin_spvip: " <<        (dimuonCand.userFloat("kin_pvipErr")>0?dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr"):999.) << std::endl;
+  // std::cout << "kin_pvipErr: " <<         dimuonCand.userFloat("kin_pvipErr") << std::endl;
   // std::cout << "mm_kin_pvip: " <<         dimuonCand.userFloat("kin_pvip") << std::endl;
   // std::cout << "mm_iso: " <<              dimuonCand.userFloat("iso") << std::endl;
   // std::cout << "mm_m1iso: " <<            dimuonCand.userFloat("m1iso") << std::endl;
@@ -1097,7 +1098,7 @@ void BxToMuMuProducer::fillBDTForBtoJpsiKThatEmulatesBmm(pat::CompositeCandidate
   // BDT
   bdtData_.fls3d    = dimuonCand.userFloat("kin_sl3d");
   bdtData_.alpha    = btokmmCand.userFloat("jpsimc_alpha");
-  bdtData_.pvips    = btokmmCand.userFloat("jpsimc_pvip")/btokmmCand.userFloat("jpsimc_pvipErr");
+  bdtData_.pvips    = btokmmCand.userFloat("jpsimc_pvipErr")>0?btokmmCand.userFloat("jpsimc_pvip")/btokmmCand.userFloat("jpsimc_pvipErr"):999;
   // One can use bkmm without mass constraint, but it doesn't help
   // bdtData_.alpha    = btokmmCand.userFloat("nomc_alpha");
   // bdtData_.pvips    = btokmmCand.userFloat("nomc_pvip")/btokmmCand.userFloat("nomc_pvipErr");
