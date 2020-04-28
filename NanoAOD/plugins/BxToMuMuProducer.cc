@@ -70,7 +70,7 @@ struct KinematicFitResult{
   std::vector<RefCountedKinematicParticle> refitDaughters;
   float lxy, lxyErr, sigLxy, cosAlpha;
   KinematicFitResult():treeIsValid(false),vertexIsValid(false),
-		       lxy(-1.0), sigLxy(-1.0), cosAlpha(-999.)
+		       lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0), cosAlpha(-999.)
   {}
 
   bool valid() const {
@@ -406,8 +406,9 @@ private:
 		bool applyJpsiMassConstraint);
 
   KinematicFitResult
-  refitWithPointingConstraint( RefCountedKinematicTree tree,
-			       const reco::Vertex& primaryVertex);
+  vertexMuonsWithPointingConstraint( const pat::Muon& muon1,
+				     const pat::Muon& muon2,
+				     const reco::Vertex& primaryVertex);
 
   pair<double,double> computeDCA(const pat::PackedCandidate &kaon,
    				 reco::BeamSpot beamSpot);
@@ -492,10 +493,9 @@ private:
 				    const pat::Muon& muon2,
 				    const pat::PackedCandidate & kaon);
  
-  void 
+  KinematicFitResult 
   fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
 	       const edm::Event& iEvent,
-	       const KinematicFitResult& kinematicMuMuVertexFit,
 	       const pat::Muon& muon1,
 	       const pat::Muon& muon2); 
 
@@ -847,13 +847,16 @@ namespace {
   }
 }
 
-void BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
-				    const edm::Event& iEvent,
-				    const KinematicFitResult& kinematicMuMuVertexFit,
-				    const pat::Muon& muon1,
-				    const pat::Muon& muon2
-				    ) 
+KinematicFitResult 
+BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
+			       const edm::Event& iEvent,
+			       const pat::Muon& muon1,
+			       const pat::Muon& muon2
+			       ) 
 {
+  auto kinematicMuMuVertexFit = vertexMuonsWithKinematicFitter(muon1, muon2);
+  kinematicMuMuVertexFit.postprocess(*beamSpot_);
+
   // printf("kinematicMuMuVertexFit (x,y,z): (%7.3f,%7.3f,%7.3f)\n", 
   // 	 kinematicMuMuVertexFit.refitVertex->position().x(),
   // 	 kinematicMuMuVertexFit.refitVertex->position().y(),
@@ -954,6 +957,12 @@ void BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
   // std::cout << "mm_closetrks1: " <<       dimuonCand.userInt(  "closetrk") << std::endl;
   // std::cout << "mm_nDisTrks: " <<         dimuonCand.userInt(  "nDisTrks") << std::endl;
   // std::cout << "mva: " <<  xgBoosters_.at(xg_index).predict() << std::endl;
+
+  // Refit with pointing constraint
+  auto bToMuMu_PC = vertexMuonsWithPointingConstraint(muon1,muon2,*displacement3D.pv);
+  addFitInfo(dimuonCand, bToMuMu_PC, "kinpc");
+  
+  return kinematicMuMuVertexFit;
 }
 
 void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
@@ -1196,10 +1205,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	  dimuonCand.addUserFloat( "kalman_sigLxy",   kalmanMuMuVertexFit.sigLxy );
 	  
 	  // Kinematic Fits
-	  auto kinematicMuMuVertexFit = vertexMuonsWithKinematicFitter(muon1, muon2);
-	  kinematicMuMuVertexFit.postprocess(*beamSpot_);
-	  
-	  fillMuMuInfo(dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2);
+	  auto kinematicMuMuVertexFit = fillMuMuInfo(dimuonCand,iEvent,muon1,muon2);
 
 	  auto imm = dimuon->size();
 	  for (unsigned int k = 0; k < nPFCands; ++k) {
@@ -1605,11 +1611,14 @@ BxToMuMuProducer::fitBToKKMuMu( RefCountedKinematicTree jpsiTree,
 }
 
 KinematicFitResult
-BxToMuMuProducer::refitWithPointingConstraint( RefCountedKinematicTree tree,
-					       const reco::Vertex& primaryVertex)
+BxToMuMuProducer::vertexMuonsWithPointingConstraint( const pat::Muon& muon1,
+						     const pat::Muon& muon2,
+						     const reco::Vertex& primaryVertex)
 {
-  KinematicFitResult result; 
-  if ( !tree->isValid()) return result;
+  auto kinematicMuMuVertexFit = vertexMuonsWithKinematicFitter(muon1, muon2);
+  kinematicMuMuVertexFit.postprocess(*beamSpot_);
+  auto tree = kinematicMuMuVertexFit.refitTree;
+  if ( !tree->isValid()) return KinematicFitResult();
 
   GlobalPoint pv(primaryVertex.position().x(), 
 		 primaryVertex.position().y(), 
@@ -1621,10 +1630,17 @@ BxToMuMuProducer::refitWithPointingConstraint( RefCountedKinematicTree tree,
 
   tree->movePointerToTheTop(); // not sure it's needed
 
-  RefCountedKinematicTree refittedTree = fitter.fit(pointing_constraint,tree);
+  RefCountedKinematicTree refittedTree;
+  try {
+    refittedTree = fitter.fit(pointing_constraint,tree);
+  } catch (const VertexException &e) {
+    // fit failed
+    return KinematicFitResult();
+  }
 
-  if ( !refittedTree->isValid()) return result;
+  if ( !refittedTree->isValid()) return KinematicFitResult();
 
+  KinematicFitResult result; 
   result.treeIsValid = true;
 
   refittedTree->movePointerToTheTop();

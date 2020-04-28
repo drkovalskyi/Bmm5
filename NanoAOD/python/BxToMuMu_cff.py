@@ -137,7 +137,8 @@ BxToMuMuDiMuonTableVariables = merge_psets(
         kin_mu2eta   = Var("userFloat('kin_mu2eta')",      float, doc = "Kinematic fit: refitted muon 2 eta"),
         kin_mu2phi   = Var("userFloat('kin_mu2phi')",      float, doc = "Kinematic fit: refitted muon 2 phi"),
         ),
-    kinematic_pset
+    kinematic_pset,
+    copy_pset(kinematic_pset,{"kin_":"kinpc_"}),
 )
 
 BxToMuMuDiMuonMcTableVariables = merge_psets(
