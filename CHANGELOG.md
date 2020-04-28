@@ -3,6 +3,7 @@
 ## New developments
 
 ### Added
+	- dimuon vertexing with pointing constrain (kinpc)
 	- XGBoost is integrated in NanoAOD code to produce ntuple with new MVA centrally
 	- Generator level filter for Bmm signature to effectively select relevant QCD events
 	- MC production config files
