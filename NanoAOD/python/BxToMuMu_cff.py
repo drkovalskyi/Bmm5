@@ -2,6 +2,13 @@ from PhysicsTools.NanoAOD.common_cff import *
 import FWCore.ParameterSet.Config as cms
 import re
 
+# NOTE: 
+#    All instances of FlatTableProducers must end with Table in their
+#    names so that their product match keep patterns in the default
+#    event content. Otherwise you need to modify outputCommands in
+#    NanoAODEDMEventContent or provide a custom event content to the
+#    output module
+
 # can use cms.PSet.clone() method instead
 def merge_psets(*argv):
     result = cms.PSet()
