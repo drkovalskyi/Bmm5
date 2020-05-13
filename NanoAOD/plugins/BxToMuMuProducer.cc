@@ -1617,6 +1617,7 @@ BxToMuMuProducer::vertexMuonsWithPointingConstraint( const pat::Muon& muon1,
 {
   auto kinematicMuMuVertexFit = vertexMuonsWithKinematicFitter(muon1, muon2);
   kinematicMuMuVertexFit.postprocess(*beamSpot_);
+  if ( !kinematicMuMuVertexFit.valid()) return KinematicFitResult();
   auto tree = kinematicMuMuVertexFit.refitTree;
   if ( !tree->isValid()) return KinematicFitResult();
 
