@@ -485,7 +485,7 @@ private:
 		    ); 
   
   void 
-  fillBDTForBtoJpsiKThatEmulatesBmm(pat::CompositeCandidate& btokmmCand,
+  fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCandidate& btokmmCand,
 				    const pat::CompositeCandidate& dimuonCand,
 				    const edm::Event& iEvent,
 				    const KinematicFitResult& kinematicMuMuVertexFit,
@@ -1076,13 +1076,14 @@ void BxToMuMuProducer::fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
 }
 
 
-void BxToMuMuProducer::fillBDTForBtoJpsiKThatEmulatesBmm(pat::CompositeCandidate& btokmmCand,
-							 const pat::CompositeCandidate& dimuonCand,
-							 const edm::Event& iEvent,
-							 const KinematicFitResult& kinematicMuMuVertexFit,
-							 const pat::Muon& muon1,
-							 const pat::Muon& muon2,
-							 const pat::PackedCandidate & kaon
+void 
+BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCandidate& mmK,
+							       const pat::CompositeCandidate& mm,
+							       const edm::Event& iEvent,
+							       const KinematicFitResult& kinematicMuMuVertexFit,
+							       const pat::Muon& muon1,
+							       const pat::Muon& muon2,
+							       const pat::PackedCandidate & kaon
 					) 
 {
   ///////
@@ -1091,36 +1092,62 @@ void BxToMuMuProducer::fillBDTForBtoJpsiKThatEmulatesBmm(pat::CompositeCandidate
   std::vector<const pat::PackedCandidate*> ignoreTracks;
   ignoreTracks.push_back(&kaon);
 
-  int pvIndex = btokmmCand.userInt("jpsimc_pvIndex");
+  int pvIndex = mmK.userInt("jpsimc_pvIndex");
 
   // Look for additional tracks compatible with the dimuon vertex
   auto closeTracks = findTracksCompatibleWithTheVertex(muon1,muon2,kinematicMuMuVertexFit,0.03,ignoreTracks);
-  closeTracks.fillCandInfo(btokmmCand, pvIndex, "bmm");
+  closeTracks.fillCandInfo(mmK, pvIndex, "bmm");
 
-  btokmmCand.addUserFloat( "bmm_m1iso",     computeTrkMuonIsolation(muon1,muon2,pvIndex,0.5,0.5,ignoreTracks));
-  btokmmCand.addUserFloat( "bmm_m2iso",     computeTrkMuonIsolation(muon2,muon1,pvIndex,0.5,0.5,ignoreTracks));
-  btokmmCand.addUserFloat( "bmm_iso",       computeTrkMuMuIsolation(muon2,muon1,pvIndex,0.9,0.7,ignoreTracks));
-  btokmmCand.addUserFloat( "bmm_otherVtxMaxProb",  otherVertexMaxProb(muon1,muon2,0.5,0.1,ignoreTracks));
-  btokmmCand.addUserFloat( "bmm_otherVtxMaxProb1", otherVertexMaxProb(muon1,muon2,1.0,0.1,ignoreTracks));
-  btokmmCand.addUserFloat( "bmm_otherVtxMaxProb2", otherVertexMaxProb(muon1,muon2,2.0,0.1,ignoreTracks));
+  mmK.addUserFloat( "bmm_m1iso",     computeTrkMuonIsolation(muon1,muon2,pvIndex,0.5,0.5,ignoreTracks));
+  mmK.addUserFloat( "bmm_m2iso",     computeTrkMuonIsolation(muon2,muon1,pvIndex,0.5,0.5,ignoreTracks));
+  mmK.addUserFloat( "bmm_iso",       computeTrkMuMuIsolation(muon2,muon1,pvIndex,0.9,0.7,ignoreTracks));
+  mmK.addUserFloat( "bmm_otherVtxMaxProb",  otherVertexMaxProb(muon1,muon2,0.5,0.1,ignoreTracks));
+  mmK.addUserFloat( "bmm_otherVtxMaxProb1", otherVertexMaxProb(muon1,muon2,1.0,0.1,ignoreTracks));
+  mmK.addUserFloat( "bmm_otherVtxMaxProb2", otherVertexMaxProb(muon1,muon2,2.0,0.1,ignoreTracks));
 
   // BDT
-  bdtData_.fls3d    = dimuonCand.userFloat("kin_sl3d");
-  bdtData_.alpha    = btokmmCand.userFloat("jpsimc_alpha");
-  bdtData_.pvips    = btokmmCand.userFloat("jpsimc_pvipErr")>0?btokmmCand.userFloat("jpsimc_pvip")/btokmmCand.userFloat("jpsimc_pvipErr"):999;
+  bdtData_.fls3d    = mm.userFloat("kin_sl3d");
+  bdtData_.alpha    = mmK.userFloat("jpsimc_alpha");
+  bdtData_.pvips    = mmK.userFloat("jpsimc_pvipErr")>0?mmK.userFloat("jpsimc_pvip")/mmK.userFloat("jpsimc_pvipErr"):999;
   // One can use bkmm without mass constraint, but it doesn't help
-  // bdtData_.alpha    = btokmmCand.userFloat("nomc_alpha");
-  // bdtData_.pvips    = btokmmCand.userFloat("nomc_pvip")/btokmmCand.userFloat("nomc_pvipErr");
-  bdtData_.iso      = btokmmCand.userFloat("bmm_iso");
-  bdtData_.chi2dof  = dimuonCand.userFloat("kin_vtx_chi2dof");
-  bdtData_.docatrk  = btokmmCand.userFloat("bmm_docatrk");
-  bdtData_.closetrk = btokmmCand.userInt(  "bmm_closetrk");
-  bdtData_.m1iso    = btokmmCand.userFloat("bmm_m1iso");
-  bdtData_.m2iso    = btokmmCand.userFloat("bmm_m2iso");
-  bdtData_.eta      = btokmmCand.userFloat("jpsimc_eta");	  
-  bdtData_.m        = btokmmCand.userFloat("jpsimc_mass");	  
+  // bdtData_.alpha    = mmK.userFloat("nomc_alpha");
+  // bdtData_.pvips    = mmK.userFloat("nomc_pvip")/mmK.userFloat("nomc_pvipErr");
+  bdtData_.iso      = mmK.userFloat("bmm_iso");
+  bdtData_.chi2dof  = mm.userFloat("kin_vtx_chi2dof");
+  bdtData_.docatrk  = mmK.userFloat("bmm_docatrk");
+  bdtData_.closetrk = mmK.userInt(  "bmm_closetrk");
+  bdtData_.m1iso    = mmK.userFloat("bmm_m1iso");
+  bdtData_.m2iso    = mmK.userFloat("bmm_m2iso");
+  bdtData_.eta      = mmK.userFloat("jpsimc_eta");	  
+  bdtData_.m        = mmK.userFloat("jpsimc_mass");	  
 
-  btokmmCand.addUserFloat("bmm_bdt",computeAnalysisBDT(iEvent.eventAuxiliary().event()%3));
+  mmK.addUserFloat("bmm_bdt",computeAnalysisBDT(iEvent.eventAuxiliary().event()%3));
+
+  // XGBoost
+  unsigned int xg_index = iEvent.eventAuxiliary().event()%3;
+  // Pointing angle - mmK
+  xgBoosters_.at(xg_index).set("mm_kin_alpha",       mmK.userFloat("jpsimc_alpha"));
+  xgBoosters_.at(xg_index).set("mm_kin_alphaXY",     mmK.userFloat("jpsimc_cosAlphaXY"));
+  // PV matching - mmK
+  xgBoosters_.at(xg_index).set("mm_kin_spvip",       mmK.userFloat("jpsimc_pvipErr")>0?
+			       mmK.userFloat("jpsimc_pvip")/mmK.userFloat("jpsimc_pvipErr"):
+			       999.);
+  xgBoosters_.at(xg_index).set("mm_kin_pvip",        mmK.userFloat("jpsimc_pvip"));
+  // Isolation and extra track variables need to be recomputed ignoring kaon
+  xgBoosters_.at(xg_index).set("mm_iso",             mmK.userFloat("bmm_iso"));
+  xgBoosters_.at(xg_index).set("mm_m1iso",           mmK.userFloat("bmm_m1iso"));
+  xgBoosters_.at(xg_index).set("mm_m2iso",           mmK.userFloat("bmm_m2iso"));
+  xgBoosters_.at(xg_index).set("mm_nBMTrks",         mmK.userInt(  "bmm_nBMTrks"));
+  xgBoosters_.at(xg_index).set("mm_closetrks1",      mmK.userInt(  "bmm_closetrk"));
+  xgBoosters_.at(xg_index).set("mm_nDisTrks",        mmK.userInt(  "bmm_nDisTrks"));
+  // Vertexing - mm
+  xgBoosters_.at(xg_index).set("mm_kin_vtx_chi2dof", mm.userFloat("kin_vtx_chi2dof"));
+  // Flight length significance - mm
+  xgBoosters_.at(xg_index).set("mm_kin_sl3d",        mm.userFloat("kin_sl3d"));
+  
+  mmK.addUserFloat("bmm_mva", xgBoosters_.at(xg_index).predict());
+
+
 }
 
 void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
@@ -1242,7 +1269,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	      btokmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon_doca);
 	      
 	      fillBtoJpsiKInfo(btokmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
-	      fillBDTForBtoJpsiKThatEmulatesBmm(btokmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
+	      fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
 
 	      btokmm->push_back(btokmmCand);
 	    }
@@ -1293,7 +1320,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	      
 		  fillBstoJpsiKKInfo(btokkmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1,kaonCand2);
 		  // FIXME
-		  // fillBDTForBtoJpsiKThatEmulatesBmm(btokkmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
+		  // fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokkmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
 
 		  btokkmm->push_back(btokkmmCand);
 		}
