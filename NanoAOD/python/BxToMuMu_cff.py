@@ -223,6 +223,10 @@ BxToMuMuBToKmumuTableVariables =  merge_psets(
         bmm_m2iso      = Var("userFloat('bmm_m2iso')",       float, doc = "Muon isolation the way it's done in Bmm4 (BtoJpsiK as Bmm)"),
         bmm_iso        = Var("userFloat('bmm_iso')",         float, doc = "B isolation the way it's done in Bmm4 (BtoJpsiK as Bmm)"),
         bmm_bdt        = Var("userFloat('bmm_bdt')",         float, doc = "BDT (BtoJpsiK as Bmm)"),
+        bmm_otherVtxMaxProb = Var("userFloat('bmm_otherVtxMaxProb')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=0.5GeV (BtoJpsiK as Bmm)"),
+        bmm_otherVtxMaxProb1 = Var("userFloat('bmm_otherVtxMaxProb1')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=1.0GeV (BtoJpsiK as Bmm)"),
+        bmm_otherVtxMaxProb2 = Var("userFloat('bmm_otherVtxMaxProb2')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=2.0GeV (BtoJpsiK as Bmm)"),
+        bmm_mva        = Var("userFloat('bmm_mva')",         float, doc = "MVA (BtoJpsiK as Bmm)"),
         # Kinematic Fit daugter info
         nomc_kaon1pt    = Var("userFloat('nomc_kaon1pt')",       float, doc = "Kinematic fit (no Jpsi mass constraint): refitted kaon 1 pt"),
         nomc_kaon1eta   = Var("userFloat('nomc_kaon1eta')",      float, doc = "Kinematic fit (no Jpsi mass constraint): refitted kaon 1 eta"),
