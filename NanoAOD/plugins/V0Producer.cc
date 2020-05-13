@@ -484,14 +484,11 @@ void V0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 	  if ( ksVtxFit.lxy > maxLxy_ ) continue;
 	  if ( ksVtxFit.sigLxy < minSigLxy_ ) continue;
 	  
-	  // FIXME: add info
-
 	  kss->push_back(ksCand);
 	}
       }
     }
     
-    std::cout << "Ks size: " << kss->size() << std::endl;
     iEvent.put(std::move(kss), "Ks");
 }
 
