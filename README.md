@@ -15,7 +15,7 @@ reggression and Bmm5 NanoAODv6-V05 analysis code
 * scram b -j 8
 
 ## cmsDriver Options
-Here is a list of must to have cmsDriver options to get analysis specific parts included
+Here is a list required cmsDriver options to get analysis specific parts included
 * --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBxToMuMu 
 * --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake
 
