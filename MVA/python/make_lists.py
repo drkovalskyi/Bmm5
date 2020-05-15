@@ -1,7 +1,7 @@
 #!/bin/env python
 import subprocess,os,re
-nanoaod_path = '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD'
-output_path = 'lists'
+nanoaod_path = '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/mm/'
+output_path = 'skim-lists'
 version = '505'
 for dir in subprocess.check_output('find %s/%s/ -mindepth 1 -maxdepth 1 -type d'%(nanoaod_path,version),shell=True).split("\n"):
     # print os.path.join(output_dir, os.path.basename(input_file).replace(".\ |root","_Skim.root"))
