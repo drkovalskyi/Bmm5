@@ -24,66 +24,71 @@ files_per_pool = 100
 # - 'lfns'           - list of input logical file names
 # - 'pfns'           - list of input physical file names
 samples = {
-    'Charmonium+Run2016B_1':{
-        'file_with_pfns':'lists/Charmonium+Run2016B-17Jul2018_ver1-v1+MINIAOD.txt'
-    },
-    'Charmonium+Run2016B_2':{
-        'file_with_pfns':'lists/Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD.txt'
-    },
-    'Charmonium+Run2016C':{
-        'file_with_pfns':'lists/Charmonium+Run2016C-17Jul2018-v1+MINIAOD.txt'
-    },
-    'Charmonium+Run2016D':{
-        'file_with_pfns':'lists/Charmonium+Run2016D-17Jul2018-v1+MINIAOD.txt'
-    },
-    'Charmonium+Run2016E':{
-        'file_with_pfns':'lists/Charmonium+Run2016E-17Jul2018-v1+MINIAOD.txt'
-    },
-    'Charmonium+Run2016F':{
-        'file_with_pfns':'lists/Charmonium+Run2016F-17Jul2018-v1+MINIAOD.txt'
-    },
-    'Charmonium+Run2016G':{
-        'file_with_pfns':'lists/Charmonium+Run2016G-17Jul2018-v1+MINIAOD.txt'
-    },
-    'Charmonium+Run2016H':{
-        'file_with_pfns':'lists/Charmonium+Run2016H-17Jul2018-v1+MINIAOD.txt'
-    },
-    # 'Charmonium+Run2017B':{
-    #     'file_with_pfns':'lists/Charmonium+Run2017B-31Mar2018-v1+MINIAOD.txt'
-    # },
-    # 'Charmonium+Run2017C':{
-    #     'file_with_pfns':'lists/Charmonium+Run2017C-31Mar2018-v1+MINIAOD.txt'
-    # },
-    # 'Charmonium+Run2017D':{
-    #     'file_with_pfns':'lists/Charmonium+Run2017D-31Mar2018-v1+MINIAOD.txt'
-    # },
-    # 'Charmonium+Run2017E':{
-    #     'file_with_pfns':'lists/Charmonium+Run2017E-31Mar2018-v1+MINIAOD.txt'
-    # },
-    # 'Charmonium+Run2017F':{
-    #     'file_with_pfns':'lists/Charmonium+Run2017F-31Mar2018-v1+MINIAOD.txt'
-    # },
-    # 'Charmonium+Run2018A':{
-    #     'file_with_pfns':'lists/Charmonium+Run2018A-17Sep2018-v1+MINIAOD.txt'
-    # },
-    # 'Charmonium+Run2018B':{
-    #     'file_with_pfns':'lists/Charmonium+Run2018B-17Sep2018-v1+MINIAOD.txt'
-    # },
-    # 'Charmonium+Run2018C':{
-    #     'file_with_pfns':'lists/Charmonium+Run2018C-17Sep2018-v1+MINIAOD.txt'
-    # },
-    # 'Charmonium+Run2018D':{
-    #     'file_with_pfns':'lists/Charmonium+Run2018D-PromptReco-v2+MINIAOD.txt'
-    # },
+   'Charmonium+Run2016B_1':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2016B-17Jul2018_ver1-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2016B_2':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2016C':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2016C-17Jul2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2016D':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2016D-17Jul2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2016E':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2016E-17Jul2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2016F':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2016F-17Jul2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2016G':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2016G-17Jul2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2016H':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2016H-17Jul2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2017B':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2017B-31Mar2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2017C':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2017C-31Mar2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2017D':{
+      'file_with_pfns':'skim-lists/Charmonium+Run2017D-31Mar2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2017E':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2017E-31Mar2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2017F':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2017F-31Mar2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2018A':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2018A-17Sep2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2018B':{
+        'file_with_pfns':'skim-lists/Charmonium+Run2018B-17Sep2018-v1+MINIAOD.txt'
+   },
+    'Charmonium+Run2018C':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2018C-17Sep2018-v1+MINIAOD.txt'
+   },
+   'Charmonium+Run2018D':{
+       'file_with_pfns':'skim-lists/Charmonium+Run2018D-PromptReco-v2+MINIAOD.txt'
+   },
     # 'BsToMuMu':{
-    #     'file_with_pfns':'lists/BsToMuMu_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.txt',
+    #     'file_with_pfns':'skim-lists/BsToMuMu_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.txt',
     #     'match':True
     # },
-    # 'BdToMuMu_BMuonFilter_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/MVA/BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.txt'
-    # },
+    'BsToMuMu_BMuonFilter_RunIIAutumn18MiniAOD':{
+        'file_with_pfns':'skim-lists/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt',
+        'match':True
+    },
+    'BsToMuMu_BMuonFilter_RunIIFall17MiniAODv2':{
+        'file_with_pfns':'skim-lists/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM.txt',
+        'match':True
+    },
     # 'QCD_HT100to200_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/QCD_HT100to200_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
+    #     'file_with_pfns':'skim-lists/QCD_HT100to200_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
     # },
     # 'QCD_HT50to100_RunIIAutumn18MiniAOD':{
     #     'file_with_pfns':'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/MVA/QCD_HT50to100_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
@@ -95,17 +100,20 @@ samples = {
     #     'file_with_pfns':'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/MVA/QCD_HT200to300_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
     # },
     # 'QCD_Pt-80to120_MuEnrichedPt5_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/QCD_Pt-80to120_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v2+MINIAODSIM.txt',
+    #     'file_with_pfns':'skim-lists/QCD_Pt-80to120_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v2+MINIAODSIM.txt',
     # },
     # 'QCD_Pt-30to50_MuEnrichedPt5_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM.txt',
+    #     'file_with_pfns':'skim-lists/QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM.txt',
     # },
     # 'QCD_Pt-50to80_MuEnrichedPt5_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM.txt',
+    #     'file_with_pfns':'skim-lists/QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM.txt',
     # },
     # 'QCD_Pt-30to50_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/QCD_Pt_30to50_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
+    #     'file_with_pfns':'skim-lists/QCD_Pt_30to50_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
     # },
+    'QCD_Pt-30toInf_BmmGenFilter':{
+        'file_with_pfns':'skim-lists/QCD_Pt-30toInf_BmmGenFilter-NanoAOD.txt'
+    }
 }
 
 # import os, re, sys, time, ROOT, subprocess
