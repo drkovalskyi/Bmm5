@@ -2,7 +2,7 @@
 ## Bx to mumu analysis code based on MiniAOD input data in CMS experiment at CERN
 
 Production configuration for Run NanoAODv6 with the new B-jet
-reggression and Bmm5 NanoAODv6-V05 analysis code
+reggression and Bmm5 NanoAODv6-V06 analysis code
 
 ## Build Instructions 
 * scram p CMSSW CMSSW_10_2_18
