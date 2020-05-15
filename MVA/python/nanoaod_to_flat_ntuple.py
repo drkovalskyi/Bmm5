@@ -3,7 +3,7 @@
 # Produce flat ROOT ntuples for MVA training
 #
 
-import os, re, sys, time, subprocess
+import os, re, sys, time, subprocess, math
 from Bmm5.MVA.mtree import MTree
 import multiprocessing
 from datetime import datetime
@@ -14,8 +14,8 @@ from ROOT import TFile, TTree
 ## User Input
 ##
 blind_signal_region = True
-blinding_right_sideband = True
-blinding_left_sideband = False
+keep_right_sideband = True
+keep_left_sideband = True
 tree_name = "mva"
 force_recreation = False
 n_events_limit = None 
@@ -53,45 +53,58 @@ def output_is_already_available(filename):
 
 def _configure_output_tree(tree):
     ## event info
-    tree.addBranch( 'evt_run',   'UInt_t', 0)
-    tree.addBranch( 'evt_lumi',  'UInt_t', 0)
-    tree.addBranch( 'evt_event', 'ULong64_t', 0)
+    tree.addBranch( 'evt_run',           'UInt_t', 0)
+    tree.addBranch( 'evt_lumi',          'UInt_t', 0)
+    tree.addBranch( 'evt_event',         'ULong64_t', 0)
     # tree.addBranch( 'evt_pu',    'UInt_t', 0)
-    # tree.addBranch( 'evt_nvtx',  'UInt_t', 0)
+    tree.addBranch( 'evt_nvtx',          'UInt_t',  0, "Number of good reconstructed primary vertices")
+    tree.addBranch( 'evt_met',           'Float_t', 0, "Missing transverse energy")
 
     ## mm info
-    tree.addBranch('mm_kin_mass',   'Float_t', 0, "Vertex constrained dimuon mass")
-    tree.addBranch('mm_kin_eta',    'Float_t', 0, "Vertex constrained dimuon mass")
-    tree.addBranch('mm_mu1_pt',     'Float_t', 0)
-    tree.addBranch('mm_mu2_pt',     'Float_t', 0)
-    tree.addBranch('mm_mu1_eta',    'Float_t', 0)
-    tree.addBranch('mm_mu2_eta',    'Float_t', 0)
-    tree.addBranch('mm_kin_l3d',    'Float_t', 0, "Decay length wrt Primary Vertex in 3D")
-    tree.addBranch('mm_kin_sl3d',   'Float_t', 0, "Decay length significance wrt Primary Vertex in 3D")
-    tree.addBranch('mm_kin_alpha',  'Float_t', 0, "Cosine of ointing angle in 3D wrt PV")
-    tree.addBranch('mm_kin_spvip',  'Float_t', 0, "Significance of impact parameter wrt Primary Vertex in 3D")
-    tree.addBranch('mm_iso',        'Float_t', 0, "B isolation the way it's done in Bmm4")
-    tree.addBranch('mm_kin_vtx_chi2dof', 'Float_t', 0, "")
-    tree.addBranch('mm_docatrk',    'Float_t', 0, "Distance of closest approach of a track to the vertex")
-    tree.addBranch('mm_closetrk',   'UInt_t',  0, "Number of tracks compatible with the vertex by DOCA (0.3mm)")
-    tree.addBranch('mm_m1iso',      'Float_t', 0, "Muon isolation the way it's done in Bmm4")
-    tree.addBranch('mm_m2iso',      'Float_t', 0, "Muon isolation the way it's done in Bmm4")
-    tree.addBranch('mm_os',         'UInt_t',  0, "Opposite charge or not")
+    tree.addBranch('mm_kin_mass',        'Float_t', 0, "Vertex constrained dimuon mass")
+    tree.addBranch('mm_kin_eta',         'Float_t', 0, "Vertex constrained dimuon eta")
+    tree.addBranch('mm_kin_pt',          'Float_t', 0, "Vertex constrained dimuon pt")
+    tree.addBranch('mm_mu1_pt',          'Float_t', 0)
+    tree.addBranch('mm_mu2_pt',          'Float_t', 0)
+    tree.addBranch('mm_mu1_eta',         'Float_t', 0)
+    tree.addBranch('mm_mu2_eta',         'Float_t', 0)
+    tree.addBranch('mm_mu1_phi',         'Float_t', 0)
+    tree.addBranch('mm_mu2_phi',         'Float_t', 0)
+    tree.addBranch('mm_kin_l3d',         'Float_t', 0, "Decay length wrt Primary Vertex in 3D")
+    tree.addBranch('mm_kin_sl3d',        'Float_t', 0, "Decay length significance wrt Primary Vertex in 3D")
+    tree.addBranch('mm_kin_slxy',        'Float_t', 0, "Decay length significance wrt Beam Spot in XY plain")
+    tree.addBranch('mm_kin_alpha',       'Float_t', 0, "Pointing angle in 3D wrt PV")
+    tree.addBranch('mm_kin_spvip',       'Float_t', 0, "Significance of impact parameter wrt Primary Vertex in 3D")
+    tree.addBranch('mm_kin_spvlip',      'Float_t', 0, "Significance of longitudinal impact parameter wrt Primary Vertex in 3D")
+    tree.addBranch('mm_iso',             'Float_t', 0, "B isolation the way it's done in Bmm4")
+    tree.addBranch('mm_kin_vtx_chi2dof', 'Float_t', 0, "Normalized chi2 of the dimuon vertex kinematic fit")
+    tree.addBranch('mm_doca',            'Float_t', 0, "dimuon DOCA")
+    tree.addBranch('mm_docatrk',         'Float_t', 0, "Distance of closest approach of a track to the vertex")
+    tree.addBranch('mm_closetrk',        'UInt_t',  0, "Number of tracks compatible with the vertex by DOCA (0.3mm)")
+    tree.addBranch('mm_m1iso',           'Float_t', 0, "Muon isolation the way it's done in Bmm4")
+    tree.addBranch('mm_m2iso',           'Float_t', 0, "Muon isolation the way it's done in Bmm4")
+    tree.addBranch('mm_os',              'UInt_t',  0, "Opposite charge or not")
 
-    tree.addBranch('mm_kin_alphaXY','Float_t', 0, "Cosine of pointing angle in XY wrt BS")
-    tree.addBranch('mm_nBMTrks',     'UInt_t', 0, "Number of tracks more compatible with the mm vertex than with PV by doca significance")
-    tree.addBranch('mm_nDisTrks',    'UInt_t', 0, "Number of displaced tracks compatible with the vertex by vertex probability")
-    tree.addBranch('mm_closetrks1',  'UInt_t', 0, "Number of tracks compatible with the vertex by DOCA(0.3mm) and signifance less than 1")
-    tree.addBranch('mm_closetrks2',  'UInt_t', 0, "Number of tracks compatible with the vertex by DOCA(0.3mm) and signifance less than 2")
-    tree.addBranch('mm_closetrks3',  'UInt_t', 0, "Number of tracks compatible with the vertex by DOCA(0.3mm) and signifance less than 3")
+    tree.addBranch('mm_kin_alphaXY',     'Float_t', 0, "Cosine of pointing angle in XY wrt BS")
+    tree.addBranch('mm_nBMTrks',         'UInt_t',  0, "Number of tracks more compatible with the mm vertex than with PV by doca significance")
+    tree.addBranch('mm_nDisTrks',        'UInt_t',  0, "Number of displaced tracks compatible with the vertex by vertex probability")
+    tree.addBranch('mm_closetrks1',      'UInt_t',  0, "Number of tracks compatible with the vertex by DOCA(0.3mm) and signifance less than 1")
+    tree.addBranch('mm_closetrks2',      'UInt_t',  0, "Number of tracks compatible with the vertex by DOCA(0.3mm) and signifance less than 2")
+    tree.addBranch('mm_closetrks3',      'UInt_t',  0, "Number of tracks compatible with the vertex by DOCA(0.3mm) and signifance less than 3")
+    tree.addBranch('mm_otherVtxMaxProb', 'Float_t', 0, "Max vertexing probability of one of the muons with a random track with minPt=0.5GeV")
+    tree.addBranch('mm_otherVtxMaxProb1','Float_t', 0, "Max vertexing probability of one of the muons with a random track with minPt=1.0GeV")
+    tree.addBranch('mm_otherVtxMaxProb2','Float_t', 0, "Max vertexing probability of one of the muons with a random track with minPt=2.0GeV")
     
-    
-    
+    tree.addBranch('HLT_DoubleMu4_3_Bs', 'UInt_t',  0, "Main analysis trigger")
+    tree.addBranch('mm_kin_pvip',        'Float_t', 0, "Impact parameter wrt Primary Vertex in 3D")
+    tree.addBranch('mm_kin_pvlip',       'Float_t', 0, "Longitudinal impact parameter wrt Primary Vertex")
+    tree.addBranch('mm_met',             'Float_t', 0, "MET projected on dimuon direction")
+
     ## gen info
-    tree.addBranch('mm_gen_pdgId', 'Int_t',  0, "Gen match: dimuon pdg Id")
+    tree.addBranch('mm_gen_pdgId',       'Int_t',   0, "Gen match: dimuon pdg Id")
     
     ## BDT info
-    tree.addBranch('mm_bdt',      'Float_t', 0, "Bmm4 BDT")
+    tree.addBranch('mm_bdt',             'Float_t', 0, "Bmm4 BDT")
 
 def _good_muon(event,index):
     if not (abs(event.Muon_eta[index])<1.4): return False
@@ -125,11 +138,11 @@ def _apply_selection(event):
         selection.append( ('decay_length_significance', event.mm_kin_sl3d[i]>4) )
         selection.append( ('vertex_chi2', event.mm_kin_vtx_chi2dof[i]<5) )
         keeper = True
-        if blind_signal_region:
+        if not hasattr(event, 'mm_gen_pdgId') and blind_signal_region:
             keeper = False
-            if blinding_right_sideband:
+            if keep_right_sideband:
                 if (event.mm_kin_mass[i]-5.3)>0.2: keeper = True
-            if blinding_left_sideband:
+            if keep_left_sideband:
                 if (event.mm_kin_mass[i]-5.3)<-0.2: keeper = True
         selection.append( ('blinding', keeper) )
         candidates.append(selection)
@@ -153,31 +166,45 @@ def _fill_tree(tree,event,cand):
     tree['evt_run']   = event.run
     tree['evt_lumi']  = event.luminosityBlock
     tree['evt_event'] = event.event
-
+    tree['evt_nvtx']  = event.PV_npvsGood
+    tree['evt_met']   = event.MET_pt
+ 
     ## mm info
-    tree['mm_kin_mass']  = event.mm_kin_mass[cand]
-    tree['mm_kin_eta']   = event.mm_kin_eta[cand]
-    tree['mm_mu1_pt']    = event.Muon_pt[event.mm_mu1_index[cand]]
-    tree['mm_mu2_pt']    = event.Muon_pt[event.mm_mu2_index[cand]]
-    tree['mm_mu1_eta']   = event.Muon_eta[event.mm_mu1_index[cand]]
-    tree['mm_mu2_eta']   = event.Muon_eta[event.mm_mu1_index[cand]]
-    tree['mm_kin_l3d']   = event.mm_kin_l3d[cand]
-    tree['mm_kin_sl3d']  = event.mm_kin_sl3d[cand]
-    tree['mm_kin_alpha'] = event.mm_kin_alpha[cand]
-    tree['mm_kin_spvip'] = event.mm_kin_pvip[cand]/event.mm_kin_pvipErr[cand]
-    tree['mm_iso']       = event.mm_iso[cand]
+    tree['mm_kin_mass']    = event.mm_kin_mass[cand]
+    tree['mm_kin_eta']     = event.mm_kin_eta[cand]
+    tree['mm_kin_pt']      = event.mm_kin_pt[cand]
+    tree['mm_mu1_pt']      = event.Muon_pt[event.mm_mu1_index[cand]]
+    tree['mm_mu2_pt']      = event.Muon_pt[event.mm_mu2_index[cand]]
+    tree['mm_mu1_eta']     = event.Muon_eta[event.mm_mu1_index[cand]]
+    tree['mm_mu2_eta']     = event.Muon_eta[event.mm_mu2_index[cand]]
+    tree['mm_mu1_phi']     = event.Muon_phi[event.mm_mu1_index[cand]]
+    tree['mm_mu2_phi']     = event.Muon_phi[event.mm_mu2_index[cand]]
+    tree['mm_kin_l3d']     = event.mm_kin_l3d[cand]
+    tree['mm_kin_sl3d']    = event.mm_kin_sl3d[cand]
+    tree['mm_kin_slxy']    = event.mm_kin_slxy[cand]
+    tree['mm_kin_alpha']   = event.mm_kin_alpha[cand]
+    tree['mm_kin_spvip']   = event.mm_kin_pvip[cand]/event.mm_kin_pvipErr[cand]
+    tree['mm_kin_spvlip']  = event.mm_kin_pvlip[cand]/event.mm_kin_pvlipErr[cand]
+    tree['mm_kin_pvip']    = event.mm_kin_pvip[cand]
+    tree['mm_kin_pvlip']   = event.mm_kin_pvlip[cand]
+    tree['mm_iso']         = event.mm_iso[cand]
     tree['mm_kin_vtx_chi2dof'] = event.mm_kin_vtx_chi2dof[cand]
-    tree['mm_docatrk']   = event.mm_docatrk[cand]
-    tree['mm_closetrk']  = event.mm_closetrk[cand]
+    tree['mm_docatrk']     = event.mm_docatrk[cand]
+    tree['mm_closetrk']    = event.mm_closetrk[cand]
     tree['mm_closetrks1']  = event.mm_closetrks1[cand]
     tree['mm_closetrks2']  = event.mm_closetrks2[cand]
     tree['mm_closetrks3']  = event.mm_closetrks3[cand]
-    tree['mm_m1iso']     = event.mm_m1iso[cand]
-    tree['mm_m2iso']     = event.mm_m2iso[cand]
-    tree['mm_os']        = 1 if (event.Muon_charge[event.mm_mu1_index[cand]] * event.Muon_charge[event.mm_mu2_index[cand]] == -1) else 0
+    tree['mm_otherVtxMaxProb']  = event.mm_otherVtxMaxProb[cand]
+    tree['mm_otherVtxMaxProb1'] = event.mm_otherVtxMaxProb1[cand]
+    tree['mm_otherVtxMaxProb2'] = event.mm_otherVtxMaxProb2[cand]
+    tree['mm_m1iso']       = event.mm_m1iso[cand]
+    tree['mm_m2iso']       = event.mm_m2iso[cand]
+    tree['mm_os'] = 1 if (event.Muon_charge[event.mm_mu1_index[cand]] * event.Muon_charge[event.mm_mu2_index[cand]] == -1) else 0
     tree['mm_kin_alphaXY'] = event.mm_kin_cosAlphaXY[cand]
     tree['mm_nBMTrks']     = event.mm_nBMTrks[cand]
     tree['mm_nDisTrks']    = event.mm_nDisTrks[cand]
+    tree['mm_doca']        = event.mm_doca[cand]
+    tree['mm_met']         = event.MET_pt*math.cos(event.mm_kin_phi[cand]-event.MET_phi)
     
     ## gen info
     if hasattr(event, 'mm_gen_pdgId'):
@@ -185,6 +212,7 @@ def _fill_tree(tree,event,cand):
     else:
         tree['mm_gen_pdgId'] = 0
         
+    tree['HLT_DoubleMu4_3_Bs'] = event.HLT_DoubleMu4_3_Bs
 
     ## old BDT
     tree['mm_bdt']       = event.mm_bdt[cand]
@@ -215,11 +243,11 @@ def _analyze_selection(candidates,statistics):
             else:
                 break
 
-def process_file(input_file,output_filename=None,signal_only=False):
+def process_file(input_file,output_filename=None,signal_only=False,output_path="/tmp"):
     _formated_print("Processing file: %s" % input_file)
     statisitics = dict()
     if not output_filename:
-        output_filename = "/tmp/%s.root" % hashlib.md5(input_file).hexdigest()
+        output_filename = "%s/%s.root" % (output_path,hashlib.md5(input_file).hexdigest())
     if output_is_already_available(output_filename):
         return output_filename
     try:
@@ -259,8 +287,31 @@ def process_file(input_file,output_filename=None,signal_only=False):
 def process_file_mc_mathed(input_file):
     return process_file(input_file,None,True)
 
+def process_files(input_files,output_file_name,output_path="./",signal_only=False):
+    results = []
+    for f in input_files:
+        result = process_file(f,signal_only,output_path)
+        print "Processed %s into %s" % (f,result)
+        results.append(result)
+
+    print "Multiprocessing is done. Merging output."
+
+    good_files = []
+    for rfile in results:
+        if rfile: good_files.append(rfile)
+    status = subprocess.call("hadd -f %s/%s %s" % (output_path,output_file_name," ".join(good_files)),shell=True)
+    if status==0:
+        print "Merged output."
+        for file in good_files:
+            os.remove(file)
+    else:
+        print "Merge failed"
+
+    return results
+
 if __name__ == "__main__":
     # print process_file('/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/505/BsToMuMu_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0D690850-542C-874D-8553-2454517F6E54.root')
     # print process_file('/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/505/QCD_HT100to200_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM_Skim.root')
-    print process_file('/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/505/Charmonium+Run2018A-17Sep2018-v1+MINIAOD/0024D10F-B9D6-3E46-BEE1-413765D77D91.root')
-
+    # print process_file('/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/505/Charmonium+Run2018A-17Sep2018-v1+MINIAOD/0024D10F-B9D6-3E46-BEE1-413765D77D91.root')
+    print process_file('/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/505/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root')
+    # print process_file('/afs/cern.ch/user/d/dmytro/eos/tmp/Bmm/QCD_Pt-30toInf_BmmGenFilter-NanoAOD/QCD_Pt-30toInf_BmmGenFilter-NanoAODv6-v5.root')
