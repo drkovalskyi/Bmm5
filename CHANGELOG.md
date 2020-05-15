@@ -2,6 +2,8 @@
 
 ## New developments
 
+## [NanoAODv6-V06] - 2020/05/15
+
 ### Added
 	- Bmm emulation with BtoJpsiK events
 	- skimming tools
