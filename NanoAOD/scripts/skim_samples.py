@@ -11,7 +11,7 @@ import hashlib
 
 cut = "Muon_softId[mm_mu1_index]&&abs(Muon_eta[mm_mu1_index])<1.4&&Muon_pt[mm_mu1_index]>4&&Muon_softId[mm_mu2_index]&&abs(Muon_eta[mm_mu2_index])<1.4&&Muon_pt[mm_mu2_index]>4&&abs(mm_kin_mass-5.4)<0.5&&mm_kin_sl3d>4&&mm_kin_vtx_chi2dof<5"
 
-output_dir = "/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/505"
+output_dir = "/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/mm/505"
 
 nProcesses = 16
 
