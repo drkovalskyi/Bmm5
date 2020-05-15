@@ -580,9 +580,9 @@ bdtReader2_("!Color:Silent")
     xgBoosters_.push_back(XGBooster(iConfig.getParameter<edm::FileInPath>("xgbEvent2").fullPath()));
 
     // XGBooster
-    std::vector<std::string> features = {"mm_kin_alpha", "mm_kin_alphaXY", "mm_kin_spvip", "mm_kin_pvip", "mm_iso", 
-					 "mm_m1iso", "mm_m2iso", "mm_kin_sl3d", "mm_kin_vtx_chi2dof", "mm_nBMTrks", 
-					 "mm_closetrks1", "mm_nDisTrks"};
+    std::vector<std::string> features = {"mm_kin_alpha", "mm_kin_alphaXY", "mm_kin_spvip", "mm_kin_pvip", 
+					 "mm_iso", "mm_m1iso", "mm_m2iso", "mm_kin_sl3d", "mm_kin_vtx_chi2dof", 
+					 "mm_nBMTrks", "mm_otherVtxMaxProb1", "mm_otherVtxMaxProb2"};
     for (auto& xgBooster: xgBoosters_)
       for (const auto& feature: features)
 	xgBooster.addFeature(feature);
@@ -936,10 +936,10 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
   xgBoosters_.at(xg_index).set("mm_m1iso",           dimuonCand.userFloat("m1iso"));
   xgBoosters_.at(xg_index).set("mm_m2iso",           dimuonCand.userFloat("m2iso"));
   xgBoosters_.at(xg_index).set("mm_kin_sl3d",        dimuonCand.userFloat("kin_sl3d"));
-  xgBoosters_.at(xg_index).set("mm_nBMTrks",         dimuonCand.userInt(  "nBMTrks"));
   xgBoosters_.at(xg_index).set("mm_kin_vtx_chi2dof", dimuonCand.userFloat("kin_vtx_chi2dof"));
-  xgBoosters_.at(xg_index).set("mm_closetrks1",      dimuonCand.userInt(  "closetrk"));
-  xgBoosters_.at(xg_index).set("mm_nDisTrks",        dimuonCand.userInt(  "nDisTrks"));
+  xgBoosters_.at(xg_index).set("mm_nBMTrks",         dimuonCand.userInt(  "nBMTrks"));
+  xgBoosters_.at(xg_index).set("mm_otherVtxMaxProb1", dimuonCand.userFloat(  "otherVtxMaxProb1"));
+  xgBoosters_.at(xg_index).set("mm_otherVtxMaxProb2", dimuonCand.userFloat(  "otherVtxMaxProb2"));
   
   dimuonCand.addUserFloat("mva", xgBoosters_.at(xg_index).predict());
 
@@ -1138,8 +1138,8 @@ BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCan
   xgBoosters_.at(xg_index).set("mm_m1iso",           mmK.userFloat("bmm_m1iso"));
   xgBoosters_.at(xg_index).set("mm_m2iso",           mmK.userFloat("bmm_m2iso"));
   xgBoosters_.at(xg_index).set("mm_nBMTrks",         mmK.userInt(  "bmm_nBMTrks"));
-  xgBoosters_.at(xg_index).set("mm_closetrks1",      mmK.userInt(  "bmm_closetrk"));
-  xgBoosters_.at(xg_index).set("mm_nDisTrks",        mmK.userInt(  "bmm_nDisTrks"));
+  xgBoosters_.at(xg_index).set("mm_otherVtxMaxProb1", mmK.userFloat(  "bmm_otherVtxMaxProb1"));
+  xgBoosters_.at(xg_index).set("mm_otherVtxMaxProb2", mmK.userFloat(  "bmm_otherVtxMaxProb2"));
   // Vertexing - mm
   xgBoosters_.at(xg_index).set("mm_kin_vtx_chi2dof", mm.userFloat("kin_vtx_chi2dof"));
   // Flight length significance - mm

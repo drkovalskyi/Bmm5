@@ -65,9 +65,9 @@ BxToMuMu = cms.EDProducer("BxToMuMuProducer",
     bdtEvent0 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events0_BDT.weights.xml'),
     bdtEvent1 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events1_BDT.weights.xml'),
     bdtEvent2 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events2_BDT.weights.xml'),
-    xgbEvent0 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200415-Event0.model'),
-    xgbEvent1 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200415-Event1.model'),
-    xgbEvent2 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200415-Event2.model'),
+    xgbEvent0 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200515-1144-Event0.model'),
+    xgbEvent1 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200515-1143-Event1.model'),
+    xgbEvent2 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200515-1143-Event2.model'),
     isMC = cms.bool(False)
 )
 
