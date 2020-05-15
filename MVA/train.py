@@ -1,5 +1,6 @@
 # import os
 import sys, pickle, json
+from datetime import datetime
 
 import numpy as np
 import uproot
@@ -16,6 +17,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
+output_path = "results/"
 
 def load_data(fname):
     """Load ROOT data and turn MVA tree into an array.
@@ -111,7 +113,7 @@ def get_parametrs():
     # and eta shrinks the feature weights to make the boosting process
     # more conservative.
     # - range: [0,1]
-    param['eta'] = 0.3
+    param['eta'] = 0.01
     # max_depth [default=6]
     #
     # - Maximum depth of a tree. Increasing this value will make the model
@@ -121,8 +123,10 @@ def get_parametrs():
     # consumes memory when training a deep tree.  
     # - range: [0,Inf] (0 is only accepted in lossguided growing policy
     # when tree_method is set as hist)
-    param['max_depth'] = 3
+    param['max_depth'] = 10
     param['silent'] = 1
+    # number of threads to use for training. It's wise to set it to
+    # the number of real CPUs. More is not always better.
     param['nthread'] = 15
     # eval_metric [default according to objective]
     # 
@@ -131,6 +135,7 @@ def get_parametrs():
     # classification, mean average precision for ranking)
     # - auc: Area under the curve
     param['eval_metric'] = "auc"
+    # param['eval_metric'] = "aucpr"
     # subsample [default=1]
     # 
     # - Subsample ratio of the training instances. Setting it to 0.5 means
@@ -166,7 +171,8 @@ def get_parametrs():
     # node. The larger min_child_weight is, the more conservative the
     # algorithm will be.
     # - range: [0,Inf]
-    param['min_child_weight'] = 1.0
+    # param['min_child_weight'] = 0.01
+    param['min_child_weight'] = 0.00001
     # colsample_bytree, colsample_bylevel, colsample_bynode [default=1]
     # 
     # - This is a family of parameters for subsampling of columns.
@@ -184,7 +190,7 @@ def train(x_train,x_test,y_train,y_test,model_name="test"):
     dtest = xgb.DMatrix( x_test, label=y_test, feature_names=feature_names)
     evallist  = [(dtrain,'train'), (dtest,'eval')]
 
-    num_round = 200
+    num_round = 5000
 
     param = get_parametrs()
 
@@ -198,7 +204,8 @@ def train(x_train,x_test,y_train,y_test,model_name="test"):
     # discussion.
     # https://xgboost.readthedocs.io/en/latest/tutorials/param_tuning.html
 
-    target_s_over_b = 0.001
+    # target_s_over_b = 0.005
+    target_s_over_b = .1
 
     param["scale_pos_weight"] = sumw_neg/float(sumw_pos)*target_s_over_b
     pprint(param)
@@ -214,14 +221,69 @@ def train(x_train,x_test,y_train,y_test,model_name="test"):
             print (feature_format+" %0.1f") % (name,scores[name])
         else:
             print (feature_format+" unused") % name
-    pickle.dump({'model':bst,'feature_names':feature_names},open("%s.pkl"%model_name,"wb"))
-    bst.dump_model("%s.txt"%model_name)
-    bst.save_model("%s.model"%model_name)
-    json.dump(feature_names,open("%s.features"%model_name,"w"))
+    pickle.dump({'model':bst,'feature_names':feature_names},open("%s/%s.pkl"%(output_path,model_name),"wb"))
+    bst.dump_model("%s/%s.txt"%(output_path,model_name))
+    bst.save_model("%s/%s.model"%(output_path,model_name))
+    json.dump(feature_names,open("%s/%s.features"%(output_path,model_name),"w"))
+    json.dump(param,open("%s/%s.params"%(output_path,model_name),"w"))
 
     # write_json("model.json", bst, feature_names)
     # json_to_cfunc("model.json", fname_out="func.h")
     return bst,dtrain,dtest
+
+def cross_validate(x_train,y_train,model_name="test"):
+    """Cross-validate model and its parameters"""
+    dtrain = xgb.DMatrix( x_train, label=y_train, feature_names=feature_names)
+
+    num_round = 200
+
+    param = get_parametrs()
+
+    sumw_pos = np.abs(dtrain.get_label()==1).sum()
+    sumw_neg = np.abs(dtrain.get_label()==0).sum()
+    # scale_pos_weight [default=1]
+    #
+    # - Control the balance of positive and negative weights, useful for
+    # unbalanced classes. A typical value to consider: sum(negative
+    # instances) / sum(positive instances). See Parameters Tuning for more
+    # discussion.
+    # https://xgboost.readthedocs.io/en/latest/tutorials/param_tuning.html
+
+    target_s_over_b = 0.003
+
+    param["scale_pos_weight"] = sumw_neg/float(sumw_pos)*target_s_over_b
+    pprint(param)
+
+    cv_results = xgb.cv( 
+        param.items(), 
+        dtrain, 
+        num_round, 
+        seed=42, # fix seed to be able to compare scores with different parameters
+        nfold=5, # the number of folds to use for cross-validation
+        metrics={'auc'},
+        verbose_eval=True,
+        early_stopping_rounds=10 )
+    
+    pprint(cv_results)
+    # # bst.feature_names = feature_names
+    # max_length = max([len(s) for s in feature_names])
+    # feature_format = "%"+"%u"%max_length+"s"
+    # scores = bst.get_score(importance_type='gain')
+    # print "Importance scores:"
+    # for name in feature_names:
+    #     if name in scores:
+    #         print (feature_format+" %0.1f") % (name,scores[name])
+    #     else:
+    #         print (feature_format+" unused") % name
+    # pickle.dump({'model':bst,'feature_names':feature_names},open("%s.pkl"%model_name,"wb"))
+    # bst.dump_model("%s.txt"%model_name)
+    # bst.save_model("%s.model"%model_name)
+    # json.dump(feature_names,open("%s.features"%model_name,"w"))
+
+    # # write_json("model.json", bst, feature_names)
+    # # json_to_cfunc("model.json", fname_out="func.h")
+    # return bst,dtrain,dtest
+
 
 def make_validation_plots(bst,dtrain,dtest,model_name="test"):
     y_pred_train = bst.predict(dtrain)
@@ -251,7 +313,7 @@ def make_validation_plots(bst,dtrain,dtest,model_name="test"):
 
     ax.set_ylim([0.01,ax.get_ylim()[1]])
     fig.set_tight_layout(True)
-    fig.savefig("%s-validation-disc.pdf"%model_name)
+    fig.savefig("%s/%s-validation-disc.pdf"%(output_path,model_name))
 
     fpr_test,tpr_test,_ = roc_curve(y_test, y_pred_test)
     fpr_train,tpr_train,_ = roc_curve(y_train, y_pred_train)
@@ -270,7 +332,7 @@ def make_validation_plots(bst,dtrain,dtest,model_name="test"):
     fig.set_tight_layout(True)
     ax.set_yscale("log")
     ax.set_xscale("log")
-    fig.savefig("%s-validation-roc.pdf"%model_name)
+    fig.savefig("%s/%s-validation-roc.pdf"%(output_path,model_name))
 
 def prepare_dataset():
     all_data = load_datasets([
@@ -286,7 +348,10 @@ def prepare_dataset():
         "python/Charmonium+Run2017C.root",
         "python/Charmonium+Run2017D.root",
         "python/Charmonium+Run2017E.root",
-        "python/Charmonium+Run2017F.root"
+        "python/Charmonium+Run2017F.root",
+        # "python/QCD_Pt-30to50_MuEnrichedPt5_RunIIAutumn18MiniAOD.root",
+        # "python/QCD_Pt-50to80_MuEnrichedPt5_RunIIAutumn18MiniAOD.root",
+        # "python/QCD_Pt-80to120_MuEnrichedPt5_RunIIAutumn18MiniAOD.root",
     ])
     print "Total number of events:", len(all_data['evt_event'])
 
@@ -314,8 +379,8 @@ feature_names = [
     ### weak 
     "mm_nBMTrks",    
     # "mm_mu2_pt",
-    "mm_closetrks1",
-    "mm_nDisTrks",
+    # "mm_closetrks1",
+    # "mm_nDisTrks",
     # "mm_kin_pt"
     ### very weak (in order of decreasing contribution)
     # "mm_mu2_eta",
@@ -324,7 +389,10 @@ feature_names = [
     # "mm_kin_eta",     # used in old BDT
     # "mm_kin_spvlip",   
     # "mm_kin_pvlip",   
+    # "mm_otherVtxMaxProb",
     ### new
+    "mm_otherVtxMaxProb1",
+    "mm_otherVtxMaxProb2",
 ]
 
 
@@ -334,10 +402,15 @@ if __name__ == "__main__":
     data = prepare_dataset()
 
     # x_train, x_test, y_train, y_test = get_train_and_test_datasets_split_randomly(data)
-    x_train, x_test, y_train, y_test = get_train_and_test_datasets_split_be_event_number(data,3,0)
+    event_index = 0
+    x_train, x_test, y_train, y_test = get_train_and_test_datasets_split_be_event_number(data,3,event_index)
 
-    print "Number of signal/background events in training sample: %u/%u",  (sum(y_train==True),sum(y_train==False) )
-    model_name = "Run2017-2018-20200415-Event0"
+    print "Number of signal/background events in training sample: %u/%u (%0.3f)" % (sum(y_train==True),
+                                                                                    sum(y_train==False),
+                                                                                    sum(y_train==True)/float(sum(y_train==False)) )
+    model_name = "Run2017-2018-%s-Event%u" % (datetime.now().strftime("%Y%m%d-%H%M"), event_index)
+    
+    # cross_validate(x_train, y_train, model_name)
     bst,dtrain,dtest = train(x_train, x_test, y_train, y_test,model_name)
     make_validation_plots(bst,dtrain,dtest,model_name)
 
