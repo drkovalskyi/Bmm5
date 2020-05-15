@@ -14,7 +14,12 @@ reggression and Bmm5 NanoAODv6-V05 analysis code
 * scram setup Bmm5/NanoAOD/external-tools/xgboost.xml
 * scram b -j 8
 
-## Filtering
+## cmsDriver Options
+Here is a list of must to have cmsDriver options to get analysis specific parts included
+* --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBxToMuMu 
+* --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake
+
+## Optional Filtering
 If you want to add event filtering to the commands below you just need to modify the step option the following way
 * Monte Carlo: --step NANO,FILTER:Bmm5/NanoAOD/BxToMuMuFilter_cff.BxToMuMuFilterSequenceMC
 * Data: --step NANO,FILTER:Bmm5/NanoAOD/BxToMuMuFilter_cff.BxToMuMuFilterSequence
