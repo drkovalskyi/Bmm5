@@ -3,6 +3,9 @@
 ## New developments
 
 ### Added
+	- Bmm emulation with BtoJpsiK events
+	- skimming tools
+	- KsToPiPi reconstruction for muon fake studies
 	- dimuon vertexing with pointing constrain (kinpc)
 	- XGBoost is integrated in NanoAOD code to produce ntuple with new MVA centrally
 	- Generator level filter for Bmm signature to effectively select relevant QCD events
