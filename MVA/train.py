@@ -101,6 +101,9 @@ def get_parametrs():
     """Get parameters for XGBoost."""
     param = {}
     # https://xgboost.readthedocs.io/en/latest/parameter.html
+
+    param['tree_method'] = 'hist'
+
     # objective [default=reg:squarederror]
     #
     # - binary:logistic: logistic regression for binary classification,
@@ -336,22 +339,22 @@ def make_validation_plots(bst,dtrain,dtest,model_name="test"):
 
 def prepare_dataset():
     all_data = load_datasets([
-        # "python/BdToMuMu_BMuonFilter_RunIIAutumn18MiniAOD.root",
-        # "python/BsToMuMu.root",
-        "python/BsToMuMu_BMuonFilter_RunIIAutumn18MiniAOD.root",
-        "python/Charmonium+Run2018A.root",
-        "python/Charmonium+Run2018B.root",
-        "python/Charmonium+Run2018C.root",
-        "python/Charmonium+Run2018D.root",
-        # "python/BsToMuMu_BMuonFilter_RunIIFall17MiniAODv2.root",
-        "python/Charmonium+Run2017B.root",
-        "python/Charmonium+Run2017C.root",
-        "python/Charmonium+Run2017D.root",
-        "python/Charmonium+Run2017E.root",
-        "python/Charmonium+Run2017F.root",
-        # "python/QCD_Pt-30to50_MuEnrichedPt5_RunIIAutumn18MiniAOD.root",
-        # "python/QCD_Pt-50to80_MuEnrichedPt5_RunIIAutumn18MiniAOD.root",
-        # "python/QCD_Pt-80to120_MuEnrichedPt5_RunIIAutumn18MiniAOD.root",
+        # "data/BdToMuMu_BMuonFilter_RunIIAutumn18MiniAOD.root",
+        # "data/BsToMuMu.root",
+        "data/BsToMuMu_BMuonFilter_RunIIAutumn18MiniAOD.root",
+        "data/Charmonium+Run2018A.root",
+        "data/Charmonium+Run2018B.root",
+        "data/Charmonium+Run2018C.root",
+        "data/Charmonium+Run2018D.root",
+        # "data/BsToMuMu_BMuonFilter_RunIIFall17MiniAODv2.root",
+        "data/Charmonium+Run2017B.root",
+        "data/Charmonium+Run2017C.root",
+        "data/Charmonium+Run2017D.root",
+        "data/Charmonium+Run2017E.root",
+        "data/Charmonium+Run2017F.root",
+        # "data/QCD_Pt-30to50_MuEnrichedPt5_RunIIAutumn18MiniAOD.root",
+        # "data/QCD_Pt-50to80_MuEnrichedPt5_RunIIAutumn18MiniAOD.root",
+        # "data/QCD_Pt-80to120_MuEnrichedPt5_RunIIAutumn18MiniAOD.root",
     ])
     print "Total number of events:", len(all_data['evt_event'])
 
