@@ -16,15 +16,8 @@ reggression and Bmm5 NanoAODv6-V07 analysis code
 
 ### SL6 issues
 
-If you get the follow exception you may need to proceload XGBost library.
-    ----- Begin Fatal Exception 26-May-2020 12:57:38 CEST-----------------------
-    An exception of category 'PluginLibraryLoadError' occurred while
-       [0] Constructing the EventProcessor
-    Exception Message:
-    unable to load /afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6-SL6/lib/slc6_amd64_gcc700/pluginBmm5NanoAODPlugins.so     because dlopen: cannot load any more object with static TLS
-    ----- End Fatal Exception -------------------------------------------------
-
-export LD_PRELOAD=$CMSSW_BASE/external/$SCRAM_ARCH/lib/libxgboost.so
+If you get a Fatal Exception of category 'PluginLibraryLoadError' with the message "dlopen: cannot load any more object with static TLS" you need to preload XGBoost library before you run cmsRun:
+* export LD_PRELOAD=$CMSSW_BASE/external/$SCRAM_ARCH/lib/libxgboost.so
 
 ## cmsDriver Options
 Here is a list required cmsDriver options to get analysis specific parts included
