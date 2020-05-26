@@ -2,6 +2,11 @@
 
 ## New developments
 
+## [NanoAODv6-V07] - 2020/05/26
+
+### Added
+	- Recompute soft muon MVA
+
 ## [NanoAODv6-V06] - 2020/05/15
 
 ### Added
