@@ -3,41 +3,76 @@ import os, re, ROOT, sys, time
 from ROOT import TFile,TTree,TH1,TROOT,TDirectory,TPad,TCanvas,TColor
 from array import array
 
-output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv5-1-502/bjpsik/"
+output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-507/bjpsik/"
 
-mm_selection = "abs(Muon_eta[mm_mu1_index])<1.4 && abs(Muon_eta[mm_mu2_index])<1.4&&Muon_pt[mm_mu1_index]>4 && Muon_pt[mm_mu2_index]>4&&mm_kin_valid>0&&Muon_softMva[mm_mu1_index]>0.45 && Muon_softMva[mm_mu2_index]>0.45&&mm_kin_sl3d>4&&mm_kin_mass<6.0&&mm_kin_vtx_chi2dof<5"
+bkmm_cuts = [
+    # skimming requirements
+    "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4", "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4",
+    "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4", "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4",
+    "mm_kin_sl3d[bkmm_mm_index]>4", "mm_kin_vtx_chi2dof[bkmm_mm_index]<5",
+    "abs(bkmm_jpsimc_mass-5.4)<0.5", "bkmm_jpsimc_vtx_chi2dof<5","bkmm_jpsimc_alpha<0.2",
+    # trigger requirements
+    
+    # muon id
+    "Muon_softMva[mm_mu1_index[bkmm_mm_index]]>0.45 ", " Muon_softMva[mm_mu2_index[bkmm_mm_index]]>0.45",
+]
+bkmm_selection = "&&".join(bkmm_cuts)
 
-bkmm_selection = "bkmm_kaon_sdxy_bs>5&&bkmm_kaon_pt>1&&abs(bkmm_kaon_eta)<1.4&&bkmm_jpsimc_vtx_prob>0.1&&bkmm_jpsimc_sl3d>4&&bkmm_jpsimc_mass<6.0&&abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 && abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4&&Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 && Muon_pt[mm_mu2_index[bkmm_mm_index]]>4&&Muon_softMva[mm_mu1_index[bkmm_mm_index]]>0.45 && Muon_softMva[mm_mu2_index[bkmm_mm_index]]>0.45"
+save_root = True
+save_pdf  = False
 
 samples = {
     'BuToJpsiK_RunIIAutumn18MiniAOD_102X':{
         'files':[
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0057C0BD-B380-D74A-8634-BA648F4FF669.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0151F40E-240B-374C-AA69-44EBCE093268.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/017F2874-3AD9-074C-BB1E-E061D429E3F1.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0440EA45-411F-E04F-92A6-B3DDA0AA9DDD.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/05DDBC2E-90BE-044A-88A9-0049686243DF.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0939BA48-B40B-444B-9665-1743D6017488.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0C8090D3-3B84-A142-B22B-F81541642824.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0DF86428-7817-0B40-AF6D-421E65B64647.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0F3A06FA-7BDF-0B49-9EC8-959D2257A614.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/10EAD7D6-C405-D144-9308-0FA1416FBD72.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0bb34079aa40de8c3fd5615d4816875f.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0e73043348cb10591fd0695444457eb0.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/11f35da73cfdc279a1c462ff4545171d.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/34879d46edcc4751275237a9a5f5e005.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/4a098cd804e128ff3884d364a83ca001.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/5ee0b86054c0cd06cdd8321aa7bd6ad7.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/69256771e201020cf2cb897dcf8a8c50.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/83cca0d22ac9b759c372b35e26383e75.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/858c7ecc88235b88b48d2781029c589b.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/859639c395e8b78e5961a529c8c40e57.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/95f810c82fcd5d0f28c797d434567fd0.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/96ef9d3d833bc619b9302acdaaad4bae.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ae3371239732054142154e65ac6704da.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/bf3334e398d5fe68e5b3b90902b98211.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/c1fccea24bea988bf44999dcbe392944.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/c4829a75fb3d015222a50537e11cf5c5.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/d0f387b0f422c1a5fc9d27473d2aac84.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ec72869cbf788f4b6f7ff70009f1ec71.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ee13334ead0829b10ce5e7451ee11245.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/f9156ede12c49a38bb79033cb8ee80f1.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/feb8d6652fdd5e9037dda99f1a01cbe4.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ff104c1d47f6100eee007c5f7d7e348b.root',
         ],
         'color':ROOT.kBlue,
     },
     'Charmonium_Run2018D_PromptReco':{
         'files':[
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/Charmonium+Run2018D-PromptReco-v2+MINIAOD/0067F915-7DB8-E811-A3B5-FA163E3C94E9.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/Charmonium+Run2018D-PromptReco-v2+MINIAOD/00A68F5A-8AAF-E811-800C-FA163E32FB27.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/Charmonium+Run2018D-PromptReco-v2+MINIAOD/00EE8907-CA9E-E811-A3C9-FA163E1858E5.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/Charmonium+Run2018D-PromptReco-v2+MINIAOD/02093F10-FA9D-E811-99F8-FA163EA55BB8.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/Charmonium+Run2018D-PromptReco-v2+MINIAOD/021B4E0E-F8E7-E84B-8D73-708675E13E77.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/Charmonium+Run2018D-PromptReco-v2+MINIAOD/022E11A6-56A0-E811-AD2B-FA163E205A29.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/Charmonium+Run2018D-PromptReco-v2+MINIAOD/023EC343-EDAE-E811-A17C-FA163EDAA78B.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/Charmonium+Run2018D-PromptReco-v2+MINIAOD/0268C30A-CEAF-E811-9604-02163E015F3C.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/Charmonium+Run2018D-PromptReco-v2+MINIAOD/02995A20-B0B3-E811-9F1A-FA163EB2B58A.root',
-            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/502/Charmonium+Run2018D-PromptReco-v2+MINIAOD/02AEB5E0-CFAE-E811-BF92-FA163EB9E8EA.root',
-            
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/0598c756298cd841ea1ba52aa6205eaa.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/093134082bc6cd87be174850e72892c2.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/142c84fb8e8d03eea34e0cf3277a0656.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/171c485619d24e7b2de271e713eca657.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/3a2e7df0fa80cecb95f8f3adcf209df1.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/3f4c01f6a59a852150e3a7a30319a8b3.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/41c385f0cbe95de10b190b3d64ad7bdc.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/4743df6d0cc32407bf84a5e83f2404a8.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/6cba9feb4a653616c839744db0f2a04b.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/71cf6c7a252fa917ab6a61b3c60d1b05.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/72080df52e6a36f3e85c6b960daaf510.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/729046729c91eeaef1ebfa1e320ab2d2.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/8e58a2b22e745af953fb0ce4763d8453.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/92c411e0b3a00b2b0606a6b12f009aa8.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/974e71c94fc6b826fc5a57d0a1e11351.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/b9a1a2f74e56da3db7871bd16cff191b.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/d038d09060a5b5487cdf4de572362e2f.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/d606c6838c2bfe67273e6f1bb7f8ecff.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/ddf50979ae49179f598e49ab87a8ceeb.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/e6fc8ef8028c22b1b9489374220f1d4e.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/e88d8f1444f66a53cf4098070036100f.root',
+            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/Charmonium+Run2018D-PromptReco-v2+MINIAOD/f016487d3c89be36327f2575e958c9bf.root',
         ],
         'color':ROOT.kBlack,
     }
@@ -69,9 +104,11 @@ for name,sample in samples.items():
 def print_canvas(output_name_without_extention, path, canvas=ROOT.gPad):
     if not os.path.exists(path):
         os.makedirs(path)
-    canvas.Print("%s/%s.png"%(path,output_name_without_extention))
-    # canvas.Print("%s/%s.pdf"%(path,output_name_without_extention))
-    # canvas.Print("%s/%s.root"%(path,output_name_without_extention))
+    canvas.Print("%s/%s.png"%(path, output_name_without_extention))
+    if save_pdf:
+        canvas.Print("%s/%s.pdf"%(path, output_name_without_extention))
+    if save_root:
+        canvas.Print("%s/%s.root"%(path, output_name_without_extention))
 
 def plot_generic_1D(selection,hist_title,file_name,var,nbins=100,xmin=0,xmax=100):
     c1 = TCanvas("c1","c1",800,800)
@@ -108,21 +145,45 @@ def plot_generic_1D(selection,hist_title,file_name,var,nbins=100,xmin=0,xmax=100
     for name,sample in samples.items():
         print "\t%s: \t%u out of %u" % (name,sample['nSelected'],sample['nAll'])
 
+
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
 
-plot_generic_1D(mm_selection,  "Dimuon vertex constrained;Mass",           "02_mass","mm_kin_mass",100,2.9,3.3)
-plot_generic_1D(bkmm_selection,"BtoJ/#psiK Kaon_{pt}>1GeV;Mass",          "02_mass_jpsik","bkmm_jpsimc_mass",100,4.5,6.0)
-plot_generic_1D(bkmm_selection+"&&bkmm_kaon_pt>2","BtoJ/#psiK Kaon_{pt}>2GeV;Mass",          
-                "02_mass_jpsik_kaon2","bkmm_jpsimc_mass",100,4.5,6.0)
-plot_generic_1D(bkmm_selection,"J/#psi from BtoJ/#psiK Kaon_{pt}>1GeV;Mass",              
-                "02_mass_jpsi","mm_kin_mass[bkmm_mm_index]",100,2.9,3.3)
-plot_generic_1D(bkmm_selection+"&&bkmm_kaon_pt>2","J/#psi from BtoJ/#psiK Kaon_{pt}>2GeV;Mass",              
-                "02_mass_jpsi_kaon2","mm_kin_mass[bkmm_mm_index]",100,2.9,3.3)
-plot_generic_1D(bkmm_selection+"&&abs(bkmm_jpsimc_mass-5.29)<0.05", "J/#psi from BtoJ/#psiK (B_{M}#in[5.24,5.34]);Mass", 
-                "02_mass_jpsi_bmasscut","mm_kin_mass[bkmm_mm_index]",100,2.9,3.3)
+# plot_generic_1D(bkmm_selection, "BtoJ/#psiK (kaon P_T>1 GeV);Mass",
+#                 "02_mass_jpsik", "bkmm_jpsimc_mass", 100, 4.5, 6.0)
+# plot_generic_1D(bkmm_selection + "&&bkmm_kaon_pt>2", "BtoJ/#psiK (kaon P_T>2 GeV);Mass",          
+#                 "02_mass_jpsik_kaon2", "bkmm_jpsimc_mass", 100, 4.5, 6.0)
+# plot_generic_1D(bkmm_selection + "&&bkmm_kaon_pt>3", "BtoJ/#psiK (kaon P_T>3 GeV);Mass",          
+#                 "02_mass_jpsik_kaon3", "bkmm_jpsimc_mass", 100, 4.5, 6.0)
+# plot_generic_1D(bkmm_selection + "&&bkmm_kaon_pt>5", "BtoJ/#psiK (kaon P_T>5 GeV);Mass",          
+#                 "02_mass_jpsik_kaon5", "bkmm_jpsimc_mass", 100, 4.5, 6.0)
+# plot_generic_1D(bkmm_selection + "&&bkmm_bmm_mva>0.5", "BtoJ/#psiK (modified MVA>0.5);Mass",
+#                 "02_mass_jpsik_mva_gt0p5", "bkmm_jpsimc_mass", 100, 4.5, 6.0)
+# plot_generic_1D(bkmm_selection + "&&bkmm_bmm_mva>0.9", "BtoJ/#psiK (modified MVA>0.9);Mass",
+#                 "02_mass_jpsik_mva_gt0p9", "bkmm_jpsimc_mass", 100, 4.5, 6.0)
+# plot_generic_1D(bkmm_selection + "&&bkmm_kaon_pt>5&&bkmm_bmm_mva>0.9", "BtoJ/#psiK (modified MVA>0.9, kaon P_T>5 GeV);Mass",
+#                 "02_mass_jpsik_mva_gt0p9_kaon5", "bkmm_jpsimc_mass", 100, 4.5, 6.0)
+plot_generic_1D(bkmm_selection + "&&bkmm_kaon_pt>5&&bkmm_bmm_mva>0.9", "BtoJ/#psiK (modified MVA>0.9, kaon P_T>5 GeV);Mass",
+                "02_mass_jpsik_mva_gt0p9_kaon5_zoom", "bkmm_jpsimc_mass", 100, 5.15, 5.55)
+# plot_generic_1D(bkmm_selection, "J/#psi from BtoJ/#psiK Kaon_{pt}>1GeV;Mass",              
+#                 "02_mass_jpsi","mm_kin_mass[bkmm_mm_index]", 100, 2.9, 3.3)
+# plot_generic_1D(bkmm_selection + "&&bkmm_kaon_pt>2", "J/#psi from BtoJ/#psiK (kaon P_T>2 GeV);Mass",              
+#                 "02_mass_jpsi_kaon2", "mm_kin_mass[bkmm_mm_index]", 100, 2.9, 3.3)
+# plot_generic_1D(bkmm_selection + "&&abs(bkmm_jpsimc_mass-5.29)<0.05", "J/#psi from BtoJ/#psiK (B_{M}#in[5.24,5.34]);Mass", 
+#                 "02_mass_jpsi_bmasscut", "mm_kin_mass[bkmm_mm_index]", 100, 2.9, 3.3)
 
-plot_generic_1D(bkmm_selection+"&&abs(bkmm_jpsimc_mass-5.29)<0.05","BDT", "09_bdt","mm_bdt[bkmm_mm_index]",100,-1.5,1.5)
+# plot_generic_1D(bkmm_selection + "&&abs(bkmm_jpsimc_mass-5.29)<0.05", "BtoJ/#psiK (B_{M}#in[5.24,5.34], kaon P_T>1 GeV);BDT",
+#                 "09_bdt", "mm_bdt[bkmm_mm_index]", 100, -1.5, 1.5)
+
+# plot_generic_1D(bkmm_selection + "&&abs(bkmm_jpsimc_mass-5.29)<0.05&&bkmm_kaon_pt>2", "BtoJ/#psiK (B_{M}#in[5.24,5.34], kaon P_T>2 GeV);BDT", 
+#                 "09_bdt_kaon2", "mm_bdt[bkmm_mm_index]", 100, -1.5, 1.5)
+# plot_generic_1D(bkmm_selection + "&&abs(bkmm_jpsimc_mass-5.29)<0.05&&bkmm_kaon_pt>5", "BtoJ/#psiK (B_{M}#in[5.24,5.34], kaon P_T>5 GeV);BDT", 
+#                 "09_bdt_kaon5", "mm_bdt[bkmm_mm_index]", 100, -1.5, 1.5)
+# plot_generic_1D(bkmm_selection + "&&abs(bkmm_jpsimc_mass-5.29)<0.05&&bkmm_kaon_pt>5", "BtoJ/#psiK (B_{M}#in[5.24,5.34], kaon P_T>5 GeV);MVA", 
+#                 "09_mva_kaon5", "mm_mva[bkmm_mm_index]", 120, -0.1, 1.1)
+# plot_generic_1D(bkmm_selection + "&&abs(bkmm_jpsimc_mass-5.29)<0.05&&bkmm_kaon_pt>5", "BtoJ/#psiK (B_{M}#in[5.24,5.34], kaon P_T>5 GeV);MVA (modified)", 
+#                 "09_mva_mod_kaon5", "bkmm_bmm_mva", 120, -0.1, 1.1)
+
 
 # plot_generic_1D("Decay length 3D significance",    "01_decay_length_3D_significance","mm_kin_sl3d",60,0,120)
 # plot_generic_1D("Decay length 3D",                 "01_decay_length_3D","mm_kin_l3d",100,0,1)
