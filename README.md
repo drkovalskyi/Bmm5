@@ -14,6 +14,11 @@ reggression and Bmm5 NanoAODv6-V07 analysis code
 * scram setup Bmm5/NanoAOD/external-tools/xgboost.xml
 * scram b -j 8
 
+### SL6 issues
+
+If you get a Fatal Exception of category 'PluginLibraryLoadError' with the message "dlopen: cannot load any more object with static TLS" you need to preload XGBoost library before you run cmsRun:
+* export LD_PRELOAD=$CMSSW_BASE/external/$SCRAM_ARCH/lib/libxgboost.so
+
 ## cmsDriver Options
 Here is a list required cmsDriver options to get analysis specific parts included
 * --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBxToMuMu 
