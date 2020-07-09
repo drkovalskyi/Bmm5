@@ -129,7 +129,7 @@ def print_canvas(output_name_without_extention, path, canvas=ROOT.gPad):
     canvas.Print("%s/%s.root"%(path,output_name_without_extention))
 
 def plot_generic_1D(selections,hist_title,file_name,vars,nbins=100,xmin=0,xmax=100):
-    c1 = TCanvas("c1","c1",800,800)
+    c1 = TCanvas("c1", "c1", 800, 800)
     max_value = 0
     for name,sample in samples.items():
         selection = selections[sample['type']]
@@ -153,6 +153,58 @@ def plot_generic_1D(selections,hist_title,file_name,vars,nbins=100,xmin=0,xmax=1
     for name,sample in samples.items():
         sample['hist'].SetMinimum(0)
         sample['hist'].SetMaximum(max_value*1.2)
+        legend.AddEntry(sample['hist'],name)
+        if first_plot:
+            sample['hist'].Draw("hist")
+            first_plot = False
+        else:
+            sample['hist'].Draw("hist same")
+    legend.Draw()
+    print_canvas(file_name, output_path)
+    print "Number of selected events:"
+    for name,sample in samples.items():
+        print "\t%s: \t%u out of %u" % (name,sample['nSelected'],sample['nAll'])
+
+def integrate(source_hist, destination_hist, left_to_right = True):
+    assert(source_hist.GetNbinsX() == destination_hist.GetNbinsX())
+    assert(source_hist.Integral(0,-1) > 0)
+    for bin in range(source_hist.GetNbinsX() + 1):
+        if left_to_right:
+            destination_hist.SetBinContent(bin, source_hist.Integral(bin,-1)/source_hist.Integral(0,-1))
+        else:
+            destination_hist.SetBinContent(bin, 1 - source_hist.Integral(bin,-1)/source_hist.Integral(0,-1))
+
+def plot_integral_1D(selections, hist_title, file_name, vars, 
+                     nbins=100, xmin=0, xmax=100, 
+                     left_to_right = True):
+    """Make disitributions of the target variables and make intergral
+       plots. By default the integral is from x till xmax.
+    """
+    c1 = TCanvas("c1", "c1", 800, 800)
+    max_value = 0
+    for name,sample in samples.items():
+        selection = selections[sample['type']]
+        var = vars[sample['type']]
+        hist = ROOT.TH1D("hist", hist_title, nbins, xmin, xmax)
+        hist_integrated = ROOT.TH1D("hist_integrated", hist_title, nbins, xmin, xmax)
+        hist_integrated.SetLineColor(sample['color'])
+        hist_integrated.SetLineWidth(2)
+        sample['nSelected'] = sample['events'].Draw("%s>>hist" % var, selection)
+        integrate(hist, hist_integrated, left_to_right)
+        # print_canvas("%s_%s"%(file_name,name), output_path)
+        if max_value < hist_integrated.GetMaximum(): max_value = hist_integrated.GetMaximum()
+        hist_integrated.SetDirectory(0)
+        hist.SetDirectory(0)
+        sample['hist'] = hist_integrated
+    
+    legend = ROOT.TLegend(0.15,0.75,0.5,0.87)
+    legend.SetFillStyle(0)
+    legend.SetLineWidth(0)
+
+    first_plot = True
+    for name,sample in samples.items():
+        sample['hist'].SetMinimum(0)
+        sample['hist'].SetMaximum(max_value * 1.2)
         legend.AddEntry(sample['hist'],name)
         if first_plot:
             sample['hist'].Draw("hist")
@@ -191,58 +243,61 @@ selections = {
 # * bkmm_jpsimc_vtx_chi2dof
 # * bkmm_jpsimc_sl3d
 
-plot_generic_1D(selections, "#mu#mu;P_{T}, [GeV]", "01_mm_pt",
-                {'bmm':'mm_kin_pt', 'bjpsik':'mm_kin_pt[bkmm_mm_index]'}, 100, 0, 100)
+# plot_generic_1D(selections, "#mu#mu;P_{T}, [GeV]", "01_mm_pt",
+#                 {'bmm':'mm_kin_pt', 'bjpsik':'mm_kin_pt[bkmm_mm_index]'}, 100, 0, 100)
 
-plot_generic_1D(selections, "#mu#mu vertex displacement significance;#sigma", "02_mm_sl3d",
-                {'bmm':'mm_kin_sl3d', 'bjpsik':'mm_kin_sl3d[bkmm_mm_index]'}, 100, 0, 100)
-plot_generic_1D(selections, "#mu#muK vertex displacement significance;#sigma", "02_kmm_sl3d",
-                {'bmm':'mm_kin_sl3d', 'bjpsik':'bkmm_jpsimc_sl3d'}, 100, 0, 100)
-# plot_generic_1D(selections, "#mu#mu vertex displacement significance (#mu#muK is scaled by 1.5);#sigma", "02_mm_sl3d_scaled",
-#                {'bmm':'mm_kin_sl3d', 'bjpsik':'mm_kin_sl3d[bkmm_mm_index]*1.5'}, 100, 0, 100)
-scale = 1.60
-plot_generic_1D({'bmm':mm_selection + "&&mm_kin_sl3d>4*%s" % scale, 'bjpsik':bkmm_selection},
-                "#mu#mu vertex displacement significance (#mu#muK is scaled by %s with matched seleciton);#sigma" % scale, 
-                "02_mm_sl3d_scaled_and_matched_selection",
-                {'bmm':'mm_kin_sl3d', 'bjpsik':'mm_kin_sl3d[bkmm_mm_index]*%s' % scale}, 100, 0, 100)
+# plot_generic_1D(selections, "#mu#mu vertex displacement significance;#sigma", "02_mm_sl3d",
+#                 {'bmm':'mm_kin_sl3d', 'bjpsik':'mm_kin_sl3d[bkmm_mm_index]'}, 100, 0, 100)
+# plot_generic_1D(selections, "#mu#muK vertex displacement significance;#sigma", "02_kmm_sl3d",
+#                 {'bmm':'mm_kin_sl3d', 'bjpsik':'bkmm_jpsimc_sl3d'}, 100, 0, 100)
+# # plot_generic_1D(selections, "#mu#mu vertex displacement significance (#mu#muK is scaled by 1.5);#sigma", "02_mm_sl3d_scaled",
+# #                {'bmm':'mm_kin_sl3d', 'bjpsik':'mm_kin_sl3d[bkmm_mm_index]*1.5'}, 100, 0, 100)
+# scale = 1.60
+# plot_generic_1D({'bmm':mm_selection + "&&mm_kin_sl3d>4*%s" % scale, 'bjpsik':bkmm_selection},
+#                 "#mu#mu vertex displacement significance (#mu#muK is scaled by %s with matched seleciton);#sigma" % scale, 
+#                 "02_mm_sl3d_scaled_and_matched_selection",
+#                 {'bmm':'mm_kin_sl3d', 'bjpsik':'mm_kin_sl3d[bkmm_mm_index]*%s' % scale}, 100, 0, 100)
 
-plot_generic_1D(selections, "Pointing angle 3D;#alpha", "03_alpha",
-                {'bmm':'mm_kin_alpha', 'bjpsik':'bkmm_jpsimc_alpha'}, 100, 0, 0.3)
-plot_generic_1D(selections, "Pointing angle XY;cos(#alpha)", "03_cosAlphaXY",
-                {'bmm':'mm_kin_cosAlphaXY', 'bjpsik':'bkmm_jpsimc_cosAlphaXY'}, 110, 0.990, 1.001)
+# plot_generic_1D(selections, "Pointing angle 3D;#alpha", "03_alpha",
+#                 {'bmm':'mm_kin_alpha', 'bjpsik':'bkmm_jpsimc_alpha'}, 100, 0, 0.3)
+# plot_generic_1D(selections, "Pointing angle XY;cos(#alpha)", "03_cosAlphaXY",
+#                 {'bmm':'mm_kin_cosAlphaXY', 'bjpsik':'bkmm_jpsimc_cosAlphaXY'}, 110, 0.990, 1.001)
 
-plot_generic_1D(selections, "Impact parameter significance", "04_spvip",
-                {'bmm':'mm_kin_pvip/mm_kin_pvipErr', 'bjpsik':'bkmm_jpsimc_pvip/bkmm_jpsimc_pvipErr'},
-                100, 0, 5)
-plot_generic_1D(selections, "Impact parameter 3D", "04_pvip",
-                {'bmm':'mm_kin_pvip', 'bjpsik':'bkmm_jpsimc_pvip'}, 100, 0, 0.02)
+# plot_generic_1D(selections, "Impact parameter significance", "04_spvip",
+#                 {'bmm':'mm_kin_pvip/mm_kin_pvipErr', 'bjpsik':'bkmm_jpsimc_pvip/bkmm_jpsimc_pvipErr'},
+#                 100, 0, 5)
+# plot_generic_1D(selections, "Impact parameter 3D", "04_pvip",
+#                 {'bmm':'mm_kin_pvip', 'bjpsik':'bkmm_jpsimc_pvip'}, 100, 0, 0.02)
 
-plot_generic_1D(selections, "#mu#mu isolation", "05_iso",
-                {'bmm':'mm_iso', 'bjpsik':'bkmm_bmm_iso'}, 120, 0, 1.2)
-plot_generic_1D(selections, "#mu1 isolation", "05_m1iso",
-                {'bmm':'mm_m1iso', 'bjpsik':'bkmm_bmm_m1iso'}, 120, 0, 1.2)
-plot_generic_1D(selections, "#mu2 isolation", "05_m2iso",
-                {'bmm':'mm_m2iso', 'bjpsik':'bkmm_bmm_m2iso'}, 120, 0, 1.2)
+# plot_generic_1D(selections, "#mu#mu isolation", "05_iso",
+#                 {'bmm':'mm_iso', 'bjpsik':'bkmm_bmm_iso'}, 120, 0, 1.2)
+# plot_generic_1D(selections, "#mu1 isolation", "05_m1iso",
+#                 {'bmm':'mm_m1iso', 'bjpsik':'bkmm_bmm_m1iso'}, 120, 0, 1.2)
+# plot_generic_1D(selections, "#mu2 isolation", "05_m2iso",
+#                 {'bmm':'mm_m2iso', 'bjpsik':'bkmm_bmm_m2iso'}, 120, 0, 1.2)
 
-plot_generic_1D(selections, "#chi/nDof for #mu#mu vertex", "06_mm_chi2dof",
-                {'bmm':'mm_kin_vtx_chi2dof', 'bjpsik':'mm_kin_vtx_chi2dof[bkmm_mm_index]'}, 100, 0, 5)
-plot_generic_1D(selections, "#chi/nDof for #mu#muK vertex", "06_mmK_chi2dof",
-                {'bmm':'mm_kin_vtx_chi2dof', 'bjpsik':'bkmm_jpsimc_vtx_chi2dof'}, 100, 0, 5)
+# plot_generic_1D(selections, "#chi/nDof for #mu#mu vertex", "06_mm_chi2dof",
+#                 {'bmm':'mm_kin_vtx_chi2dof', 'bjpsik':'mm_kin_vtx_chi2dof[bkmm_mm_index]'}, 100, 0, 5)
+# plot_generic_1D(selections, "#chi/nDof for #mu#muK vertex", "06_mmK_chi2dof",
+#                 {'bmm':'mm_kin_vtx_chi2dof', 'bjpsik':'bkmm_jpsimc_vtx_chi2dof'}, 100, 0, 5)
 
-plot_generic_1D(selections, "nBMTrks", "07_nBMTrks",
-                {'bmm':'mm_nBMTrks','bjpsik':'min(bkmm_bmm_nBMTrks,9)'}, 10, 0, 10)
-plot_generic_1D(selections, "otherVtxMaxProb1", "07_otherVtxMaxProb1",
-                {'bmm':'mm_otherVtxMaxProb1', 'bjpsik':'bkmm_bmm_otherVtxMaxProb1'}, 120, 0, 1.2)
-plot_generic_1D(selections, "otherVtxMaxProb2", "07_otherVtxMaxProb2",
-                {'bmm':'mm_otherVtxMaxProb2', 'bjpsik':'bkmm_bmm_otherVtxMaxProb2'}, 120, 0, 1.2)
+# plot_generic_1D(selections, "nBMTrks", "07_nBMTrks",
+#                 {'bmm':'mm_nBMTrks','bjpsik':'min(bkmm_bmm_nBMTrks,9)'}, 10, 0, 10)
+# plot_generic_1D(selections, "otherVtxMaxProb1", "07_otherVtxMaxProb1",
+#                 {'bmm':'mm_otherVtxMaxProb1', 'bjpsik':'bkmm_bmm_otherVtxMaxProb1'}, 120, 0, 1.2)
+# plot_generic_1D(selections, "otherVtxMaxProb2", "07_otherVtxMaxProb2",
+#                 {'bmm':'mm_otherVtxMaxProb2', 'bjpsik':'bkmm_bmm_otherVtxMaxProb2'}, 120, 0, 1.2)
 
-plot_generic_1D(selections, "BDT Matched", "09_bdt_matched",
-                {'bmm':'mm_bdt', 'bjpsik':'bkmm_bmm_bdt'}, 100, -1.5, 1.5)
-plot_generic_1D(selections, "BDT Raw", "09_bdt_raw",
-                {'bmm':'mm_bdt', 'bjpsik':'mm_bdt[bkmm_mm_index]'}, 100, -1.5, 1.5)
+# plot_generic_1D(selections, "BDT Matched", "09_bdt_matched",
+#                 {'bmm':'mm_bdt', 'bjpsik':'bkmm_bmm_bdt'}, 100, -1.5, 1.5)
+# plot_generic_1D(selections, "BDT Raw", "09_bdt_raw",
+#                 {'bmm':'mm_bdt', 'bjpsik':'mm_bdt[bkmm_mm_index]'}, 100, -1.5, 1.5)
 
-plot_generic_1D(selections,"MVA Matched", "09_mva_matched",
+# plot_generic_1D(selections,"MVA Matched", "09_mva_matched",
+#                 {'bmm':'mm_mva', 'bjpsik':'bkmm_bmm_mva'}, 110, 0, 1.1)
+# plot_generic_1D(selections,"MVA Raw", "09_mva_raw",
+#                 {'bmm':'mm_mva', 'bjpsik':'mm_mva[bkmm_mm_index]'}, 110, 0, 1.1)
+
+plot_integral_1D(selections,"MVA Matched Efficiency", "09_mva_matched_eff",
                 {'bmm':'mm_mva', 'bjpsik':'bkmm_bmm_mva'}, 110, 0, 1.1)
 
-
-# plot_generic_1D(selections,"BDT Raw", "02_mm_pt",{'bmm':'mm_pt','bjpsik':'mm_pt[bkmm_mm_index]'},100,0,100)
