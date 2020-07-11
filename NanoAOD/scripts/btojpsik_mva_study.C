@@ -26,71 +26,67 @@
 using namespace RooFit;
 using namespace std;
 
-string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-507/bjpsik-fit/";
+// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-507/bjpsik-fit/";
+string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-507/bjpsik-fit-test/";
 
-// name, branch name, number of bins, xmin, xmax
+bool silent_roofit = true;
+bool store_projections = false;
+bool use_mc_truth_matching = true;
+bool do_pileup_reweighting = true;
+
+struct variable{
+  string name, branch;
+  unsigned int nbins;
+  double xmin, xmax;
+};
+
 // WARNING: signal purity must increase as x increases from xmin to xmax
-vector<tuple<string, string, unsigned int, float, float> > variables;
-void register_variables(){
-  variables.push_back(make_tuple("mva", "bkmm_bmm_mva", 100, 0, 1));
-  variables.push_back(make_tuple("alpha", "(0.2-bkmm_jpsimc_alpha)", 100, 0, 0.2));
-  variables.push_back(make_tuple("alphaXY", "bkmm_jpsimc_cosAlphaXY", 100, 0.999, 1));
-  variables.push_back(make_tuple("spvip", "(10-bkmm_jpsimc_pvip/bkmm_jpsimc_pvipErr)", 100, 0, 10));
-  variables.push_back(make_tuple("pvip", "(0.02-bkmm_jpsimc_pvip)", 100, 0, 0.02));
-  variables.push_back(make_tuple("iso", "bkmm_bmm_iso", 100, 0, 1));
-  variables.push_back(make_tuple("m1iso", "bkmm_bmm_m1iso", 100, 0, 1));
-  variables.push_back(make_tuple("m2iso", "bkmm_bmm_m2iso", 100, 0, 1));
-  variables.push_back(make_tuple("sl3d", "mm_kin_sl3d[bkmm_mm_index]", 100, 0, 100));
-  variables.push_back(make_tuple("bdt", "bkmm_bmm_bdt", 50, -1, 1));
-}
+vector<variable> variables {
+  {"mva", "bkmm_bmm_mva", 100, 0, 1},
+  {"alpha", "(0.2-bkmm_jpsimc_alpha)", 100, 0, 0.2},
+  {"alphaXY", "bkmm_jpsimc_cosAlphaXY", 100, 0.999, 1},
+  {"spvip", "(10-bkmm_jpsimc_pvip/bkmm_jpsimc_pvipErr)", 100, 0, 10},
+  {"pvip", "(0.02-bkmm_jpsimc_pvip)", 100, 0, 0.02},
+  {"iso", "bkmm_bmm_iso", 100, 0, 1},
+  {"m1iso", "bkmm_bmm_m1iso", 100, 0, 1},
+  {"m2iso", "bkmm_bmm_m2iso", 100, 0, 1},
+  {"sl3d", "mm_kin_sl3d[bkmm_mm_index]", 100, 0, 100},
+  {"bdt", "bkmm_bmm_bdt", 50, -1, 1},
+};
 
-// name, mc file(s), data file(s), trigger
-vector<tuple<string, string, string, string>> datasets;
-void register_data(){
-  string data_path = "/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/";
+struct dataset{
+  string name, mc_files, data_files, trigger;
+};
 
-  string mc_2018 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root";
-  datasets.push_back(make_tuple("Run2018A", 
-				mc_2018,
-				data_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root",
-				"HLT_DoubleMu4_3_Jpsi"));
-  datasets.push_back(make_tuple("Run2018B", 
-				mc_2018,
-				data_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root",
-				"HLT_DoubleMu4_3_Jpsi"));
-  datasets.push_back(make_tuple("Run2018C", 
-				mc_2018,
-				data_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root",
-				"HLT_DoubleMu4_3_Jpsi"));
-  datasets.push_back(make_tuple("Run2018D", 
-  				// data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0bb34079aa40de8c3fd5615d4816875f.root",
-  				mc_2018,
-  				// data_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/142c84fb8e8d03eea34e0cf3277a0656.root",
-  				data_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root",
-				"HLT_DoubleMu4_3_Jpsi"));
+string data_path = "/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/";
+string mc_2018 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root";
+string mc_2017 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v3+MINIAODSIM/*.root";
+string mc_2016 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCUEP8M1_13TeV-pythia8-evtgen+RunIISummer16MiniAODv2-PUMoriond17_80X_mcRun2_asymptotic_2016_TrancheIV_v6_ext1-v1+MINIAODSIM/*.root";
+string trigger_2018 = "HLT_DoubleMu4_3_Jpsi";
+string trigger_2017 = "HLT_DoubleMu4_Jpsi_NoVertexing";
+string trigger_2016 = "HLT_DoubleMu4_3_Jpsi_Displaced";
+// string trigger_2016 = "HLT_Dimuon6_Jpsi_NoVertexing";
+    
+vector<dataset> datasets{
+  {"Run2018A", mc_2018,	data_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root", trigger_2018},
+  {"Run2018B", mc_2018, data_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root", trigger_2018},
+  {"Run2018C", mc_2018,	data_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root", trigger_2018},
+  {"Run2018D", mc_2018,	data_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root",	trigger_2018},
 
-  string mc_2017 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v3+MINIAODSIM/*.root";
-  datasets.push_back(make_tuple("Run2017B", 
-				mc_2017,
-				data_path + "Charmonium+Run2017B-31Mar2018-v1+MINIAOD/*.root",
-				"HLT_DoubleMu4_Jpsi_NoVertexing"));
-  datasets.push_back(make_tuple("Run2017C", 
-				mc_2017,
-				data_path + "Charmonium+Run2017C-31Mar2018-v1+MINIAOD/*.root",
-				"HLT_DoubleMu4_Jpsi_NoVertexing"));
-  datasets.push_back(make_tuple("Run2017D", 
-				mc_2017,
-				data_path + "Charmonium+Run2017D-31Mar2018-v1+MINIAOD/*.root",
-				"HLT_DoubleMu4_Jpsi_NoVertexing"));
-  datasets.push_back(make_tuple("Run2017E", 
-				mc_2017,
-				data_path + "Charmonium+Run2017E-31Mar2018-v1+MINIAOD/*.root",
-				"HLT_DoubleMu4_Jpsi_NoVertexing"));
-  datasets.push_back(make_tuple("Run2017F", 
-				mc_2017,
-				data_path + "Charmonium+Run2017F-31Mar2018-v1+MINIAOD/*.root",
-				"HLT_DoubleMu4_Jpsi_NoVertexing"));
-}
+  {"Run2017B", mc_2017,	data_path + "Charmonium+Run2017B-31Mar2018-v1+MINIAOD/*.root", trigger_2017},
+  {"Run2017C", mc_2017,	data_path + "Charmonium+Run2017C-31Mar2018-v1+MINIAOD/*.root", trigger_2017},
+  {"Run2017D", mc_2017,	data_path + "Charmonium+Run2017D-31Mar2018-v1+MINIAOD/*.root", trigger_2017},
+  {"Run2017E", mc_2017, data_path + "Charmonium+Run2017E-31Mar2018-v1+MINIAOD/*.root", trigger_2017},
+  {"Run2017F", mc_2017,	data_path + "Charmonium+Run2017F-31Mar2018-v1+MINIAOD/*.root", trigger_2017},
+
+  {"Run2016B", mc_2016, data_path + "Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD/*.root", trigger_2016},
+  {"Run2016C", mc_2016,	data_path + "Charmonium+Run2016C-17Jul2018-v1+MINIAOD/*.root", trigger_2016},
+  {"Run2016D", mc_2016,	data_path + "Charmonium+Run2016D-17Jul2018-v1+MINIAOD/*.root", trigger_2016},
+  {"Run2016E", mc_2016, data_path + "Charmonium+Run2016E-17Jul2018-v1+MINIAOD/*.root", trigger_2016},
+  {"Run2016F", mc_2016,	data_path + "Charmonium+Run2016F-17Jul2018-v1+MINIAOD/*.root", trigger_2016},
+  {"Run2016G", mc_2016,	data_path + "Charmonium+Run2016G-17Jul2018-v1+MINIAOD/*.root", trigger_2016},
+  {"Run2016H", mc_2016,	data_path + "Charmonium+Run2016H-17Jul2018-v1+MINIAOD/*.root", trigger_2016},
+};
 
 void print_canvas(string output_name_without_extention, 
 		  string path, 
@@ -106,41 +102,44 @@ void print_canvas(string output_name_without_extention,
 
 void add_data(TFile* f, TChain* mc_bkmm, TChain* data, const char* trigger){
 
+  TCut mc_match;
+  if (use_mc_truth_matching)
+    // mc_match = "bkmm_gen_pdgId!=0";
+    mc_match = "abs(1-bkmm_kaon_pt/genbmm_kaon1_pt[0])<0.1";
+
   TCut base_cut(trigger);
   // TCut base_cut("HLT_DoubleMu4_Jpsi_NoVertexing");
   base_cut += "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu1_index[bkmm_mm_index]]>4";
   base_cut += "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu2_index[bkmm_mm_index]]>4";
   base_cut += "mm_kin_sl3d[bkmm_mm_index]>4 && mm_kin_vtx_chi2dof[bkmm_mm_index]<5";
   base_cut += "abs(bkmm_jpsimc_mass-5.4)<0.5 && bkmm_jpsimc_vtx_chi2dof<5";
-  base_cut += "bkmm_kaon_pt>1";
+  base_cut += "bkmm_kaon_pt<1.5";
   base_cut += "bkmm_jpsimc_alpha<0.2"; 
   base_cut += "Muon_softMva[mm_mu1_index[bkmm_mm_index]]>0.45 && Muon_softMva[mm_mu2_index[bkmm_mm_index]]>0.45";
   base_cut += "!TMath::IsNaN(bkmm_jpsimc_massErr)";
 
+  // Monte Carlo
+  
   TH1D* h_mc_bkmm_base = new TH1D("h_mc_bkmm_base", "", 50, 5.17, 5.45);
-  mc_bkmm->Draw("bkmm_jpsimc_mass>>h_mc_bkmm_base", base_cut + "bkmm_gen_pdgId!=0", "goff");
+  mc_bkmm->Draw("bkmm_jpsimc_mass>>h_mc_bkmm_base", base_cut + mc_match, "goff");
   h_mc_bkmm_base->Write();
 
-  TH1D* h_mc_bkmm_kaon5 = new TH1D("h_mc_bkmm_kaon5", "", 50, 5.17, 5.45);
-  mc_bkmm->Draw("bkmm_jpsimc_mass>>h_mc_bkmm_kaon5", base_cut + "bkmm_gen_pdgId!=0&&bkmm_kaon_pt>5", "goff");
-  h_mc_bkmm_kaon5->Write();
-
-  for (auto var: variables){
-    string hist_name = "h_mc_bkmm_" + get<0>(var);
-    string draw_command = get<1>(var) + ":bkmm_jpsimc_mass>>h_mc_bkmm_" + get<0>(var);
+  for (auto const& var : variables){
+    string hist_name = "h_mc_bkmm_" + var.name;
+    string draw_command = var.branch + ":bkmm_jpsimc_mass>>h_mc_bkmm_" + var.name;
     TH2D* h_mc_bkmm = new TH2D(hist_name.c_str(), "", 
 			       50, 5.17, 5.45, 
-			       get<2>(var), get<3>(var), get<4>(var));
-    mc_bkmm->Draw(draw_command.c_str(), base_cut + "bkmm_gen_pdgId!=0", "goff");
+			       var.nbins, var.xmin, var.xmax);
+    mc_bkmm->Draw(draw_command.c_str(), base_cut + mc_match, "goff");
     h_mc_bkmm->Write();
   }
 
   TH2D* h_mc_bkmm_mva_vs_npv = new TH2D("h_mc_bkmm_mva_vs_npv", "", 50, 0, 100, 50, 0.0, 1.0);
-  mc_bkmm->Draw("bkmm_bmm_mva:PV_npvs>>h_mc_bkmm_mva_vs_npv", base_cut + "bkmm_gen_pdgId!=0", "goff");
+  mc_bkmm->Draw("bkmm_bmm_mva:PV_npvs>>h_mc_bkmm_mva_vs_npv", base_cut + mc_match, "goff");
   h_mc_bkmm_mva_vs_npv->Write();
 
   TH2D* h_mc_bkmm_bdt_vs_npv = new TH2D("h_mc_bkmm_bdt_vs_npv", "", 50, 0, 100, 50, -1.0, 1.0);
-  mc_bkmm->Draw("bkmm_bmm_bdt:PV_npvs>>h_mc_bkmm_bdt_vs_npv", base_cut + "bkmm_gen_pdgId!=0", "goff");
+  mc_bkmm->Draw("bkmm_bmm_bdt:PV_npvs>>h_mc_bkmm_bdt_vs_npv", base_cut + mc_match, "goff");
   h_mc_bkmm_bdt_vs_npv->Write();
 
   TH1D* h_data_base = new TH1D("h_data_base", "", 50, 5.17, 5.45);
@@ -151,12 +150,12 @@ void add_data(TFile* f, TChain* mc_bkmm, TChain* data, const char* trigger){
   data->Draw("bkmm_jpsimc_mass>>h_data_kaon5", base_cut + "bkmm_kaon_pt>5", "goff");
   h_data_kaon5->Write();
 
-  for (auto var: variables){
-    string hist_name = "h_data_" + get<0>(var);
-    string draw_command = get<1>(var) + ":bkmm_jpsimc_mass>>h_data_" + get<0>(var);
+  for (auto const& var : variables){
+    string hist_name = "h_data_" + var.name;
+    string draw_command = var.branch + ":bkmm_jpsimc_mass>>h_data_" + var.name;
     TH2D* h_data = new TH2D(hist_name.c_str(), "", 
 			    50, 5.17, 5.45, 
-			    get<2>(var), get<3>(var), get<4>(var));
+			    var.nbins, var.xmin, var.xmax);
     data->Draw(draw_command.c_str(), base_cut, "goff");
     h_data->Write();
   }
@@ -180,8 +179,39 @@ struct Result {
     bkg(0), bkg_err(0){}
 };
 
+TH1* reweight_histogram(TH2* h_mc_x_vs_npv, TH1* h_mc_npv, TH1* h_data_npv){
+  /// Pileup reweighting
+  /// - Input is a 2D histrogram of the target observable as a function of npv
+  /// - Output is scaled to a unit area including overflow bins
+  
+  // TODO
+  // - do proper error propagation
+  
+  assert(h_mc_npv->GetNbinsX() == h_data_npv->GetNbinsX());
+
+  TH1* h_mc_x_reweighted = h_mc_x_vs_npv->ProjectionY("h_mc_mva_reweighted");
+  h_mc_x_reweighted->SetDirectory(0);
+  // h_mc_x_reweighted->Sumw2();
+
+  for (int x_i=0; x_i <= h_mc_x_reweighted->GetNbinsX() + 1; ++x_i){
+    double integral(0);
+    for (int npv_i=0; npv_i <= h_data_npv->GetNbinsX() + 1; ++npv_i){
+      if (h_mc_npv->GetBinContent(npv_i)>0)
+    	integral += h_mc_x_vs_npv->GetBinContent(npv_i, x_i) / 
+    	  h_mc_npv->GetBinContent(npv_i) * h_data_npv->GetBinContent(npv_i);
+    }
+    h_mc_x_reweighted->SetBinContent(x_i, integral);
+  }
+  h_mc_x_reweighted->Scale(1/h_mc_x_reweighted->Integral(0,-1));
+  return h_mc_x_reweighted;
+}
+
+
 Result fitHistogram(TH1* h_ref, TH1* h_test){
   if (h_ref->Integral() < 1 or h_test->Integral() < 1) return Result();
+
+  if (silent_roofit)
+    RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
 
   RooRealVar mass("mass", "BtoJpisK mass", 5.29);
   
@@ -209,11 +239,17 @@ Result fitHistogram(TH1* h_ref, TH1* h_test){
   // freeze signal shape to get background shape right 
   sigma.setConstant(true);
   bias.setConstant(true);
-  model.fitTo(test_data);
-
+  if (silent_roofit)
+    model.fitTo(test_data, PrintEvalErrors(-1), PrintLevel(-1));
+  else
+    model.fitTo(test_data);
+    
   sigma.setConstant(false);
   bias.setConstant(false);
-  model.fitTo(test_data);
+  if (silent_roofit)
+    model.fitTo(test_data, PrintEvalErrors(-1), PrintLevel(-1));
+  else
+    model.fitTo(test_data);
 
   RooPlot* frame = mass.frame();
   test_data.plotOn(frame);
@@ -231,50 +267,8 @@ Result fitHistogram(TH1* h_ref, TH1* h_test){
 }
 
 void process_variables(TFile* f, string prefix){
-  for (auto var: variables){
-    unsigned int n = get<2>(var);
-    vector<Double_t> mc_eff;
-    vector<Double_t> data_eff;
-    vector<Double_t> data_over_mc_eff;
-    double data_total(-1);
-    double mc_total(-1);
-    // vector<Double_t> mc_eff_err;
-    // vector<Double_t> data_over_mc_eff_err;
-
-    for (unsigned int i=0; i <= n; ++i){
-      printf("processing %s %u\n",  get<0>(var).c_str(), i);
-      auto proj_mc = ((TH2*)f->Get(("h_mc_bkmm_" + get<0>(var)).c_str()))->ProjectionX("proj_mc", i, n+1);
-      auto proj_data = ((TH2*)f->Get(("h_data_" + get<0>(var)).c_str()))->ProjectionX("proj_data", i, n+1);
-      // if (i==0){
-      // 	proj_mc->Draw();
-      // 	print_canvas(prefix + "-" + get<0>(var) + "_h_mc_proj" + to_string(i), output_path, gPad);
-      // 	proj_data->Draw();
-      // 	print_canvas(prefix + "-" + get<0>(var) + "_h_data_proj" + to_string(i), output_path, gPad);
-      // }
-      auto result = fitHistogram(proj_mc, proj_data);
-      print_canvas(prefix + "-" + get<0>(var) + "_proj" + to_string(i), output_path, gPad);
-      if (i==0){
-	data_total = result.sig;
-	mc_total = proj_mc->Integral();
-      }
-      assert(data_total>0);
-      data_eff.push_back(result.sig/data_total);
-      assert(mc_total>0);
-      mc_eff.push_back(proj_mc->Integral()/mc_total);
-      data_over_mc_eff.push_back(mc_eff.back()>0?data_eff.back()/mc_eff.back():0);
-    }
-    auto gr = new TGraph(n, &mc_eff[0], &data_over_mc_eff[0]);
-    gr->SetMinimum(0);
-    gr->SetMaximum(1.5);
-    gr->GetXaxis()->SetLimits(0.,1.);
-    gr->GetXaxis()->SetTitle("MC efficiency");
-    gr->GetYaxis()->SetTitle("Data/MC efficiency ratio");
-    gr->SetTitle(get<0>(var).c_str());
-    gr->Draw("AP*");
-    print_canvas(prefix + "-" + get<0>(var) + "_eff", output_path, gPad);
-  }
-  
-  TH1* h_mc_npv = ((TH2*)f->Get("h_mc_bkmm_mva_vs_npv"))->ProjectionX();
+  TH2* h_mc_bkmm_mva_vs_npv = (TH2*)f->Get("h_mc_bkmm_mva_vs_npv");
+  TH1* h_mc_npv = h_mc_bkmm_mva_vs_npv->ProjectionX();
   TH1* h_data_npv = ((TH1*)f->Get("h_data_npv"));
   h_mc_npv->SetLineWidth(2);
   h_mc_npv->SetLineColor(kBlue);
@@ -285,23 +279,67 @@ void process_variables(TFile* f, string prefix){
   h_data_npv->SetLineColor(kBlue);
   h_data_npv->Draw();
   print_canvas(prefix + "-" + "data_npv", output_path, gPad);
+
+  TH1* h_mc_mva_reweighted(0);
+  if (do_pileup_reweighting)
+    h_mc_mva_reweighted = reweight_histogram(h_mc_bkmm_mva_vs_npv, h_mc_npv, h_data_npv);
+
+  for (auto const& var: variables){
+    unsigned int n = var.nbins;
+    vector<Double_t> mc_eff;
+    vector<Double_t> data_eff;
+    vector<Double_t> data_over_mc_eff;
+    double total_data(-1);
+    double total_mc(-1);
+    // vector<Double_t> mc_eff_err;
+    // vector<Double_t> data_over_mc_eff_err;
+
+    printf("processing %s\n", var.name.c_str());
+    // Scan efficiency in MC and data as a function of the cut on the variable
+    
+    for (unsigned int i=0; i <= n; ++i){
+      auto mass_mc = ((TH2*)f->Get(("h_mc_bkmm_" + var.name).c_str()))->ProjectionX("mass_mc", i, n+1);
+      auto mass_data = ((TH2*)f->Get(("h_data_" + var.name).c_str()))->ProjectionX("mass_data", i, n+1);
+      auto result = fitHistogram(mass_mc, mass_data);
+      if (store_projections)
+	print_canvas(prefix + "-" + var.name + "_proj" + to_string(i), output_path, gPad);
+      if (i==0){
+	total_data = result.sig;
+	total_mc = mass_mc->Integral();
+      }
+      assert(total_data > 0);
+      data_eff.push_back(result.sig / total_data);
+      // if (do_pileup_reweighting and get<0>(var) == "mva")
+      // assert(
+      // h_mc_mva_reweighted
+      assert(total_mc>0);
+      mc_eff.push_back(mass_mc->Integral() / total_mc);
+      data_over_mc_eff.push_back(mc_eff.back()>0?data_eff.back()/mc_eff.back():0);
+    }
+    auto gr = new TGraph(n, &mc_eff[0], &data_over_mc_eff[0]);
+    gr->SetMinimum(0);
+    gr->SetMaximum(1.5);
+    gr->GetXaxis()->SetLimits(0.,1.);
+    gr->GetXaxis()->SetTitle("MC efficiency");
+    gr->GetYaxis()->SetTitle("Data/MC efficiency ratio");
+    gr->SetTitle(var.name.c_str());
+    gr->Draw("AP*");
+    print_canvas(prefix + "-" + var.name + "_eff", output_path, gPad);
+  }
 }
 
 void btojpsik_mva_study(){
-  register_variables();
-  register_data();
-
-  for (auto dataset: datasets){
-    string file_name = "btojpsik_mva_study-" + get<0>(dataset) + ".root";
+  for (auto const& ds: datasets){
+    string file_name = "btojpsik_mva_study-" + ds.name + ".root";
     // Check if we already have histograms prepared
     if (gSystem->AccessPathName(file_name.c_str())){
-      printf("Recreating histograms for %s\n", get<0>(dataset).c_str());
+      printf("Recreating histograms for %s\n", ds.name.c_str());
       TFile* f = TFile::Open(file_name.c_str(), "RECREATE");
       TChain* mc = new TChain("Events");
-      mc->Add(get<1>(dataset).c_str());
+      mc->Add(ds.mc_files.c_str());
       TChain* data = new TChain("Events");
-      data->Add(get<2>(dataset).c_str());
-      add_data(f, mc, data, (get<3>(dataset).c_str()));    
+      data->Add(ds.data_files.c_str());
+      add_data(f, mc, data, (ds.trigger.c_str()));    
       f->Close();
     }
     // continue;
@@ -312,9 +350,9 @@ void btojpsik_mva_study(){
     auto result_all = fitHistogram((TH1*)f->Get("h_mc_bkmm_base"), 
 				   (TH1*)f->Get("h_data_base"));
     
-    print_canvas(get<0>(dataset) + "base", output_path, c1);
+    print_canvas(ds.name + "base", output_path, c1);
       
-    process_variables(f, get<0>(dataset));
+    process_variables(f, ds.name);
   }
 
   return;
