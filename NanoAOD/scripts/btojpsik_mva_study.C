@@ -26,13 +26,11 @@
 using namespace RooFit;
 using namespace std;
 
-// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-507/bjpsik-fit/";
-string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-507/bjpsik-fit-test/";
+string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-507/bjpsik-fit/";
 
 bool silent_roofit = true;
 bool store_projections = false;
 bool use_mc_truth_matching = true;
-bool do_pileup_reweighting = true;
 
 struct variable{
   string name, branch;
@@ -63,7 +61,8 @@ string mc_2018 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-py
 string mc_2017 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v3+MINIAODSIM/*.root";
 string mc_2016 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCUEP8M1_13TeV-pythia8-evtgen+RunIISummer16MiniAODv2-PUMoriond17_80X_mcRun2_asymptotic_2016_TrancheIV_v6_ext1-v1+MINIAODSIM/*.root";
 string trigger_2018 = "HLT_DoubleMu4_3_Jpsi";
-string trigger_2017 = "HLT_DoubleMu4_Jpsi_NoVertexing";
+string trigger_2017 = "HLT_DoubleMu4_Jpsi_Displaced";
+// string trigger_2017 = "HLT_DoubleMu4_Jpsi_NoVertexing";
 string trigger_2016 = "HLT_DoubleMu4_3_Jpsi_Displaced";
 // string trigger_2016 = "HLT_Dimuon6_Jpsi_NoVertexing";
     
@@ -97,7 +96,7 @@ void print_canvas(string output_name_without_extention,
   string s = path + "/" + output_name_without_extention;
   canvas->Print((s + ".png").c_str());
   canvas->Print((s + ".pdf").c_str());
-  // canvas->Print((s + ".root").c_str());
+  canvas->Print((s + ".root").c_str());
 }
 
 void add_data(TFile* f, TChain* mc_bkmm, TChain* data, const char* trigger){
@@ -125,34 +124,27 @@ void add_data(TFile* f, TChain* mc_bkmm, TChain* data, const char* trigger){
   h_mc_bkmm_base->Write();
 
   for (auto const& var : variables){
-    string hist_name = "h_mc_bkmm_" + var.name;
-    string draw_command = var.branch + ":bkmm_jpsimc_mass>>h_mc_bkmm_" + var.name;
-    TH2D* h_mc_bkmm = new TH2D(hist_name.c_str(), "", 
-			       50, 5.17, 5.45, 
-			       var.nbins, var.xmin, var.xmax);
-    mc_bkmm->Draw(draw_command.c_str(), base_cut + mc_match, "goff");
-    h_mc_bkmm->Write();
+    string h_mass_name = "h_mc_bkmm_" + var.name + "_vs_mass";
+    string h_npv_name  = "h_mc_bkmm_" + var.name + "_vs_npv";
+    string command_mass = var.branch + ":bkmm_jpsimc_mass>>" + h_mass_name;
+    string command_npv  = var.branch + ":PV_npvs>>" + h_npv_name;
+    TH2D* h_mass = new TH2D(h_mass_name.c_str(), "", 50, 5.17, 5.45, var.nbins, var.xmin, var.xmax);
+    TH2D* h_npv  = new TH2D(h_npv_name.c_str(),  "", 50,    0,  100, var.nbins, var.xmin, var.xmax);
+    mc_bkmm->Draw(command_mass.c_str(), base_cut + mc_match, "goff");
+    mc_bkmm->Draw(command_npv.c_str(),  base_cut + mc_match, "goff");
+    h_mass->Write();
+    h_npv->Write();
   }
 
-  TH2D* h_mc_bkmm_mva_vs_npv = new TH2D("h_mc_bkmm_mva_vs_npv", "", 50, 0, 100, 50, 0.0, 1.0);
-  mc_bkmm->Draw("bkmm_bmm_mva:PV_npvs>>h_mc_bkmm_mva_vs_npv", base_cut + mc_match, "goff");
-  h_mc_bkmm_mva_vs_npv->Write();
-
-  TH2D* h_mc_bkmm_bdt_vs_npv = new TH2D("h_mc_bkmm_bdt_vs_npv", "", 50, 0, 100, 50, -1.0, 1.0);
-  mc_bkmm->Draw("bkmm_bmm_bdt:PV_npvs>>h_mc_bkmm_bdt_vs_npv", base_cut + mc_match, "goff");
-  h_mc_bkmm_bdt_vs_npv->Write();
+  // Data
 
   TH1D* h_data_base = new TH1D("h_data_base", "", 50, 5.17, 5.45);
   data->Draw("bkmm_jpsimc_mass>>h_data_base", base_cut, "goff");
   h_data_base->Write();
 
-  TH1D* h_data_kaon5 = new TH1D("h_data_kaon5", "", 50, 5.17, 5.45);
-  data->Draw("bkmm_jpsimc_mass>>h_data_kaon5", base_cut + "bkmm_kaon_pt>5", "goff");
-  h_data_kaon5->Write();
-
   for (auto const& var : variables){
-    string hist_name = "h_data_" + var.name;
-    string draw_command = var.branch + ":bkmm_jpsimc_mass>>h_data_" + var.name;
+    string hist_name = "h_data_" + var.name + "_vs_mass";
+    string draw_command = var.branch + ":bkmm_jpsimc_mass>>" + hist_name;
     TH2D* h_data = new TH2D(hist_name.c_str(), "", 
 			    50, 5.17, 5.45, 
 			    var.nbins, var.xmin, var.xmax);
@@ -280,15 +272,13 @@ void process_variables(TFile* f, string prefix){
   h_data_npv->Draw();
   print_canvas(prefix + "-" + "data_npv", output_path, gPad);
 
-  TH1* h_mc_mva_reweighted(0);
-  if (do_pileup_reweighting)
-    h_mc_mva_reweighted = reweight_histogram(h_mc_bkmm_mva_vs_npv, h_mc_npv, h_data_npv);
-
   for (auto const& var: variables){
     unsigned int n = var.nbins;
     vector<Double_t> mc_eff;
     vector<Double_t> data_eff;
     vector<Double_t> data_over_mc_eff;
+    vector<Double_t> mc_eff_reweighted;
+    vector<Double_t> data_over_mc_eff_reweighted;
     double total_data(-1);
     double total_mc(-1);
     // vector<Double_t> mc_eff_err;
@@ -296,26 +286,36 @@ void process_variables(TFile* f, string prefix){
 
     printf("processing %s\n", var.name.c_str());
     // Scan efficiency in MC and data as a function of the cut on the variable
+
+    auto h_mc_x_vs_npv    = (TH2*)f->Get(("h_mc_bkmm_"   + var.name + "_vs_npv" ).c_str()); 
+    auto h_mc_x_vs_mass   = (TH2*)f->Get(("h_mc_bkmm_"   + var.name + "_vs_mass").c_str()); 
+    auto h_data_x_vs_mass = (TH2*)f->Get(("h_data_" + var.name + "_vs_mass").c_str());
+    auto h_mc_x_reweighted = reweight_histogram(h_mc_x_vs_npv, h_mc_npv, h_data_npv);
     
     for (unsigned int i=0; i <= n; ++i){
-      auto mass_mc = ((TH2*)f->Get(("h_mc_bkmm_" + var.name).c_str()))->ProjectionX("mass_mc", i, n+1);
-      auto mass_data = ((TH2*)f->Get(("h_data_" + var.name).c_str()))->ProjectionX("mass_data", i, n+1);
+      auto mass_mc   = h_mc_x_vs_mass->ProjectionX(  "mass_mc",   i, n+1);
+      auto mass_data = h_data_x_vs_mass->ProjectionX("mass_data", i, n+1);
       auto result = fitHistogram(mass_mc, mass_data);
+      
       if (store_projections)
 	print_canvas(prefix + "-" + var.name + "_proj" + to_string(i), output_path, gPad);
+
       if (i==0){
 	total_data = result.sig;
 	total_mc = mass_mc->Integral();
       }
+
       assert(total_data > 0);
       data_eff.push_back(result.sig / total_data);
-      // if (do_pileup_reweighting and get<0>(var) == "mva")
-      // assert(
-      // h_mc_mva_reweighted
       assert(total_mc>0);
       mc_eff.push_back(mass_mc->Integral() / total_mc);
       data_over_mc_eff.push_back(mc_eff.back()>0?data_eff.back()/mc_eff.back():0);
+
+      mc_eff_reweighted.push_back(h_mc_x_reweighted->Integral(i,-1) / h_mc_x_reweighted->Integral(0,-1));
+      data_over_mc_eff_reweighted.push_back(mc_eff_reweighted.back()>0?data_eff.back()/mc_eff_reweighted.back():0);
     }
+    gPad->SetGridx();
+    gPad->SetGridy();
     auto gr = new TGraph(n, &mc_eff[0], &data_over_mc_eff[0]);
     gr->SetMinimum(0);
     gr->SetMaximum(1.5);
@@ -324,7 +324,20 @@ void process_variables(TFile* f, string prefix){
     gr->GetYaxis()->SetTitle("Data/MC efficiency ratio");
     gr->SetTitle(var.name.c_str());
     gr->Draw("AP*");
+
     print_canvas(prefix + "-" + var.name + "_eff", output_path, gPad);
+
+    auto gr_reweighted = new TGraph(n, &mc_eff_reweighted[0], &data_over_mc_eff_reweighted[0]);
+    gr_reweighted->SetMinimum(0);
+    gr_reweighted->SetMaximum(1.5);
+    gr_reweighted->GetXaxis()->SetLimits(0.,1.);
+    gr_reweighted->GetXaxis()->SetTitle("MC efficiency");
+    gr_reweighted->GetYaxis()->SetTitle("Data/MC efficiency ratio");
+    gr_reweighted->SetTitle(var.name.c_str());
+    gr_reweighted->Draw("AP*");
+    print_canvas(prefix + "-" + var.name + "_eff_reweighted", output_path, gPad);
+    gPad->SetGridx(0);
+    gPad->SetGridy(0);
   }
 }
 
