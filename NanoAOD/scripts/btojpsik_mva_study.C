@@ -218,9 +218,10 @@ Result fitHistogram(TH1* h_ref, TH1* h_test){
 
   // background pdf
   RooRealVar a0("a0", "a0", 0.0, -1., 1.) ;
-  RooRealVar a1("a1", "a1", 0.0, -0.2, 0.2) ;
+  // RooRealVar a1("a1", "a1", 0.0, -0.2, 0.2) ;
   // RooRealVar a2("a2", "a2", 0.0, -1., 1.) ;
-  RooChebychev bkg("bkg", "Background", mass, RooArgSet(a0, a1));
+  // RooChebychev bkg("bkg", "Background", mass, RooArgSet(a0, a1));
+  RooChebychev bkg("bkg", "Background", mass, RooArgSet(a0));
   RooRealVar Nsig("Nsig", "Nsig", h_test->Integral(), 0, h_test->Integral());
   RooRealVar Nbkg("Nbkg", "Nbkg", 0, 0, h_test->Integral());
   RooAddPdf model("model", "", RooArgList(sig,bkg), RooArgList(Nsig,Nbkg));
