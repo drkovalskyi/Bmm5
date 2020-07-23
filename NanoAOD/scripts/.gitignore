@@ -1,0 +1,8 @@
+*.pyc
+*~
+__init__.py
+*.root
+*.d
+*.so
+*.pcm
+.__afs*
