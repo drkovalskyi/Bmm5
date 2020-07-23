@@ -675,7 +675,7 @@ BxToMuMuProducer::findTracksCompatibleWithTheVertex(const pat::Muon& muon1,
   for (const auto& pfCand: *pfCandHandle_.product()){
     bool ignore_track = false;
     for (auto trk: ignoreTracks){
-      if (trk==&pfCand){
+      if (deltaR(*trk, pfCand) < 0.01){
 	ignore_track = true;
 	break;
       }
