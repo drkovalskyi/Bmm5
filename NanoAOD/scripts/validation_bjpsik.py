@@ -26,26 +26,26 @@ samples = {
         'files':[
             '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0bb34079aa40de8c3fd5615d4816875f.root',
             '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0e73043348cb10591fd0695444457eb0.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/11f35da73cfdc279a1c462ff4545171d.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/34879d46edcc4751275237a9a5f5e005.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/4a098cd804e128ff3884d364a83ca001.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/5ee0b86054c0cd06cdd8321aa7bd6ad7.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/69256771e201020cf2cb897dcf8a8c50.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/83cca0d22ac9b759c372b35e26383e75.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/858c7ecc88235b88b48d2781029c589b.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/859639c395e8b78e5961a529c8c40e57.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/95f810c82fcd5d0f28c797d434567fd0.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/96ef9d3d833bc619b9302acdaaad4bae.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ae3371239732054142154e65ac6704da.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/bf3334e398d5fe68e5b3b90902b98211.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/c1fccea24bea988bf44999dcbe392944.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/c4829a75fb3d015222a50537e11cf5c5.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/d0f387b0f422c1a5fc9d27473d2aac84.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ec72869cbf788f4b6f7ff70009f1ec71.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ee13334ead0829b10ce5e7451ee11245.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/f9156ede12c49a38bb79033cb8ee80f1.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/feb8d6652fdd5e9037dda99f1a01cbe4.root',
-            # '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ff104c1d47f6100eee007c5f7d7e348b.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/11f35da73cfdc279a1c462ff4545171d.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/34879d46edcc4751275237a9a5f5e005.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/4a098cd804e128ff3884d364a83ca001.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/5ee0b86054c0cd06cdd8321aa7bd6ad7.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/69256771e201020cf2cb897dcf8a8c50.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/83cca0d22ac9b759c372b35e26383e75.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/858c7ecc88235b88b48d2781029c589b.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/859639c395e8b78e5961a529c8c40e57.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/95f810c82fcd5d0f28c797d434567fd0.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/96ef9d3d833bc619b9302acdaaad4bae.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ae3371239732054142154e65ac6704da.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/bf3334e398d5fe68e5b3b90902b98211.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/c1fccea24bea988bf44999dcbe392944.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/c4829a75fb3d015222a50537e11cf5c5.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/d0f387b0f422c1a5fc9d27473d2aac84.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ec72869cbf788f4b6f7ff70009f1ec71.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ee13334ead0829b10ce5e7451ee11245.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/f9156ede12c49a38bb79033cb8ee80f1.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/feb8d6652fdd5e9037dda99f1a01cbe4.root',
+            '/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/bkmm/507/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/ff104c1d47f6100eee007c5f7d7e348b.root',
         ],
         'color':ROOT.kBlue,
     },
@@ -145,6 +145,70 @@ def plot_generic_1D(selection,hist_title,file_name,var,nbins=100,xmin=0,xmax=100
     for name,sample in samples.items():
         print "\t%s: \t%u out of %u" % (name,sample['nSelected'],sample['nAll'])
 
+def plot_resolution(selection, hist_title, file_name, 
+                    profile_var, profile_bins,
+                    observable, nbins=100, xmin=-5.0, xmax=5.0):
+    """Make a profile plot of the resolution with respect to the profile
+    variable."""
+
+    max_value = 0
+    n = len(profile_bins)
+    if n < 2:
+        raise Exception("Too few profile bins: %d" % (n-1))
+    elif n < 4:
+        c1 = TCanvas("c1", "c1", 1000, 500)
+        c1.Divide(2, 1)
+    elif n < 6:
+        c1 = TCanvas("c1", "c1", 1000, 1000)
+        c1.Divide(2, 2)
+    elif n < 8:
+        c1 = TCanvas("c1", "c1", 1500, 1000)
+        c1.Divide(3, 2)
+    elif n < 11:
+        c1 = TCanvas("c1", "c1", 1500, 1500)
+        c1.Divide(3, 3)
+    elif n < 14:
+        c1 = TCanvas("c1", "c1", 2000, 1500)
+        c1.Divide(4, 3)
+    elif n < 18:
+        c1 = TCanvas("c1", "c1", 2000, 2000)
+        c1.Divide(4, 4)
+    else:
+        raise Exception("Too many profile bins: %d" % (n-1))
+
+    for name,sample in samples.items():
+        results = []
+        sample['hists'] = []
+        x = array("f")
+        x_err = array("f")
+        y = array("f")
+        y_err = array("f")
+        for i in range(n-1):
+            c1.cd(i+1)
+            x.append((profile_bins[i+1] + profile_bins[i]) / 2)
+            x_err.append((profile_bins[i+1] - profile_bins[i]) / 2)
+            hist = ROOT.TH1D("hist",hist_title,nbins,xmin,xmax)
+            hist.SetLineColor(sample['color'])
+            hist.SetLineWidth(2)
+            cuts = selection + "&&%s>=%s&&%s<%s" % (profile_var, profile_bins[i], profile_var, profile_bins[i+1])
+            sample['events'].Draw("%s>>hist" % observable, cuts)
+            result = hist.Fit("gaus","S")
+            results.append([result.Parameter(2),result.ParError(2)])
+            y.append(result.Parameter(2))
+            y_err.append(result.ParError(2))
+            hist.SetDirectory(0)
+            sample['hists'].append(hist)
+            
+        print results
+        print_canvas("%s_%s"%(file_name,name), output_path, c1)
+
+        gr = ROOT.TGraphErrors(len(x), x, y, x_err, y_err)
+        # gr.SetLineColor(sample['color'])
+        gr.SetLineWidth(2)
+        gr.SetTitle(hist_title)
+        c2 = TCanvas("c2", "c2", 800, 800)
+        gr.Draw("AP")
+        print_canvas("%s_graph_%s"%(file_name,name), output_path, c2)
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat(0)
@@ -163,8 +227,22 @@ ROOT.gStyle.SetOptStat(0)
 #                 "02_mass_jpsik_mva_gt0p9", "bkmm_jpsimc_mass", 100, 4.5, 6.0)
 # plot_generic_1D(bkmm_selection + "&&bkmm_kaon_pt>5&&bkmm_bmm_mva>0.9", "BtoJ/#psiK (modified MVA>0.9, kaon P_T>5 GeV);Mass",
 #                 "02_mass_jpsik_mva_gt0p9_kaon5", "bkmm_jpsimc_mass", 100, 4.5, 6.0)
-plot_generic_1D(bkmm_selection + "&&bkmm_kaon_pt>5&&bkmm_bmm_mva>0.9", "BtoJ/#psiK (modified MVA>0.9, kaon P_T>5 GeV);Mass",
-                "02_mass_jpsik_mva_gt0p9_kaon5_zoom", "bkmm_jpsimc_mass", 100, 5.15, 5.55)
+# plot_generic_1D(bkmm_selection + "&&bkmm_kaon_pt>5&&bkmm_bmm_mva>0.9", "BtoJ/#psiK (modified MVA>0.9, kaon P_T>5 GeV);Mass",
+#                 "02_mass_jpsik_mva_gt0p9_kaon5_zoom", "bkmm_jpsimc_mass", 100, 5.15, 5.55)
+plot_resolution(bkmm_selection + 
+                "&&bkmm_kaon_pt>5&&bkmm_bmm_mva>0.9&&!TMath::IsNaN(bkmm_jpsimc_massErr)&&abs(bkmm_jpsimc_mass-5.28)<0.13", 
+                "BtoJ/#psiK (modified MVA>0.9, kaon P_T>5 GeV, [5.15,5.41]);#sigma_M;pull width", 
+                "10_resolution_vs_masserr_jpsik_mva_gt0p9_kaon5",
+                "bkmm_jpsimc_massErr", [0, 0.013, 0.015, 0.017, 0.020, 0.025, 0.05],
+                "(bkmm_jpsimc_mass-5.2792601)/bkmm_jpsimc_massErr")
+plot_resolution(bkmm_selection + 
+                "&&bkmm_kaon_pt>5&&bkmm_bmm_mva>0.9&&!TMath::IsNaN(bkmm_jpsimc_massErr)&&abs(bkmm_jpsimc_mass-5.28)<0.13", 
+                "BtoJ/#psiK (modified MVA>0.9, kaon P_T>5 GeV, [5.15,5.41]);max(|#eta|);pull width", 
+                "10_resolution_vs_eta_jpsik_mva_gt0p9_kaon5",
+                "max(abs(Muon_eta[mm_mu1_index[bkmm_mm_index]]),abs(Muon_eta[mm_mu2_index[bkmm_mm_index]]))", 
+                [0, 0.25, 0.50, 0.75, 1.00, 1.20, 1.40],
+                "(bkmm_jpsimc_mass-5.2792601)/bkmm_jpsimc_massErr")
+                
 # plot_generic_1D(bkmm_selection, "J/#psi from BtoJ/#psiK Kaon_{pt}>1GeV;Mass",              
 #                 "02_mass_jpsi","mm_kin_mass[bkmm_mm_index]", 100, 2.9, 3.3)
 # plot_generic_1D(bkmm_selection + "&&bkmm_kaon_pt>2", "J/#psi from BtoJ/#psiK (kaon P_T>2 GeV);Mass",              
