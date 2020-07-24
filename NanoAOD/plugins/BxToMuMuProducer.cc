@@ -68,9 +68,9 @@ struct KinematicFitResult{
   RefCountedKinematicParticle    refitMother;
   RefCountedKinematicTree        refitTree;
   std::vector<RefCountedKinematicParticle> refitDaughters;
-  float lxy, lxyErr, sigLxy, cosAlpha;
+  float lxy, lxyErr, sigLxy, cosAlphaXY;
   KinematicFitResult():treeIsValid(false),vertexIsValid(false),
-		       lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0), cosAlpha(-999.)
+		       lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0), cosAlphaXY(-999.)
   {}
 
   bool valid() const {
@@ -107,7 +107,7 @@ struct KinematicFitResult{
     TVector w(2);
     w[0] = refitMother->currentState().globalMomentum().x();
     w[1] = refitMother->currentState().globalMomentum().y();
-    cosAlpha = v*w/sqrt(v.Norm2Sqr()*w.Norm2Sqr());
+    cosAlphaXY = v*w/sqrt(v.Norm2Sqr()*w.Norm2Sqr());
 
   }
   
@@ -608,8 +608,9 @@ namespace {
     cand.addUserFloat( name+"_massErr",     fit.massErr() );
     cand.addUserFloat( name+"_lxy",         fit.lxy );
     cand.addUserFloat( name+"_sigLxy",      fit.sigLxy );
-    cand.addUserFloat( name+"_cosAlphaXY",  fit.cosAlpha );
+    cand.addUserFloat( name+"_cosAlphaXY",  fit.cosAlphaXY );
     cand.addUserFloat( name+"_alpha",       fabs(displacement3d.cosAlpha)<=1?acos(displacement3d.cosAlpha):-999. );
+    cand.addUserFloat( name+"_alphaXY",     fabs(fit.cosAlphaXY)<=1?acos(fit.cosAlphaXY):-999. );
     cand.addUserFloat( name+"_vtx_x",       fit.valid()?fit.refitVertex->position().x():0 );
     cand.addUserFloat( name+"_vtx_xErr",    fit.valid()?sqrt(fit.refitVertex->error().cxx()):0 );
     cand.addUserFloat( name+"_vtx_y",       fit.valid()?fit.refitVertex->position().y():0 );
