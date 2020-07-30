@@ -160,6 +160,7 @@ BxToMuMuDiMuonMcTableVariables = merge_psets(
         gen_mu2_mpdgId = Var("userInt(  'gen_mu2_mpdgId')",   int,   doc = "Gen match: second muon mother pdg Id"),
         gen_mu2_pt     = Var("userFloat('gen_mu2_pt')",     float,   doc = "Gen match: second muon pt"),
         gen_pdgId      = Var("userInt(  'gen_pdgId')",        int,   doc = "Gen match: dimuon pdg Id"),
+        gen_cpdgId     = Var("userInt(  'gen_cpdgId')",       int,   doc = "Gen match: common mother pdg Id"),
         gen_mpdgId     = Var("userInt(  'gen_mpdgId')",       int,   doc = "Gen match: dimuon mother pdg Id"),
         gen_mass       = Var("userFloat('gen_mass')",       float,   doc = "Gen match: dimuon mass"),
         gen_pt         = Var("userFloat('gen_pt')",         float,   doc = "Gen match: dimuon pt"),

@@ -238,6 +238,7 @@ struct GenMatchInfo{
   const reco::GenParticle* mc_kaon1;
   const reco::GenParticle* mc_kaon2;
   const reco::Candidate* match;
+  const reco::Candidate* common_mother;
   GenMatchInfo():mu1_pdgId(0), mu1_motherPdgId(0), mu2_pdgId(0), mu2_motherPdgId(0), 
 		 kaon1_pdgId(0), kaon1_motherPdgId(0), kaon2_pdgId(0), kaon2_motherPdgId(0),
 		 mm_pdgId(0), mm_motherPdgId(0), 
@@ -245,7 +246,7 @@ struct GenMatchInfo{
 		 kaon1_pt(0), kaon2_pt(0), mm_mass(0), mm_pt(0), 
 		 kmm_mass(0), kkmm_mass(0), kmm_pt(0), kkmm_pt(0),
 		 mc_mu1(0), mc_mu2(0), mc_kaon1(0), mc_kaon2(0),
-		 match(0)
+		 match(0), common_mother(0)
   {}
 };
 
@@ -880,6 +881,7 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
     dimuonCand.addUserFloat("gen_pt",          gen_mm.mm_pt);
     dimuonCand.addUserInt(  "gen_pdgId",       gen_mm.mm_pdgId);
     dimuonCand.addUserInt(  "gen_mpdgId",      gen_mm.mm_motherPdgId);
+    dimuonCand.addUserInt(  "gen_cpdgId",      gen_mm.common_mother?gen_mm.common_mother->pdgId():0);
     dimuonCand.addUserFloat("gen_prod_x",      gen_mm.mm_prod_vtx.x());
     dimuonCand.addUserFloat("gen_prod_y",      gen_mm.mm_prod_vtx.y());
     dimuonCand.addUserFloat("gen_prod_z",      gen_mm.mm_prod_vtx.z());
@@ -995,6 +997,7 @@ void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
     btokmmCand.addUserFloat("gen_l3d",         (gen_kmm.kmm_prod_vtx-gen_kmm.mm_vtx).r());
     btokmmCand.addUserFloat("gen_lxy",         (gen_kmm.kmm_prod_vtx-gen_kmm.mm_vtx).rho());
     btokmmCand.addUserFloat("gen_tau",         computeDecayTime(gen_kmm));
+    btokmmCand.addUserFloat("gen_cpdgId",      gen_kmm.common_mother?gen_kmm.common_mother->pdgId():0);
   }
 
   // if (kaon.genParticle()){
@@ -1067,6 +1070,7 @@ void BxToMuMuProducer::fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
     bCand.addUserFloat("gen_l3d",         (gen_info.kkmm_prod_vtx-gen_info.mm_vtx).r());
     bCand.addUserFloat("gen_lxy",         (gen_info.kkmm_prod_vtx-gen_info.mm_vtx).rho());
     bCand.addUserFloat("gen_tau",          computeDecayTime(gen_info));
+    bCand.addUserFloat("gen_cpdgId",       gen_info.common_mother?gen_info.common_mother->pdgId():0);
   }
 
   auto bToKKJPsiMuMu = fitBToKKMuMu(kinematicMuMuVertexFit.refitTree, kaon1, kaon2, true);
@@ -1882,8 +1886,12 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticl
       }
     }
   }
-
-  
+  if (daughters.size() > 1){
+    const auto* mother = find_common_ancestor(daughters); 
+    if (mother){ 
+      result.common_mother = mother;
+    }
+  }
 
   return result;
 }
