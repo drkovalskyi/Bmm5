@@ -10,6 +10,7 @@
 
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
+#include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
 #include "DataFormats/PatCandidates/interface/CompositeCandidate.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
@@ -413,8 +414,7 @@ private:
 
   pair<double,double> computeDCA(const pat::PackedCandidate &kaon,
    				 reco::BeamSpot beamSpot);
-  GenMatchInfo getGenMatchInfo( const edm::View<reco::GenParticle>& genParticles,
-				const pat::Muon& muon1,
+  GenMatchInfo getGenMatchInfo( const pat::Muon& muon1,
 				const pat::Muon& muon2,
 				const pat::PackedCandidate* kaon1 = 0,
 				const pat::PackedCandidate* kaon2 = 0 );
@@ -513,8 +513,10 @@ private:
   edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
   edm::EDGetTokenT<std::vector<pat::Muon>> muonToken_;
   edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandToken_;
-  edm::EDGetTokenT<edm::View<reco::GenParticle> >   prunedGenToken_;
-  const edm::View<reco::GenParticle>* prunedGenParticles_;
+  edm::EDGetTokenT<std::vector<reco::GenParticle> >   prunedGenToken_;
+  edm::EDGetTokenT<std::vector<pat::PackedGenParticle> >   packedGenToken_;
+  const std::vector<reco::GenParticle>* prunedGenParticles_;
+  const std::vector<pat::PackedGenParticle>* packedGenParticles_;
 
   edm::ESHandle<TransientTrackBuilder> theTTBuilder_;
   edm::ESHandle<MagneticField> bFieldHandle_;
@@ -550,8 +552,10 @@ beamSpot_(nullptr),
 vertexToken_( consumes<reco::VertexCollection> ( iConfig.getParameter<edm::InputTag>( "vertexCollection" ) ) ),
 muonToken_( consumes<std::vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
 pfCandToken_( consumes<edm::View<pat::PackedCandidate>> ( iConfig.getParameter<edm::InputTag>( "PFCandCollection" ) ) ),
-prunedGenToken_( consumes<edm::View<reco::GenParticle>> ( iConfig.getParameter<edm::InputTag>( "prunedGenParticleCollection" ) ) ),
+prunedGenToken_( consumes<std::vector<reco::GenParticle>> ( iConfig.getParameter<edm::InputTag>( "prunedGenParticleCollection" ) ) ),
+packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( edm::InputTag( "packedGenParticles" ) ) ),
 prunedGenParticles_(nullptr),
+packedGenParticles_(nullptr),
 impactPointExtrapolator_(0),
 isMC_(            iConfig.getParameter<bool>( "isMC" ) ),
 ptMinMu_(         iConfig.getParameter<double>( "MuonMinPt" ) ),
@@ -867,7 +871,7 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
   addFitInfo(dimuonCand, kinematicMuMuVertexFit, "kin", displacement3D,0,1);
   
   if (isMC_){
-    auto gen_mm = getGenMatchInfo(*prunedGenParticles_,muon1,muon2);
+    auto gen_mm = getGenMatchInfo(muon1,muon2);
     // int mu1_pdgId, mu1_motherPdgId, mu2_pdgId, mu2_motherPdgId, kaon_pdgId, kaon_motherPdgId,
     // mm_pdgId, mm_motherPdgId, kmm_pdgId;
     // float mu1_pt, mu2_pt, kaon_pt, mm_mass, mm_pt, kmm_mass, kmm_pt;
@@ -984,7 +988,7 @@ void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
 			  kaon.bestTrack()->dxyError()>0 ? fabs(kaon.bestTrack()->dxy(*beamSpot_))/kaon.bestTrack()->dxyError():0.0);
   btokmmCand.addUserInt("kaon_charge", kaon.charge());
   if (isMC_){
-    auto gen_kmm = getGenMatchInfo(*prunedGenParticles_,muon1,muon2,&kaon);
+    auto gen_kmm = getGenMatchInfo(muon1,muon2,&kaon);
     btokmmCand.addUserInt(  "gen_kaon_pdgId",  gen_kmm.kaon1_pdgId);
     btokmmCand.addUserInt(  "gen_kaon_mpdgId", gen_kmm.kaon1_motherPdgId);
     btokmmCand.addUserFloat("gen_kaon_pt",     gen_kmm.kaon1_pt);
@@ -1054,7 +1058,7 @@ void BxToMuMuProducer::fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
   bCand.addUserFloat("kk_mass",    (kaon1.p4()+kaon2.p4()).mass());
 
   if (isMC_){
-    auto gen_info = getGenMatchInfo(*prunedGenParticles_,muon1,muon2,&kaon1,&kaon2);
+    auto gen_info = getGenMatchInfo(muon1,muon2,&kaon1,&kaon2);
     bCand.addUserInt(  "gen_kaon1_pdgId",  gen_info.kaon1_pdgId);
     bCand.addUserInt(  "gen_kaon1_mpdgId", gen_info.kaon1_motherPdgId);
     bCand.addUserFloat("gen_kaon1_pt",     gen_info.kaon1_pt);
@@ -1182,7 +1186,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(muonToken_, muonHandle);
     iEvent.getByToken(pfCandToken_, pfCandHandle_);
     
-    edm::Handle<edm::View<reco::GenParticle> > prunedGenParticleHandle;
+    edm::Handle<std::vector<reco::GenParticle> > prunedGenParticleHandle;
     if ( isMC_ ) {
       iEvent.getByToken(prunedGenToken_,prunedGenParticleHandle);
       prunedGenParticles_ = prunedGenParticleHandle.product();
@@ -1796,8 +1800,7 @@ namespace{
 
 }
 
-GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticle>& genParticles,
-						const pat::Muon& muon1,
+GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const pat::Muon& muon1,
 						const pat::Muon& muon2,
 						const pat::PackedCandidate* kaon1,
 						const pat::PackedCandidate* kaon2 )
@@ -1839,7 +1842,7 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticl
   }
   
   if (kaon1){
-    for (auto const & genParticle: genParticles){
+    for (auto const & genParticle: *prunedGenParticles_){
       if (dr_match(kaon1->p4(),genParticle.p4())){
 	result.mc_kaon1 = &genParticle;
 	daughters.push_back(result.mc_kaon1);
@@ -1863,7 +1866,7 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const edm::View<reco::GenParticl
     }
   }
   if (kaon2){
-    for (auto const & genParticle: genParticles){
+    for (auto const & genParticle: *prunedGenParticles_){
       if (dr_match(kaon2->p4(),genParticle.p4())){
 	result.mc_kaon2 = &genParticle;
 	daughters.push_back(result.mc_kaon2);
@@ -2177,7 +2180,7 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
 // GenInfoSummary HeavyFlavDileptonNtupleMakerMiniAOD::getGenInfoSummary(const edm::Event& iEvent){
 //   GenInfoSummary summary;
   
-//   edm::Handle<edm::View<reco::GenParticle> > pruned;
+//   edm::Handle<std::vector<reco::GenParticle> > pruned;
 //   iEvent.getByToken(pruned_gen_token,pruned);
 
 //   // Packed particles are all the status 1, so usable to remake jets
