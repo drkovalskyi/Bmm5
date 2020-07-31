@@ -380,6 +380,8 @@ BxToMuMuBToKKmumuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProd
 BxToMuMuGen = cms.EDProducer("GenBmmProducer")
 
 BxToMuMuGenVars = cms.PSet(
+    signature    = Var("userInt('signature')",     int, doc = "Product of PDG ids of all daughters"),
+
     # bhadron
     pdgId        = Var("userInt('pdgId')",         int, doc = "PDG id of the b-hadron"),
     pt           = Var("userFloat('pt')",        float, doc = "Pt of the b-hadron"),
@@ -398,16 +400,15 @@ BxToMuMuGenVars = cms.PSet(
     mu2_phi          = Var("userFloat('mu2_phi')",       float, doc = "Phi of mu2"),
     dimuon_mass      = Var("userFloat('dimuon_mass')",   float, doc = "Mass of dimuon"),
 
-    # kaons
-    kaon1_pdgId        = Var("userInt('kaon1_pdgId')",         int, doc = "PDG id of kaon1"),
-    kaon1_pt           = Var("userFloat('kaon1_pt')",        float, doc = "Pt of kaon1"),
-    kaon1_eta          = Var("userFloat('kaon1_eta')",       float, doc = "Eta of kaon1"),
-    kaon1_phi          = Var("userFloat('kaon1_phi')",       float, doc = "Phi of kaon1"),
-    kaon2_pdgId        = Var("userInt('kaon2_pdgId')",         int, doc = "PDG id of kaon2"),
-    kaon2_pt           = Var("userFloat('kaon2_pt')",        float, doc = "Pt of kaon2"),
-    kaon2_eta          = Var("userFloat('kaon2_eta')",       float, doc = "Eta of kaon2"),
-    kaon2_phi          = Var("userFloat('kaon2_phi')",       float, doc = "Phi of kaon2"),
-    kk_mass            = Var("userFloat('kk_mass')",         float, doc = "Mass of kk"),
+    # other daughters
+    dau3_pdgId        = Var("userInt('dau3_pdgId')",         int, doc = "PDG id of dau3"),
+    dau3_pt           = Var("userFloat('dau3_pt')",        float, doc = "Pt of dau3"),
+    dau3_eta          = Var("userFloat('dau3_eta')",       float, doc = "Eta of dau3"),
+    dau3_phi          = Var("userFloat('dau3_phi')",       float, doc = "Phi of dau3"),
+    dau4_pdgId        = Var("userInt('dau4_pdgId')",         int, doc = "PDG id of dau4"),
+    dau4_pt           = Var("userFloat('dau4_pt')",        float, doc = "Pt of dau4"),
+    dau4_eta          = Var("userFloat('dau4_eta')",       float, doc = "Eta of dau4"),
+    dau4_phi          = Var("userFloat('dau4_phi')",       float, doc = "Phi of dau4"),
     
     # radiation
     rad_p            = Var("userFloat('rad_p')",         float, doc = "P of radiation sum"),

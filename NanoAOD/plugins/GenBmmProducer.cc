@@ -20,6 +20,9 @@
 // GenBmmProducer gen info extraction for Bmm5 analysis
 
 typedef reco::Candidate::LorentzVector LorentzVector;
+namespace {
+  const float muon_mass_    = 0.10565837;
+}
 
 class GenBmmProducer : public edm::EDProducer {
 public:
@@ -59,7 +62,7 @@ GenBmmProducer::GenBmmProducer(const edm::ParameterSet &iConfig):
 
 void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // Output collection
-  auto b2kkmm = std::make_unique<pat::CompositeCandidateCollection>();
+  auto genbmm = std::make_unique<pat::CompositeCandidateCollection>();
   auto genbinfo = std::make_unique<pat::CompositeCandidateCollection>();
     
   edm::Handle<std::vector<reco::GenParticle> > pruned;
@@ -87,9 +90,10 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     }
 
     // keep only interesting b-hadrons
-    if( abs(cand.pdgId()) != 521     // B+/-
-	and abs(cand.pdgId()) != 511 // B
-	and abs(cand.pdgId()) != 531 )// Bs 
+    if ( abs(cand.pdgId()) != 511 and  // B0
+	 abs(cand.pdgId()) != 521 and  // B+/-
+	 abs(cand.pdgId()) != 531 and  // Bs 
+	 abs(cand.pdgId()) != 541 )  // Bc 
       continue;
 
     // check direct daughter infor for signs of neutral B oscilations
@@ -105,31 +109,123 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     // find final state daughters and compute signature
     // note: ignore photos
     long long int signature = 1;
-    std::vector<const reco::Candidate*> muons;
-    std::vector<const reco::Candidate*> kaons;
+    std::vector<const reco::Candidate*> final_state_particles;
     LorentzVector radiation;
 
+    // Loop over final state particles stored in the packed gen collection
     for (auto const& dau: *packed){
       auto mother = dau.mother(0);
       if (mother and isAncestor(&cand,mother)){
 	if (dau.pdgId()!=22){
 	  signature *= dau.pdgId();
-	  if (abs(dau.pdgId()) == 13)  muons.push_back(&dau);
-	  if (abs(dau.pdgId()) == 321) kaons.push_back(&dau);
+	  if (abs(dau.pdgId()) == 13  or // mu+/-
+	      abs(dau.pdgId()) == 211 or // pi+/-
+	      abs(dau.pdgId()) == 321 or // K+/-
+	      abs(dau.pdgId()) == 14  or // nu_mu
+	      dau.pdgId() == 111)        // pi0
+	    final_state_particles.push_back(&dau);
 	} else {
 	  radiation += dau.p4();
 	}
       }
     }
+    std::sort(final_state_particles.begin(), final_state_particles.end(), order_by_pt);
+
+    // Interpret the signature
+    // 
+    // We will store directly acceessible the following information
+    // - B pdg id
+    // - B p3
+    // - "dimuon" pair - most likely combination of daughters that may fake dimuon signature
+    // - decay channel id based on the signature
+    // 
+    // The rest of information can be extracted from other daughters
+    const reco::Candidate* mu_cand1(nullptr);
+    const reco::Candidate* mu_cand2(nullptr);
+    const reco::Candidate* dau3(nullptr);
+    const reco::Candidate* dau4(nullptr);
     
     // skip irrelevant signatures
-    if ( (signature != 13*13*321*321)      // kkmm
-	 and (abs(signature) != 13*13*321) // kmm
-	 and (signature != -13*13) )        // mm
+    // if ( (signature != 13*13*321*321)      // kkmm
+    // 	 and (abs(signature) != 13*13*321) // kmm
+    // 	 and (signature != -13*13) )        // mm
+    //   continue;
+
+    switch (signature){
+    case -13*13:    // mm
+    case -211*211:  // pi+pi-
+    case -321*321:  // K+K-
+    case -321*211:  // Kpi
+    case -321*2212: // Kp
+    case -211*2212: // pi p
+      mu_cand1 = final_state_particles.at(0);
+      mu_cand2 = final_state_particles.at(1);
+      break;
+
+    case 211*13*14:
+    case -211*13*14: // pi mu nu
+    case 321*13*14:
+    case -321*13*14: // K mu nu
+    case 2212*13*14:
+    case -2212*13*14: // p mu nu
+      if ( abs(final_state_particles.at(0)->pdgId()) == 14 ){
+	dau3     = final_state_particles.at(0);
+	mu_cand1 = final_state_particles.at(1);
+	mu_cand2 = final_state_particles.at(2);
+      }
+      if ( abs(final_state_particles.at(1)->pdgId()) == 14 ){
+	dau3     = final_state_particles.at(1);
+	mu_cand1 = final_state_particles.at(0);
+	mu_cand2 = final_state_particles.at(2);
+      }
+      if ( abs(final_state_particles.at(2)->pdgId()) == 14 ){
+	dau3     = final_state_particles.at(2);
+	mu_cand1 = final_state_particles.at(0);
+	mu_cand2 = final_state_particles.at(1);
+      }
+      break;
+
+    case -111*13*13:  // pi0 mu mu
+      if ( final_state_particles.at(0)->pdgId() == 111 ){
+	dau3     = final_state_particles.at(0);
+	mu_cand1 = final_state_particles.at(1);
+	mu_cand2 = final_state_particles.at(2);
+      }
+      if ( final_state_particles.at(1)->pdgId() == 111 ){
+	dau3     = final_state_particles.at(1);
+	mu_cand1 = final_state_particles.at(0);
+	mu_cand2 = final_state_particles.at(2);
+      }
+      if ( final_state_particles.at(2)->pdgId() == 111 ){
+	dau3     = final_state_particles.at(2);
+	mu_cand1 = final_state_particles.at(0);
+	mu_cand2 = final_state_particles.at(1);
+      }
+      break;
+
+    case 321*321*13*13:  // KKmm
+      for (auto dau: final_state_particles){
+	if (abs(dau->pdgId())==13){
+	  if (not mu_cand1)
+	    mu_cand1 = dau;
+	  else
+	    mu_cand2 = dau;
+	} else {
+	  if (not dau3)
+	    dau3 = dau;
+	  else
+	    dau4 = dau;
+	}
+      }
+      break;
+
+    default:       // unknown signature
       continue;
+    }
 
     // fill information
     pat::CompositeCandidate bCand;
+    bCand.addUserInt("signature",  signature);
     bCand.addUserInt("pdgId",  cand.pdgId());
     bCand.addUserFloat("pt",   cand.pt());
     bCand.addUserFloat("eta",  cand.eta());
@@ -137,28 +233,34 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     bCand.addUserFloat("mass", cand.mass());
 
     // dimuon info
-    std::sort(muons.begin(), muons.end(), order_by_pt);
-    bCand.addUserInt(  "mu1_pdgId", muons[0]->pdgId());
-    bCand.addUserFloat("mu1_pt",    muons[0]->pt());
-    bCand.addUserFloat("mu1_eta",   muons[0]->eta());
-    bCand.addUserFloat("mu1_phi",   muons[0]->phi());
-    bCand.addUserInt(  "mu2_pdgId", muons[1]->pdgId());
-    bCand.addUserFloat("mu2_pt",    muons[1]->pt());
-    bCand.addUserFloat("mu2_eta",   muons[1]->eta());
-    bCand.addUserFloat("mu2_phi",   muons[1]->phi());
-    bCand.addUserFloat("dimuon_mass", (muons[0]->p4()+muons[1]->p4()).mass());
+    bCand.addUserInt(  "mu1_pdgId", mu_cand1->pdgId());
+    bCand.addUserFloat("mu1_pt",    mu_cand1->pt());
+    bCand.addUserFloat("mu1_eta",   mu_cand1->eta());
+    bCand.addUserFloat("mu1_phi",   mu_cand1->phi());
+    bCand.addUserInt(  "mu2_pdgId", mu_cand2->pdgId());
+    bCand.addUserFloat("mu2_pt",    mu_cand2->pt());
+    bCand.addUserFloat("mu2_eta",   mu_cand2->eta());
+    bCand.addUserFloat("mu2_phi",   mu_cand2->phi());
+    auto dimuon_p2 = 
+      pow(mu_cand1->px() + mu_cand2->px(),2) +
+      pow(mu_cand1->py() + mu_cand2->py(),2) +
+      pow(mu_cand1->pz() + mu_cand2->pz(),2);
+    auto dimuon_e = 
+      sqrt(pow(mu_cand1->p(),2) + pow(muon_mass_,2)) +
+      sqrt(pow(mu_cand2->p(),2) + pow(muon_mass_,2));
     
-    // kaon(s) info
-    std::sort(kaons.begin(), kaons.end(), order_by_pt);
-    bCand.addUserInt(  "kaon1_pdgId", kaons.size()>0?kaons[0]->pdgId():0);
-    bCand.addUserFloat("kaon1_pt",    kaons.size()>0?kaons[0]->pt():0);
-    bCand.addUserFloat("kaon1_eta",   kaons.size()>0?kaons[0]->eta():0);
-    bCand.addUserFloat("kaon1_phi",   kaons.size()>0?kaons[0]->phi():0);
-    bCand.addUserInt(  "kaon2_pdgId", kaons.size()>1?kaons[1]->pdgId():0);
-    bCand.addUserFloat("kaon2_pt",    kaons.size()>1?kaons[1]->pt():0);
-    bCand.addUserFloat("kaon2_eta",   kaons.size()>1?kaons[1]->eta():0);
-    bCand.addUserFloat("kaon2_phi",   kaons.size()>1?kaons[1]->phi():0);
-    bCand.addUserFloat("kk_mass",   kaons.size()>1?(kaons[0]->p4()+kaons[1]->p4()).mass():0);
+    bCand.addUserFloat("dimuon_mass", sqrt(pow(dimuon_e,2) - dimuon_p2));
+    
+    // other daughters
+    bCand.addUserInt(  "dau3_pdgId", dau3?dau3->pdgId():0);
+    bCand.addUserFloat("dau3_pt",    dau3?dau3->pt():0);
+    bCand.addUserFloat("dau3_eta",   dau3?dau3->eta():0);
+    bCand.addUserFloat("dau3_phi",   dau3?dau3->phi():0);
+    bCand.addUserInt(  "dau4_pdgId", dau4?dau4->pdgId():0);
+    bCand.addUserFloat("dau4_pt",    dau4?dau4->pt():0);
+    bCand.addUserFloat("dau4_eta",   dau4?dau4->eta():0);
+    bCand.addUserFloat("dau4_phi",   dau4?dau4->phi():0);
+    // bCand.addUserFloat("kk_mass",   kaons.size()>1?(kaons[0]->p4()+kaons[1]->p4()).mass():0);
 
     // radiation
     bCand.addUserFloat("rad_p",   radiation.P());    
@@ -166,7 +268,7 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     bCand.addUserFloat("rad_eta", radiation.eta());
     bCand.addUserFloat("rad_phi", radiation.phi());
       
-    b2kkmm->push_back(bCand);
+    genbmm->push_back(bCand);
 
   }
   // fill information
@@ -187,7 +289,7 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
   bgen.addUserInt("process_type",processType);
   genbinfo->push_back(bgen);
 
-  iEvent.put(std::move(b2kkmm),"genbmm");
+  iEvent.put(std::move(genbmm),"genbmm");
   iEvent.put(std::move(genbinfo),"gensummary");
 }
 DEFINE_FWK_MODULE(GenBmmProducer);
