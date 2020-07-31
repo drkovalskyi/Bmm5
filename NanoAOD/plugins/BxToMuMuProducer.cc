@@ -234,10 +234,10 @@ struct GenMatchInfo{
     kaon2_pdgId, kaon2_motherPdgId, mm_pdgId, mm_motherPdgId, kmm_pdgId, kkmm_pdgId;
   float mu1_pt, mu2_pt, kaon1_pt, kaon2_pt, mm_mass, mm_pt, kmm_mass, kkmm_mass, kmm_pt, kkmm_pt;
   math::XYZPoint mm_prod_vtx, mm_vtx, kmm_prod_vtx, kkmm_prod_vtx;
-  const reco::GenParticle* mc_mu1;
-  const reco::GenParticle* mc_mu2;
-  const reco::GenParticle* mc_kaon1;
-  const reco::GenParticle* mc_kaon2;
+  const reco::Candidate* mc_mu1;
+  const reco::Candidate* mc_mu2;
+  const reco::Candidate* mc_kaon1;
+  const reco::Candidate* mc_kaon2;
   const reco::Candidate* match;
   const reco::Candidate* common_mother;
   GenMatchInfo():mu1_pdgId(0), mu1_motherPdgId(0), mu2_pdgId(0), mu2_motherPdgId(0), 
@@ -249,6 +249,14 @@ struct GenMatchInfo{
 		 mc_mu1(0), mc_mu2(0), mc_kaon1(0), mc_kaon2(0),
 		 match(0), common_mother(0)
   {}
+  const reco::GenParticle* gen_mu1(){
+    return dynamic_cast<const reco::GenParticle*>(mc_mu1);
+  }
+  const reco::GenParticle* gen_mu2(){
+    return dynamic_cast<const reco::GenParticle*>(mc_mu2);
+  }
+    
+
 };
 
 struct GenEventInfo{};
@@ -418,6 +426,8 @@ private:
 				const pat::Muon& muon2,
 				const pat::PackedCandidate* kaon1 = 0,
 				const pat::PackedCandidate* kaon2 = 0 );
+  const reco::Candidate* getGenParticle(const reco::Candidate* cand);
+
   // Two track DOCA
   float 
   distanceOfClosestApproach( const reco::Track* track1,
@@ -897,9 +907,8 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
     dimuonCand.addUserFloat("gen_tau",         computeDecayTime(gen_mm));
     
     double mm_doca = -1;
-    if (gen_mm.mc_mu1 and gen_mm.mc_mu2)
-      mm_doca = distanceOfClosestApproach(gen_mm.mc_mu1,
-					  gen_mm.mc_mu2);
+    if (gen_mm.gen_mu1() and gen_mm.gen_mu2())
+      mm_doca = distanceOfClosestApproach(gen_mm.gen_mu1(), gen_mm.gen_mu2());
     dimuonCand.addUserFloat("gen_doca",        mm_doca);
     
     
@@ -1187,11 +1196,15 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(pfCandToken_, pfCandHandle_);
     
     edm::Handle<std::vector<reco::GenParticle> > prunedGenParticleHandle;
+    edm::Handle<std::vector<pat::PackedGenParticle> > packedGenParticleHandle;
     if ( isMC_ ) {
       iEvent.getByToken(prunedGenToken_,prunedGenParticleHandle);
       prunedGenParticles_ = prunedGenParticleHandle.product();
+      iEvent.getByToken(packedGenToken_,packedGenParticleHandle);
+      packedGenParticles_ = packedGenParticleHandle.product();
     } else {
       prunedGenParticles_ = nullptr;
+      packedGenParticles_ = nullptr;
     }
 
     auto nMuons = muonHandle->size();
@@ -1800,6 +1813,18 @@ namespace{
 
 }
 
+const reco::Candidate* BxToMuMuProducer::getGenParticle(const reco::Candidate* cand)
+{
+  if (not cand) return nullptr;
+  auto muon = dynamic_cast<const pat::Muon*>(cand);
+  if (muon and muon->genParticle()) return muon->genParticle();
+  for (auto const & genParticle: *packedGenParticles_){
+      if (dr_match(cand->p4(), genParticle.p4()))
+	return &genParticle;
+  }
+  return nullptr;
+}
+
 GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const pat::Muon& muon1,
 						const pat::Muon& muon2,
 						const pat::PackedCandidate* kaon1,
@@ -1807,26 +1832,30 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const pat::Muon& muon1,
 {
   auto result = GenMatchInfo();
   const reco::Candidate*   mm_mother(0);
+  assert(prunedGenParticles_);
+  assert(packedGenParticles_);
   std::vector<const reco::Candidate*> daughters;
-  if (muon1.genParticle()){
-    // should we use sim instead for more information?
-    result.mc_mu1 = muon1.genParticle();
-    result.mu1_pdgId = muon1.genParticle()->pdgId();
-    result.mu1_pt    = muon1.genParticle()->pt();
-    if (muon1.genParticle()->mother()){
-      result.mu1_motherPdgId = muon1.genParticle()->mother()->pdgId();
+
+  result.mc_mu1 = getGenParticle(&muon1);
+  if (result.mc_mu1){
+    result.mu1_pdgId = result.mc_mu1->pdgId();
+    result.mu1_pt    = result.mc_mu1->pt();
+    if (result.mc_mu1->mother()){
+      result.mu1_motherPdgId = result.mc_mu1->mother()->pdgId();
     }
     daughters.push_back(result.mc_mu1);
   }
-  if (muon2.genParticle()){
-    result.mc_mu2 = muon2.genParticle();
-    result.mu2_pdgId = muon2.genParticle()->pdgId();
-    result.mu2_pt    = muon2.genParticle()->pt();
-    if (muon2.genParticle()->mother()){
-      result.mu2_motherPdgId = muon2.genParticle()->mother()->pdgId();
+
+  result.mc_mu2 = getGenParticle(&muon2);
+  if (result.mc_mu2){
+    result.mu2_pdgId = result.mc_mu2->pdgId();
+    result.mu2_pt    = result.mc_mu2->pt();
+    if (result.mc_mu2->mother()){
+      result.mu2_motherPdgId = result.mc_mu2->mother()->pdgId();
     }
     daughters.push_back(result.mc_mu2);
   }
+
   if ( result.mc_mu1 and result.mc_mu2 ){
     if ( (result.mc_mu1->vertex()-result.mc_mu2->vertex()).r() < 1e-4)
       result.mm_vtx    = result.mc_mu1->vertex();
@@ -1842,14 +1871,14 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const pat::Muon& muon1,
   }
   
   if (kaon1){
-    for (auto const & genParticle: *prunedGenParticles_){
+    for (auto const & genParticle: *packedGenParticles_){
       if (dr_match(kaon1->p4(),genParticle.p4())){
 	result.mc_kaon1 = &genParticle;
 	daughters.push_back(result.mc_kaon1);
 	result.kaon1_pdgId = genParticle.pdgId();
 	result.kaon1_pt    = genParticle.pt();
-	if (genParticle.mother()){
-	  result.kaon1_motherPdgId = genParticle.mother()->pdgId();
+	if (genParticle.mother(0)){
+	  result.kaon1_motherPdgId = genParticle.mother(0)->pdgId();
 	}
 	break;
       }
@@ -1866,14 +1895,14 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const pat::Muon& muon1,
     }
   }
   if (kaon2){
-    for (auto const & genParticle: *prunedGenParticles_){
+    for (auto const & genParticle: *packedGenParticles_){
       if (dr_match(kaon2->p4(),genParticle.p4())){
 	result.mc_kaon2 = &genParticle;
 	daughters.push_back(result.mc_kaon2);
 	result.kaon2_pdgId = genParticle.pdgId();
 	result.kaon2_pt    = genParticle.pt();
-	if (genParticle.mother()){
-	  result.kaon2_motherPdgId = genParticle.mother()->pdgId();
+	if (genParticle.mother(0)){
+	  result.kaon2_motherPdgId = genParticle.mother(0)->pdgId();
 	}
 	break;
       }
