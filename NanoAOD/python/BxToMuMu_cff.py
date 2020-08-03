@@ -113,7 +113,15 @@ kinematic_pset = cms.PSet(
 BxToMuMuDiMuonTableVariables = merge_psets(
     cms.PSet(
         mu1_index    = Var("userInt('mu1_index')",         int,   doc = "Index of corresponding leading muon"),
+        mu1_pdgId    = Var("userInt('mu1_pdgId')",         int,   doc = "Leading muon candidate pdgId. Used in hadron fake studies"),
+        mu1_pt       = Var("userFloat('mu1_pt')",          float, doc = "Leading muon pt"),
+        mu1_eta      = Var("userFloat('mu1_eta')",         float, doc = "Leading muon eta"),
+        mu1_phi      = Var("userFloat('mu1_phi')",         float, doc = "Leading muon phi"),
         mu2_index    = Var("userInt('mu2_index')",         int,   doc = "Index of corresponding subleading muon"),
+        mu2_pdgId    = Var("userInt('mu2_pdgId')",         int,   doc = "Trailing muon candidate pdgId. Used in hadron fake studies"),
+        mu2_pt       = Var("userFloat('mu2_pt')",          float, doc = "Trailing muon pt"),
+        mu2_eta      = Var("userFloat('mu2_eta')",         float, doc = "Trailing muon eta"),
+        mu2_phi      = Var("userFloat('mu2_phi')",         float, doc = "Trailing muon phi"),
         mass         = Var("mass",                         float, doc = "Unfit invariant mass"),
         doca         = Var("userFloat('doca')",            float, doc = "Distance of closest approach of muons"),
         nTrks        = Var("userInt('nTrks')",             int,   doc = "Number of tracks compatible with the vertex by vertex probability"),

@@ -1168,6 +1168,33 @@ BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCan
 
 }
 
+namespace {
+  // Muon container to hold muons and hadrons that may decays to muons
+  // Index is the position of the muon in the original muon collection
+  // For hadrons Index is -1
+
+  class MuonCand: public pat::Muon{
+  public:
+    MuonCand(const pat::Muon& muon, int index):
+      pat::Muon(muon), index_(index)
+    {
+    }
+    MuonCand(const pat::PackedCandidate& hadron):
+      pat::Muon(reco::Muon(hadron.charge(), hadron.p4())),
+      index_(-1)
+    {
+      assert(hadron.hasTrackDetails());
+      tracks_.push_back(*hadron.bestTrack());
+      setInnerTrack(reco::TrackRef(&tracks_,0));
+      setPdgId(hadron.pdgId());
+    }
+    int index() const { return index_; }
+  private:
+    int index_;
+    std::vector<reco::Track> tracks_;
+  };
+}
+
 void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
     iSetup.get<IdealMagneticFieldRecord>().get(bFieldHandle_);
@@ -1217,18 +1244,23 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
     auto btokkmm = std::make_unique<pat::CompositeCandidateCollection>();
     AddFourMomenta addP4;
 
-    // Build dimuon candidates first
-
-    if ( nMuons > 1 ){
-      // Ensure that muon1.pt > muon2.pt
-      for (unsigned int i = 0; i < nMuons; ++i) {
-	const pat::Muon & muon1 = muonHandle->at(i);
-        if (not isGoodMuon(muon1)) continue;
-	for (unsigned int j = 0; j < nMuons; ++j) {
+    // good muon candidates
+    std::vector<MuonCand> good_muon_candidates;
+    for (unsigned int i = 0; i < nMuons; ++i) {
+      const pat::Muon & muon = muonHandle->at(i);
+      if (not isGoodMuon(muon)) continue;
+      good_muon_candidates.push_back(MuonCand(muon, i));
+    }
+    
+    // Build dimuon candidates
+    if ( good_muon_candidates.size() > 1 ){
+      for (unsigned int i = 0; i < good_muon_candidates.size(); ++i) {
+	const MuonCand & muon1 = good_muon_candidates.at(i);
+	for (unsigned int j = 0; j < good_muon_candidates.size(); ++j) {
 	  if (i==j) continue;
-	  const pat::Muon & muon2 = muonHandle->at(j);
+	  const MuonCand & muon2 = good_muon_candidates.at(j);
+	  // Ensure that muon1.pt > muon2.pt
 	  if (muon2.pt() > muon1.pt()) continue;
-	  if (not isGoodMuon(muon2)) continue;
 	  
 	  auto mm_doca = distanceOfClosestApproach(muon1.innerTrack().get(),
 						   muon2.innerTrack().get());
@@ -1240,8 +1272,16 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	  dimuonCand.addDaughter( muon2 , "muon2");
 	  addP4.set( dimuonCand );
 
-	  dimuonCand.addUserInt("mu1_index", i);
-	  dimuonCand.addUserInt("mu2_index", j);
+	  dimuonCand.addUserInt("mu1_index", muon1.index());
+	  dimuonCand.addUserInt("mu1_pdgId", muon1.pdgId());
+	  dimuonCand.addUserFloat("mu1_pt",  muon1.pt());
+	  dimuonCand.addUserFloat("mu1_eta", muon1.eta());
+	  dimuonCand.addUserFloat("mu1_phi", muon1.phi());
+	  dimuonCand.addUserInt("mu2_index", muon2.index());
+	  dimuonCand.addUserInt("mu2_pdgId", muon2.pdgId());
+	  dimuonCand.addUserFloat("mu2_pt",  muon2.pt());
+	  dimuonCand.addUserFloat("mu2_eta", muon2.eta());
+	  dimuonCand.addUserFloat("mu2_phi", muon2.phi());
 	  dimuonCand.addUserFloat( "doca", mm_doca);
 
 	  // Kalman Vertex Fit
