@@ -122,6 +122,7 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
 	      abs(dau.pdgId()) == 211 or // pi+/-
 	      abs(dau.pdgId()) == 321 or // K+/-
 	      abs(dau.pdgId()) == 14  or // nu_mu
+	      abs(dau.pdgId()) == 2212 or // protons
 	      dau.pdgId() == 111)        // pi0
 	    final_state_particles.push_back(&dau);
 	} else {
