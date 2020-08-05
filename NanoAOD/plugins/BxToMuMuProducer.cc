@@ -356,6 +356,33 @@ struct BdtReaderData {
   float fls3d, alpha, pvips, iso, chi2dof, docatrk, closetrk, m1iso, m2iso, eta, m;
 };
 
+namespace {
+  // Muon container to hold muons and hadrons that may decays to muons
+  // Index is the position of the muon in the original muon collection
+  // For hadrons Index is -1
+
+  class MuonCand: public pat::Muon{
+  public:
+    MuonCand(const pat::Muon& muon, int index):
+      pat::Muon(muon), index_(index)
+    {
+    }
+    MuonCand(const pat::PackedCandidate& hadron):
+      pat::Muon(reco::Muon(hadron.charge(), hadron.p4())),
+      index_(-1)
+    {
+      assert(hadron.hasTrackDetails());
+      tracks_.push_back(*hadron.bestTrack());
+      setInnerTrack(reco::TrackRef(&tracks_,0));
+      setPdgId(hadron.pdgId());
+    }
+    int index() const { return index_; }
+  private:
+    int index_;
+    std::vector<reco::Track> tracks_;
+  };
+}
+
 
 using namespace std;
 
@@ -509,6 +536,9 @@ private:
 	       const edm::Event& iEvent,
 	       const pat::Muon& muon1,
 	       const pat::Muon& muon2); 
+
+  void 
+  injectHadronsThatMayFakeMuons(std::vector<MuonCand>& good_muon_candidates);
 
   float  computeAnalysisBDT(unsigned int event_idx);
   
@@ -1167,32 +1197,90 @@ BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCan
 
 
 }
-
 namespace {
-  // Muon container to hold muons and hadrons that may decays to muons
-  // Index is the position of the muon in the original muon collection
-  // For hadrons Index is -1
+  bool isAncestor(const reco::Candidate* ancestor, const reco::Candidate* candidate){
+    if (ancestor == candidate) return true;
+    for (unsigned int iMother=0; iMother < candidate->numberOfMothers(); ++iMother){
+      if (isAncestor(ancestor,candidate->mother(iMother)))
+	return true;
+    }
+    return false;
+  }
+}
 
-  class MuonCand: public pat::Muon{
-  public:
-    MuonCand(const pat::Muon& muon, int index):
-      pat::Muon(muon), index_(index)
-    {
+void 
+BxToMuMuProducer::injectHadronsThatMayFakeMuons(std::vector<MuonCand>& good_muon_candidates){
+  // Loop over gen info and find interesting events
+  for (auto const & cand: *prunedGenParticles_){
+    // keep only interesting b-hadrons
+    if ( abs(cand.pdgId()) != 511 and  // B0
+	 abs(cand.pdgId()) != 521 and  // B+/-
+	 abs(cand.pdgId()) != 531 and  // Bs 
+	 abs(cand.pdgId()) != 541 )  // Bc 
+      continue;
+
+    // check direct daughter infor for signs of neutral B oscilations
+    bool final_b = true;
+    for (auto const& daughter: cand.daughterRefVector()){
+      if (daughter->pdgId() == -cand.pdgId()){
+	final_b = false;
+	break;
+      }
     }
-    MuonCand(const pat::PackedCandidate& hadron):
-      pat::Muon(reco::Muon(hadron.charge(), hadron.p4())),
-      index_(-1)
-    {
-      assert(hadron.hasTrackDetails());
-      tracks_.push_back(*hadron.bestTrack());
-      setInnerTrack(reco::TrackRef(&tracks_,0));
-      setPdgId(hadron.pdgId());
+    if (not final_b) continue;
+
+    long long int signature = 1;
+    std::vector<const reco::Candidate*> final_state_particles;
+
+    // Loop over packed gen particles that represent final state
+    // particles at gen level and compute the decay signature ignoring
+    // photons
+    for (auto const& dau: *packedGenParticles_){
+      auto mother = dau.mother(0);
+      if (mother and isAncestor(&cand,mother)){
+	if (dau.pdgId()!=22){
+	  signature *= dau.pdgId();
+	  if (abs(dau.pdgId()) == 211 or // pions
+	      abs(dau.pdgId()) == 321 or // kaons
+	      abs(dau.pdgId()) == 2212)  // protons 
+	    final_state_particles.push_back(&dau);
+	}
+      }
     }
-    int index() const { return index_; }
-  private:
-    int index_;
-    std::vector<reco::Track> tracks_;
-  };
+
+    // select relevent backgound events
+    static const std::vector<long long int> relevant_backgrounds = {
+      -211*211,  // pi+pi-
+      -321*321,  // K+K-
+      -321*211,  // Kpi
+      -321*2212, // Kp
+      -211*2212, // pi p
+      211*13*14, // pi mu nu
+      211*13*14, // pi mu nu
+      321*13*14, // K mu nu
+     -321*13*14, // K mu nu
+     2212*13*14, // p mu nu
+    -2212*13*14, // p mu nu
+     -111*13*13 // pi0 mu mu
+    };
+    bool relevant_event = false;
+    for (auto bkg_signature: relevant_backgrounds)
+      if (bkg_signature == signature){
+	relevant_event = true;
+	break;
+      }
+    if (not relevant_event) continue;
+    
+    // find reco tracks matching selected gen level hadrons
+    for (const auto& pfCand: *pfCandHandle_.product()){
+      if (pfCand.charge() == 0 ) continue;
+      if (not pfCand.hasTrackDetails()) continue;
+      for (auto hadron: final_state_particles){
+	if (deltaR(*hadron, pfCand) > 0.01) continue;
+	good_muon_candidates.push_back(MuonCand(pfCand));
+      }
+    }
+  }
 }
 
 void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
@@ -1230,6 +1318,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
       iEvent.getByToken(packedGenToken_,packedGenParticleHandle);
       packedGenParticles_ = packedGenParticleHandle.product();
     } else {
+
       prunedGenParticles_ = nullptr;
       packedGenParticles_ = nullptr;
     }
@@ -1252,6 +1341,9 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
       good_muon_candidates.push_back(MuonCand(muon, i));
     }
     
+    // FIXME: add a switch to disable this feature
+    injectHadronsThatMayFakeMuons(good_muon_candidates);
+
     // Build dimuon candidates
     if ( good_muon_candidates.size() > 1 ){
       for (unsigned int i = 0; i < good_muon_candidates.size(); ++i) {
