@@ -18,6 +18,37 @@ peformance of NanoAOD production in various configurations
 | NanoAODv6-V07 | 507                | 3.48    | 3.98          | 3.99               |
 | NanoAODv6-V05 | 505                | 3.48    | 3.89          | -                  |
 
+#### Memory Usage (RSS)
+| Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
+| ------------- | ------------------ | ------- |-------------- | ------------------ | 
+| Master        | -                  | 3.48    | 4.02          | 4.03               | 
+| NanoAODv6-V07 | 507                | 3.48    | 3.98          | 3.99               |
+| NanoAODv6-V05 | 505                | 1657.8  | 1678.2        | -                  |
+
+### Data: Charmonium Run2018D
+#### Average Time Per Event
+| Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
+| ------------- | ------------------ | ------- |-------------- | ------------------ | 
+| Master        |                    | 0.148   | 0.163         | 0.298              | 
+| NanoAODv6-V07 | 507                | 0.150   | 0.161         | 0.270              |
+| NanoAODv6-V05 | 505                | 0.148   | 0.159         | -                  |
+
+#### Size per event (KiB)
+| Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
+| ------------- | ------------------ | ------- |-------------- | ------------------ | 
+| Master        | -                  | 3.48    | 4.02          | 5.02               | 
+| NanoAODv6-V07 | 507                | 3.48    | 3.98          | 3.99               |
+| NanoAODv6-V05 | 505                | 3.48    | 3.89          | -                  |
+
+#### Memory Usage (RSS)
+| Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
+| ------------- | ------------------ | ------- |-------------- | ------------------ | 
+| Master        | -                  | 3.48    | 4.02          | 1645.8               | 
+| NanoAODv6-V07 | 507                | 3.48    | 3.98          | 3.99               |
+| NanoAODv6-V05 | 505                | 1657.8  | 1678.2        | -                  |
+
+
+
 ## Testing procedure
 cmsDriver and processing commands
 * Monte Carlo
