@@ -2,7 +2,7 @@
 
 ## New developments
 
-## [NanoAODv6-V07] - 2020/08/06
+## [NanoAODv6-V08] - 2020/08/06
 
 ### Added
 	- Injected hadrons from relevant exclusive decays into good muon candidates to study muon fakes. This may break some old code since muon index for hadron is a negative number and cannot be used to reference a muon unless it was reconstructed as a muon 
