@@ -4,7 +4,7 @@ peformance of NanoAOD production in various configurations
 
 ## Results
 ### Monte Carlo: BsToMuMu_RunIIAutumn18NanoAODv6
-#### Average Time Per Event
+#### Average Time Per Event (sec)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
 | Master        |                    | 0.148   | 0.163         | 0.291              | 
@@ -18,7 +18,7 @@ peformance of NanoAOD production in various configurations
 | NanoAODv6-V07 | 507                | 3.48    | 3.98          | 3.99               |
 | NanoAODv6-V05 | 505                | 3.48    | 3.89          | -                  |
 
-#### Memory Usage (RSS)
+#### Memory Usage (RSS KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
 | Master        | -                  | 1642    | 1770          | 1765               | 
@@ -26,7 +26,7 @@ peformance of NanoAOD production in various configurations
 | NanoAODv6-V05 | 505                | 1658    | 1678          | -                  |
 
 ### Data: Charmonium Run2018D
-#### Average Time Per Event
+#### Average Time Per Event (sec)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
 | Master        |                    | 0.128   | 0.208         | 0.298              | 
@@ -40,7 +40,7 @@ peformance of NanoAOD production in various configurations
 | NanoAODv6-V07 | 507                | 3.94    | 3.98          | 3.99               |
 | NanoAODv6-V05 | 505                | 3.94    | 4.85          | -                  |
 
-#### Memory Usage (RSS)
+#### Memory Usage (RSS KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
 | Master        | -                  | 1515    | 1653          | 1646               | 
