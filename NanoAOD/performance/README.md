@@ -36,4 +36,6 @@ cmsDriver and processing commands
          * ```cmsRun BsToMuMu_RunIIAutumn18NanoAODv6_bmm_with_fakes.py > & BsToMuMu_RunIIAutumn18NanoAODv6_bmm_with_fakes.log &```
 
 * Data:
-
+   * Charmonium Run2018D
+      * Standard NanoAOD + Bmm + V0 muon fakes
+         * ```cmsDriver.py step1 --filein root://cms-xrd-global.cern.ch//store/data/Run2018D/Charmonium/MINIAOD/PromptReco-v2/000/325/022/00000/0F526EF2-A897-C84D-9921-B8DFC60000EF.root --fileout file:Run2018D_NanoAOD_bmm_with_fakes.root --data --eventcontent NANOAOD --datatier NANOAOD --conditions 102X_dataRun2_Prompt_v15 --step NANO --nThreads 1 --era Run2_2018,run2_nanoAOD_102Xv1 --python_filename Run2018D_NanoAOD_bmm_with_fakes.py --no_exec -n 1000 --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBxToMuMu --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))" --customise Validation/Performance/TimeMemoryInfo.py --customise_commands="process.Timing.summaryOnly = cms.untracked.bool(True)"```
