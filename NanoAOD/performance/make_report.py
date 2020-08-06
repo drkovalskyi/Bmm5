@@ -44,7 +44,9 @@ for module, time in nanoaod_block.items():
 print("NanoAOD step time per event: %0.3f sec" % nanoaod_block_time_per_event)
 
 bmm_modules = ['BxToMuMu', 'BxToMuMuMc', 'BxToMuMuGen', 'BxToMuMuDiMuonMcTable', 'BxToMuMuBToKmumuMcTable',
-               'BxToMuMuBToKKmumuMcTable', 'BxToMuMuGenTable', 'BxToMuMuGenSummaryTable', 'V0ForMuonFakeMC']
+               'BxToMuMuBToKKmumuMcTable', 'BxToMuMuGenTable', 'BxToMuMuGenSummaryTable', 
+               'BxToMuMuDiMuonTable', 'BxToMuMuBToKmumuTable', 'BxToMuMuBToKKmumuTable', 
+               'V0ForMuonFakeMC', 'V0ForMuonFake']
 
 print("Bmm modules:")
 for module in sorted(nanoaod_block, key=nanoaod_block.get, reverse=True):
