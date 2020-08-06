@@ -2,6 +2,14 @@
 This folder contains a set of tools and instructions to measure 
 peformance of NanoAOD production in various configurations
 
+## Results - Average Time Per Event
+### Monte Carlo: BsToMuMu_RunIIAutumn18NanoAODv6
+| Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
+| ------------- | ------------------ | ------- |-------------- | ------------------ | 
+| Master        |                    | 0.148   | 0.163         | 0.291              | 
+| NanoAODv6-V07 | 507                |         |               |                    |
+
+
 ## Testing procedure
 cmsDriver and processing commands
 * Monte Carlo
@@ -18,9 +26,3 @@ cmsDriver and processing commands
 
 * Data:
 
-## Results - Average Time Per Event
-### Monte Carlo: BsToMuMu_RunIIAutumn18NanoAODv6
-| Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
-| ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| Master        |                    | 0.148   | 0.163         | 0.291              | 
-| NanoAODv6-V07 | 507                |         |               |                    |
