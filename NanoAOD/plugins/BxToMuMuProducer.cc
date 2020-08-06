@@ -1318,7 +1318,6 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
       iEvent.getByToken(packedGenToken_,packedGenParticleHandle);
       packedGenParticles_ = packedGenParticleHandle.product();
     } else {
-
       prunedGenParticles_ = nullptr;
       packedGenParticles_ = nullptr;
     }
@@ -1342,7 +1341,9 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
     }
     
     // FIXME: add a switch to disable this feature
-    injectHadronsThatMayFakeMuons(good_muon_candidates);
+    if ( isMC_ ) {
+      injectHadronsThatMayFakeMuons(good_muon_candidates);
+    }
 
     // Build dimuon candidates
     if ( good_muon_candidates.size() > 1 ){
