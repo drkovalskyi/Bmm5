@@ -7,7 +7,7 @@ peformance of NanoAOD production in various configurations
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
 | Master        |                    | 0.148   | 0.163         | 0.291              | 
-| NanoAODv6-V07 | 507                |         |               |                    |
+| NanoAODv6-V07 | 507                |         | 0.161         |                    |
 
 
 ## Testing procedure
