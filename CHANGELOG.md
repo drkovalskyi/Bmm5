@@ -1,6 +1,15 @@
 # Changelog
 
 ## New developments
+### Added
+	- Injected hadrons from relevant exclusive decays into good muon candidates to study muon fakes. This may break some old code since muon index for hadron is a negative number and cannot be used to reference a muon unless it was reconstructed as a muon 
+	- Added gen summary for all relevant exclusive backgrounds
+	- Added a few variables
+### Modified
+	- Redesinged genbmm block. It is not compatible with the old code.
+	- Improved gen matching (adde extra information and started using packed candidates)
+### Fixed
+	- Fixed bug in matching tracks to ignore
 
 ## [NanoAODv6-V07] - 2020/05/26
 
