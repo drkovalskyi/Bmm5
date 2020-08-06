@@ -14,9 +14,9 @@ peformance of NanoAOD production in various configurations
 #### Size per event (KiB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| Master        |                    | 3.48    | 4.02          | 4.03               | 
+| Master        | -                  | 3.48    | 4.02          | 4.03               | 
 | NanoAODv6-V07 | 507                | 3.48    | 3.98          | 3.99               |
-| NanoAODv6-V05 | 505                | 3.48    | 3.98          | 3.99               |
+| NanoAODv6-V05 | 505                | 3.48    | 3.89          | -                  |
 
 ## Testing procedure
 cmsDriver and processing commands
