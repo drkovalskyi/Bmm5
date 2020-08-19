@@ -371,15 +371,16 @@ namespace {
       pat::Muon(reco::Muon(hadron.charge(), hadron.p4())),
       index_(-1)
     {
+      std::vector<reco::Track> tracks;
       assert(hadron.hasTrackDetails());
-      tracks_.push_back(*hadron.bestTrack());
-      setInnerTrack(reco::TrackRef(&tracks_,0));
+      tracks.push_back(*hadron.bestTrack());
+      setInnerTrack(reco::TrackRef(&tracks,0));
+      embedTrack();
       setPdgId(hadron.pdgId());
     }
     int index() const { return index_; }
   private:
     int index_;
-    std::vector<reco::Track> tracks_;
   };
 }
 
