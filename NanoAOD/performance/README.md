@@ -7,21 +7,21 @@ peformance of NanoAOD production in various configurations
 #### Average Time Per Event (sec)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| Master        |                    | 0.148   | 0.163         | 0.291              | 
+| NanoAODv6-V08 |                    | 0.148   | 0.163         | 0.291              | 
 | NanoAODv6-V07 | 507                | 0.150   | 0.161         | 0.270              |
 | NanoAODv6-V05 | 505                | 0.148   | 0.159         | -                  |
 
 #### Size per event (KiB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| Master        | -                  | 3.48    | 4.02          | 4.03               | 
+| NanoAODv6-V08 | -                  | 3.48    | 4.02          | 4.03               | 
 | NanoAODv6-V07 | 507                | 3.48    | 3.98          | 3.99               |
 | NanoAODv6-V05 | 505                | 3.48    | 3.89          | -                  |
 
 #### Memory Usage (RSS KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| Master        | -                  | 1642    | 1770          | 1765               | 
+| NanoAODv6-V08 | -                  | 1642    | 1770          | 1765               | 
 | NanoAODv6-V07 | 507                | 1624    | 1753          | 1769               |
 | NanoAODv6-V05 | 505                | 1658    | 1678          | -                  |
 
@@ -29,21 +29,21 @@ peformance of NanoAOD production in various configurations
 #### Average Time Per Event (sec)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| Master        |                    | 0.128   | 0.208         | 0.298              | 
+| NanoAODv6-V08 |                    | 0.128   | 0.208         | 0.298              | 
 | NanoAODv6-V07 | 507                | 0.126   | 0.193         | 0.311              |
 | NanoAODv6-V05 | 505                | 0.127   | 0.209         | -                  |
 
 #### Size per event (KiB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| Master        | -                  | 3.94    | 5.01          | 5.02               | 
+| NanoAODv6-V08 | -                  | 3.94    | 5.01          | 5.02               | 
 | NanoAODv6-V07 | 507                | 3.94    | 4.95          | 4.96               |
 | NanoAODv6-V05 | 505                | 3.94    | 4.85          | -                  |
 
 #### Memory Usage (RSS KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| Master        | -                  | 1515    | 1653          | 1646               | 
+| NanoAODv6-V08 | -                  | 1515    | 1653          | 1646               | 
 | NanoAODv6-V07 | 507                | 1539    | 1642          | 1648               |
 | NanoAODv6-V05 | 505                | 1542    | 1548          | -                  |
 
