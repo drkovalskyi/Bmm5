@@ -2,6 +2,8 @@
 
 ## New developments
 
+## [NanoAODv6-V09] - 2020/08/21
+
 ### Fixed
 	- Fixed bug in MuonCand build from a hadron (the track reference could be wrong)
 
