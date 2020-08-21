@@ -1278,7 +1278,16 @@ BxToMuMuProducer::injectHadronsThatMayFakeMuons(std::vector<MuonCand>& good_muon
       if (not pfCand.hasTrackDetails()) continue;
       for (auto hadron: final_state_particles){
 	if (deltaR(*hadron, pfCand) > 0.01) continue;
-	good_muon_candidates.push_back(MuonCand(pfCand));
+	// check if the hadron is matching one of the selected muons
+	bool good_candidate = true;
+	for (const auto& good_muon_candidate: good_muon_candidates){
+	  if (deltaR(*hadron, good_muon_candidate) < 0.01) {
+	    good_candidate=false;
+	    break;
+	  }
+	}
+	if (good_candidate)
+	  good_muon_candidates.push_back(MuonCand(pfCand));
       }
     }
   }
