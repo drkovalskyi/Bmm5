@@ -364,7 +364,16 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
   stop_watch_generate.Stop();
   TStopwatch stop_watch_init;
   stop_watch_init.Stop();
-  for (unsigned int i=0; i<trials; ++i){
+  printf("Peforming %u toy MC studies\n", trials);
+  int i_permille_old = 0;
+  for (unsigned int i=0; i < trials; ++i){
+    int i_permille = (int)floor(100. * i / trials);
+    if (i_permille != i_permille_old) {
+      printf("\015\033[32m ---> \033[1m\033[31m%d%%"
+             "\033[0m\033[32m <---\033[0m\015", i_permille);
+      fflush(stdout);
+      i_permille_old = i_permille;
+    }
     stop_watch_init.Start(false);
     RooWorkspace ws;
     ws.import(*ws_ref.pdf(gen_model_name.c_str()));
@@ -444,6 +453,18 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
 
   if (silent_roofit)
     RooMsgService::instance().restoreState();
+  ws_ref.Print();
+
+  result.yield_bsmm->Draw();
+  string plot_name = "toy_gen-" + gen_model_name + "_fit-" + fit_model_name;
+  print_canvas(plot_name + "_n_bsmm", output_path, gPad);
+  result.yield_bmm->Draw();
+  print_canvas(plot_name + "_n_bmm", output_path, gPad);
+  result.significance_bmm->Draw();
+  print_canvas(plot_name + "_significance_bmm", output_path, gPad);
+  result.significance_bsmm->Draw();
+  print_canvas(plot_name + "_significance_bsmm", output_path, gPad);
+
   return result;
 }
 
@@ -863,16 +884,6 @@ void sensitivity_study(){
   // print_canvas("toy_significance_bmm_2D", output_path, c1);
   // result.significance_bsmm->Draw();
   // print_canvas("toy_significance_bsmm_2D", output_path, c1);
-
-  result.yield_bsmm->Draw();
-  print_canvas("toy_n_bsmm", output_path, c1);
-  result.yield_bmm->Draw();
-  print_canvas("toy_n_bmm", output_path, c1);
-  result.significance_bmm->Draw();
-  print_canvas("toy_significance_bmm", output_path, c1);
-  result.significance_bsmm->Draw();
-  print_canvas("toy_significance_bsmm", output_path, c1);
-
 
   //   // continue;
 
