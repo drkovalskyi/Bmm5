@@ -48,9 +48,6 @@ const double mm_mass_err_max = 0.100;
 const bool silent_roofit = true;
 const bool plot_each_toy = false; // debugging option 
 
-const bool store_projections = false;
-// bool use_mc_truth_matching = true;
-
 struct Sample{
   string name, files, selection;
   float cross_section, scale_factor;
@@ -93,12 +90,10 @@ void print_canvas(string output_name_without_extention,
   // canvas->Print((s + ".root").c_str());
 }
 
-// void process_sample(TChain* chain, string name, string selection=""){
 const RooWorkspace* process_sample(Sample& sample){
   string file_name = "sensitivity_study-" + sample.name + ".root";
   
   // Check if we already have histograms prepared
-  
   if (not remake_input_workspaces and not gSystem->AccessPathName(file_name.c_str())){
     TFile *f = TFile::Open(file_name.c_str()) ;
     if (not f) 
@@ -107,7 +102,6 @@ const RooWorkspace* process_sample(Sample& sample){
     if (not ws) 
       throw std::runtime_error( "Workspace is not found" );
     return ws;
-      
   }
   
   printf("Recreating histograms for %s\n", sample.name.c_str());
@@ -189,13 +183,6 @@ const RooWorkspace* process_sample(Sample& sample){
     // Loop over candidates
     bool good_event = false;
     for (unsigned int cand=0; cand < nmm; ++cand){
-      // std::cout << bkmm_jpsimc_mass[cand] << ", " << bkmm_jpsimc_massErr[cand] << ", " << 
-      //   bkmm_mm_index[cand] << ", " << bkmm_jpsimc_vtx_chi2dof[cand] << ", " << bkmm_jpsimc_alpha[cand] << ", " <<
-      //   mm_mu1_index[bkmm_mm_index[cand]] << ", " << mm_mu2_index[bkmm_mm_index[cand]] << ", " << 
-      //   mm_kin_sl3d[bkmm_mm_index[cand]] << ", " << mm_kin_vtx_chi2dof[bkmm_mm_index[cand]] << ", " << 
-      //   muon_eta[mm_mu1_index[bkmm_mm_index[cand]]] << ", " <<  muon_pt[mm_mu1_index[bkmm_mm_index[cand]]] << ", " <<
-      //   muon_softMva[mm_mu1_index[bkmm_mm_index[cand]]] << 
-      //   std::endl;
       if (sample.truth_match and not mm_gen_pdgId[cand]) continue;
       if (fabs(mm_mu1_eta[cand]) > 1.4) continue;
       if (fabs(mm_mu2_eta[cand]) > 1.4) continue;
@@ -234,99 +221,6 @@ const RooWorkspace* process_sample(Sample& sample){
   ws->import(scale);
   ws->writeToFile(file_name.c_str()) ;
   return ws;
-  
-  
-
-  //   printf("Number of events: %lld\n", chain->GetEntries());
-  
-  //   TCut mc_match("mm_gen_pdgId!=0");
-  //   // mc_match = "abs(1-bkmm_kaon_pt/genbmm_kaon1_pt[0])<0.1";
-
-  //   TCut base_cut;
-  //   // TCut base_cut("HLT_DoubleMu4_Jpsi_NoVertexing");
-  //   base_cut += "abs(mm_mu1_eta)<1.4 && mm_mu1_pt>4";
-  //   base_cut += "abs(mm_mu2_eta)<1.4 && mm_mu2_pt>4";
-  //   base_cut += "abs(mm_kin_mass-5.5)<0.5";
-  //   base_cut += "!TMath::IsNaN(mm_kin_massErr)";
-  //   base_cut += "mm_kin_sl3d>4 && mm_kin_vtx_chi2dof<5";
-    
-  //   // base_cut += "Muon_softMva[mm_mu1_index[bkmm_mm_index]]>0.45 && Muon_softMva[mm_mu2_index[bkmm_mm_index]]>0.45";
-
-  // string h_mass_name = "h_" + sample.name + "_mass";
-  // string h_mass_err_name = "h_" + sample.name + "_mass_err";
-
-  // TH1D* h_mass = new TH1D(h_mass_name.c_str(), "", 100, 5.0, 5.5);
-  // TH1D* h_mass_err = new TH1D(h_mass_err_name.c_str(), "", 100, 0.0, 0.1);
-  // chain->Draw(("mm_kin_mass>>" + h_mass_name).c_str(), base_cut + mc_match, "goff");
-  // chain->Draw(("mm_kin_massErr>>" + h_mass_err_name).c_str(), base_cut + mc_match, "goff");
-  // printf("Selected events: %0.0f (efficiency: %0.1f%%)\n", h_mass->Integral(), 
-  // 	 100.*h_mass->Integral()/chain->GetEntries());
-  // h_mass->SetDirectory(0);
-  // h_mass_err->SetDirectory(0);
-  // sample.h_mass = h_mass;
-  // sample.h_mass_err = h_mass_err;
-  // sample.efficiency = h_mass->Integral()/chain->GetEntries();
-  // if (recompute_scale_factors){
-  //   unsigned int n = chain->GetEntries(base_cut + mc_match);
-  //   float mu_eff = n>0? float(chain->GetEntries(base_cut + mc_match + "mm_mu1_index>=0&&mm_mu2_index>=0"))/n : 1;
-  //   sample.scale_factor = mu_eff;
-  // }
-
-  // // Make a dataset
-  // RooRealVar* mass = workspace.var("mm_kin_mass");
-  // if (not mass){
-  //   workspace.import(RooRealVar("mm_kin_mass", "mass", 5.0, 6.0));
-  //   mass = workspace.var("mm_kin_mass");
-  //   assert(mass);
-  // }
-  // RooRealVar* mass_err = workspace.var("mm_kin_massErr");
-  // if (not mass_err){
-  //   workspace.import(RooRealVar("mm_kin_massErr", "mass uncertainty", 0.0, 0.1));
-  //   mass_err = workspace.var("mm_kin_massErr");
-  //   assert(mass_err);
-  // }
-
-  // TTree* tree = chain->CopyTree(base_cut + mc_match);
-  // assert(tree);
-  // printf("Number of events selected: %lld\n", tree->GetEntries());
-  // RooDataSet data(("data_" + sample.name).c_str(), "data", RooArgSet(*mass, *mass_err), Import(*tree));
-  // workspace.import(data);
-
-  // for (auto const& var : variables){
-  //   string h_mass_name = "h_mc_bkmm_" + var.name + "_vs_mass";
-  //   string h_npv_name  = "h_mc_bkmm_" + var.name + "_vs_npv";
-  //   string command_mass = var.branch + ":bkmm_jpsimc_mass>>" + h_mass_name;
-  //   string command_npv  = var.branch + ":PV_npvs>>" + h_npv_name;
-  //   TH2D* h_mass = new TH2D(h_mass_name.c_str(), "", 50, 5.17, 5.45, var.nbins, var.xmin, var.xmax);
-  //   TH2D* h_npv  = new TH2D(h_npv_name.c_str(),  "", 50,    0,  100, var.nbins, var.xmin, var.xmax);
-  //   mc_bkmm->Draw(command_mass.c_str(), base_cut + mc_match, "goff");
-  //   mc_bkmm->Draw(command_npv.c_str(),  base_cut + mc_match, "goff");
-  //   h_mass->Write();
-  //   h_npv->Write();
-  // }
-
-  // // Data
-
-  // TH1D* h_data_base = new TH1D("h_data_base", "", 50, 5.17, 5.45);
-  // data->Draw("bkmm_jpsimc_mass>>h_data_base", base_cut, "goff");
-  // h_data_base->Write();
-
-  // for (auto const& var : variables){
-  //   string hist_name = "h_data_" + var.name + "_vs_mass";
-  //   string draw_command = var.branch + ":bkmm_jpsimc_mass>>" + hist_name;
-  //   TH2D* h_data = new TH2D(hist_name.c_str(), "", 
-  // 			    50, 5.17, 5.45, 
-  // 			    var.nbins, var.xmin, var.xmax);
-  //   data->Draw(draw_command.c_str(), base_cut, "goff");
-  //   h_data->Write();
-  // }
-
-  // TH1D* h_data_npv = new TH1D("h_data_npv", "", 50, 0, 100);
-  // data->Draw("PV_npvs>>h_data_npv", base_cut, "goff");
-  // h_data_npv->Write();
-
-  // return h_mass;
-
 }
 
 struct Result {
@@ -471,8 +365,11 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
 	nobsmm_res = fit_model->fitTo(*data, PrintEvalErrors(-1), PrintLevel(-1), Save(kTRUE));
       stop_watch_fit.Stop();
       significance_bsmm.push_back(sqrt(max(0.,nobsmm_res->minNll() - def_res->minNll())*2.));
+      if (nobsmm_res) delete nobsmm_res;
     }
     delete data;
+    if (def_res) delete def_res;
+    if (nobmm_res) delete nobmm_res;
   }
   stop_watch.Stop();
   stop_watch_fit.Stop();
@@ -742,145 +639,6 @@ void build_model_2D(RooWorkspace& workspace){
 
 }
 
-// Result fitHistogram(TH1* h_ref, TH1* h_test){
-//   if (h_ref->Integral() < 1 or h_test->Integral() < 1) return Result();
-
-//   if (silent_roofit)
-//     RooMsgService::instance().setGlobalKillBelow(RooFit::ERROR);
-
-//   // signal pdf
-//   RooRealVar bias("bias", "bias", 0, -0.1, 0.1) ;
-//   RooRealVar sigma("sigma", "sigma", 0.0001, 0., 0.01);
-//   RooGaussModel gaussM("gaussM", "signal pdf", mass, bias, sigma) ;
-//   mass.setBins(10000, "fft");
-//   RooFFTConvPdf sig("sig", "smeared distribution", mass, ref_pdf, gaussM);
-
-//   // background pdf
-//   RooRealVar a0("a0", "a0", 0.0, -1., 1.) ;
-//   // RooRealVar a1("a1", "a1", 0.0, -0.2, 0.2) ;
-//   // RooRealVar a2("a2", "a2", 0.0, -1., 1.) ;
-//   // RooChebychev bkg("bkg", "Background", mass, RooArgSet(a0, a1));
-//   RooChebychev bkg("bkg", "Background", mass, RooArgSet(a0));
-//   RooRealVar Nsig("Nsig", "Nsig", h_test->Integral(), 0, h_test->Integral());
-//   RooRealVar Nbkg("Nbkg", "Nbkg", 0, 0, h_test->Integral());
-//   RooAddPdf model("model", "", RooArgList(sig,bkg), RooArgList(Nsig,Nbkg));
-
-//   // test dataset
-//   RooDataHist test_data("test_data", "", mass, h_test);
-
-//   // freeze signal shape to get background shape right 
-//   sigma.setConstant(true);
-//   bias.setConstant(true);
-//   if (silent_roofit)
-//     model.fitTo(test_data, PrintEvalErrors(-1), PrintLevel(-1));
-//   else
-//     model.fitTo(test_data);
-    
-//   sigma.setConstant(false);
-//   bias.setConstant(false);
-//   if (silent_roofit)
-//     model.fitTo(test_data, PrintEvalErrors(-1), PrintLevel(-1));
-//   else
-//     model.fitTo(test_data);
-
-//   RooPlot* frame = mass.frame();
-//   test_data.plotOn(frame);
-//   model.plotOn(frame);
-//   model.plotOn(frame, RooFit::Components(bkg), RooFit::LineStyle(kDashed));
-//   // data.statOn(frame, Layout(0.55, 0.99, 0.8));
-//   // model->paramOn(frame, Parameters(params), Layout(0.6,0.9,0.9) ) ;
-
-//   model.paramOn(frame, Layout(0.6, 0.85, 0.85));
-//   // model->paramOn(frame, Layout(0.55));
-//   frame->getAttText()->SetTextSize(0.02);
-//   frame->Draw();
-
-//   return Result(Nsig,Nbkg);
-// }
-
-// void process_variables(TFile* f, string prefix){
-//   TH2* h_mc_bkmm_mva_vs_npv = (TH2*)f->Get("h_mc_bkmm_mva_vs_npv");
-//   TH1* h_mc_npv = h_mc_bkmm_mva_vs_npv->ProjectionX();
-//   TH1* h_data_npv = ((TH1*)f->Get("h_data_npv"));
-//   h_mc_npv->SetLineWidth(2);
-//   h_mc_npv->SetLineColor(kBlue);
-//   h_mc_npv->Draw();
-//   print_canvas(prefix + "-" + "mc_npv", output_path, gPad);
-
-//   h_data_npv->SetLineWidth(2);
-//   h_data_npv->SetLineColor(kBlue);
-//   h_data_npv->Draw();
-//   print_canvas(prefix + "-" + "data_npv", output_path, gPad);
-
-//   for (auto const& var: variables){
-//     unsigned int n = var.nbins;
-//     vector<Double_t> mc_eff;
-//     vector<Double_t> data_eff;
-//     vector<Double_t> data_over_mc_eff;
-//     vector<Double_t> mc_eff_reweighted;
-//     vector<Double_t> data_over_mc_eff_reweighted;
-//     double total_data(-1);
-//     double total_mc(-1);
-//     // vector<Double_t> mc_eff_err;
-//     // vector<Double_t> data_over_mc_eff_err;
-
-//     printf("processing %s\n", var.name.c_str());
-//     // Scan efficiency in MC and data as a function of the cut on the variable
-
-//     auto h_mc_x_vs_npv    = (TH2*)f->Get(("h_mc_bkmm_"   + var.name + "_vs_npv" ).c_str()); 
-//     auto h_mc_x_vs_mass   = (TH2*)f->Get(("h_mc_bkmm_"   + var.name + "_vs_mass").c_str()); 
-//     auto h_data_x_vs_mass = (TH2*)f->Get(("h_data_" + var.name + "_vs_mass").c_str());
-//     auto h_mc_x_reweighted = reweight_histogram(h_mc_x_vs_npv, h_mc_npv, h_data_npv);
-    
-//     for (unsigned int i=0; i <= n; ++i){
-//       auto mass_mc   = h_mc_x_vs_mass->ProjectionX(  "mass_mc",   i, n+1);
-//       auto mass_data = h_data_x_vs_mass->ProjectionX("mass_data", i, n+1);
-//       auto result = fitHistogram(mass_mc, mass_data);
-      
-//       if (store_projections)
-// 	print_canvas(prefix + "-" + var.name + "_proj" + to_string(i), output_path, gPad);
-
-//       if (i==0){
-// 	total_data = result.sig;
-// 	total_mc = mass_mc->Integral();
-//       }
-
-//       assert(total_data > 0);
-//       data_eff.push_back(result.sig / total_data);
-//       assert(total_mc>0);
-//       mc_eff.push_back(mass_mc->Integral() / total_mc);
-//       data_over_mc_eff.push_back(mc_eff.back()>0?data_eff.back()/mc_eff.back():0);
-
-//       mc_eff_reweighted.push_back(h_mc_x_reweighted->Integral(i,-1) / h_mc_x_reweighted->Integral(0,-1));
-//       data_over_mc_eff_reweighted.push_back(mc_eff_reweighted.back()>0?data_eff.back()/mc_eff_reweighted.back():0);
-//     }
-//     gPad->SetGridx();
-//     gPad->SetGridy();
-//     auto gr = new TGraph(n, &mc_eff[0], &data_over_mc_eff[0]);
-//     gr->SetMinimum(0);
-//     gr->SetMaximum(1.5);
-//     gr->GetXaxis()->SetLimits(0.,1.);
-//     gr->GetXaxis()->SetTitle("MC efficiency");
-//     gr->GetYaxis()->SetTitle("Data/MC efficiency ratio");
-//     gr->SetTitle(var.name.c_str());
-//     gr->Draw("AP*");
-
-//     print_canvas(prefix + "-" + var.name + "_eff", output_path, gPad);
-
-//     auto gr_reweighted = new TGraph(n, &mc_eff_reweighted[0], &data_over_mc_eff_reweighted[0]);
-//     gr_reweighted->SetMinimum(0);
-//     gr_reweighted->SetMaximum(1.5);
-//     gr_reweighted->GetXaxis()->SetLimits(0.,1.);
-//     gr_reweighted->GetXaxis()->SetTitle("MC efficiency");
-//     gr_reweighted->GetYaxis()->SetTitle("Data/MC efficiency ratio");
-//     gr_reweighted->SetTitle(var.name.c_str());
-//     gr_reweighted->Draw("AP*");
-//     print_canvas(prefix + "-" + var.name + "_eff_reweighted", output_path, gPad);
-//     gPad->SetGridx(0);
-//     gPad->SetGridy(0);
-//   }
-// }
-
 void import_var(RooWorkspace& target_ws, const RooWorkspace& source_ws, const char* var_name, const char* new_name){
   auto var = source_ws.var(var_name);
     if (not var) 
@@ -934,123 +692,13 @@ void sensitivity_study(){
   build_model_1D(workspace);
   build_model_2D(workspace);
 
-  /*  
-  auto mass = workspace.var("mass");
-  auto model = workspace.pdf("model");
-  
-  auto frame = mass->frame() ;
-
-  model->plotOn(frame);
-  if (workspace.pdf("pdf_bkpi")){
-    model->plotOn(frame, Components(*(workspace.pdf("pdf_bkpi"))), FillColor(kMagenta), FillStyle(1001), DrawOption("F"));
-    model->plotOn(frame, Components(RooArgSet(*(workspace.pdf("pdf_bmm")), *(workspace.pdf("pdf_bkpi")))), LineStyle(kDashed));
-  } else {
-    model->plotOn(frame, Components(*(workspace.pdf("pdf_bmm"))), LineStyle(kDashed));
-  }
-  frame->Draw();
-
-  print_canvas("model", output_path, c1);
-  */
-
   // Toy study
   //  auto result = 
   unsigned int n_toys = 10000;
-  toy_study(workspace, "model_1D", "model_1D", n_toys);
+  // toy_study(workspace, "model_1D", "model_1D", n_toys);
   toy_study(workspace, "model_2D", "model_2D_cond", n_toys);
-  toy_study(workspace, "model_2D", "model_2D", n_toys);
-  toy_study(workspace, "model_2D", "model_1D", n_toys);
-
-  // result.yield_bsmm->Draw();
-  // print_canvas("toy_n_bsmm_2D", output_path, c1);
-  // result.yield_bmm->Draw();
-  // print_canvas("toy_n_bmm_2D", output_path, c1);
-  // result.significance_bmm->Draw();
-  // print_canvas("toy_significance_bmm_2D", output_path, c1);
-  // result.significance_bsmm->Draw();
-  // print_canvas("toy_significance_bsmm_2D", output_path, c1);
-
-  //   // continue;
-
-  //   // TFile* f = TFile::Open(file_name.c_str());
-  
-  //   // TCanvas* c1 = new TCanvas("c1", "c1", 600, 600);
-  //   // auto result_all = fitHistogram((TH1*)f->Get("h_mc_bkmm_base"), 
-  //   // 				   (TH1*)f->Get("h_data_base"));
-    
-
-
-      
-    // process_variables(f, ds.name);
-
+  // toy_study(workspace, "model_2D", "model_2D", n_toys);
+  // toy_study(workspace, "model_2D", "model_1D", n_toys);
 
   return;
-
-  // unsigned int n = 50;
-
-  // // MVA
-  // vector<tuple<Result, unsigned int>> results_mva;
-
-  // for (unsigned int i=1; i <= n; ++i){
-  //   auto proj_mc = ((TH2*)f->Get("h_mc_bkmm_mva"))->ProjectionX("proj_mc", i);
-  //   auto proj_data = ((TH2*)f->Get("h_data_mva"))->ProjectionX("proj_data", i);
-  //   auto result = fitHistogram(proj_mc, proj_data);
-  //   results_mva.push_back(make_tuple(result, proj_mc->Integral()));
-  //   print_canvas("mva_proj"+to_string(i), output_path, c1);
-  // }
-
-  // // BDT
-  // vector<tuple<Result, unsigned int>> results_bdt;
-
-  // for (unsigned int i=1; i <= n; ++i){
-  //   auto proj_mc = ((TH2*)f->Get("h_mc_bkmm_bdt"))->ProjectionX("proj_mc", i);
-  //   auto proj_data = ((TH2*)f->Get("h_data_bdt"))->ProjectionX("proj_data", i);
-  //   auto result = fitHistogram(proj_mc, proj_data);
-  //   results_bdt.push_back(make_tuple(result, proj_mc->Integral()));
-  //   print_canvas("bdt_proj"+to_string(i), output_path, c1);
-  // }
-
-
-  // // Pileup treatment
-  // TH1* h_mc_npv = ((TH2*)f->Get("h_mc_bkmm_mva_vs_npv"))->ProjectionX();
-  // TH1* h_data_npv = ((TH1*)f->Get("h_data_npv"));
-  // h_mc_npv->SetLineWidth(2);
-  // h_mc_npv->SetLineColor(kBlue);
-  // h_mc_npv->Draw();
-  // print_canvas("mc_npv", output_path, c1);
-
-  // h_data_npv->SetLineWidth(2);
-  // h_data_npv->SetLineColor(kBlue);
-  // h_data_npv->Draw();
-  // print_canvas("data_npv", output_path, c1);
-  
-  // // Results
-  // printf("Total: %0.1f+/-%0.1f\n", result_all.sig, result_all.sig_err);
-  // printf("MVA:\n");
-  // for (unsigned int i=0; i < n; ++i){
-  //   double eff_data = get<0>(results_mva[i]).sig/get<0>(results_mva[0]).sig;
-  //   double eff_mc = get<1>(results_mva[i])/float(get<1>(results_mva[0]));
-  //   printf("\t[%u] \tmva_data: %0.1f+/-%0.1f \tmva_mc:%u \teff_data: %0.1f%% \teff_mc: %0.1f%% \teff_mc/eff_data: %0.2f\n", 
-  // 	   i+1,
-  // 	   get<0>(results_mva[i]).sig, 
-  // 	   get<0>(results_mva[i]).sig_err, 
-  // 	   get<1>(results_mva[i]),
-  // 	   eff_data*100.,
-  // 	   eff_mc*100.,
-  // 	   eff_data>0?eff_mc/eff_data:0
-  // 	   ); 
-  // }
-  // printf("BDT:\n");
-  // for (unsigned int i=0; i < n; ++i){
-  //   double eff_data = get<0>(results_bdt[i]).sig/get<0>(results_bdt[0]).sig;
-  //   double eff_mc = get<1>(results_bdt[i])/float(get<1>(results_bdt[0]));
-  //   printf("\t[%u] \tbdt_data: %0.1f+/-%0.1f \tbdt_mc:%u \teff_data: %0.1f%% \teff_mc: %0.1f%% \teff_mc/eff_data: %0.2f\n", 
-  // 	   i+1,
-  // 	   get<0>(results_bdt[i]).sig, 
-  // 	   get<0>(results_bdt[i]).sig_err, 
-  // 	   get<1>(results_bdt[i]),
-  // 	   eff_data*100.,
-  // 	   eff_mc*100.,
-  // 	   eff_data>0?eff_mc/eff_data:0
-  // 	   ); 
-  // }
 }
