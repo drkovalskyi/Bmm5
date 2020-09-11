@@ -25,11 +25,12 @@
 #include <tuple>
 #include "TStopwatch.h"
 #include "RooProdPdf.h"
+#include "RooAcceptReject.h"
 
 using namespace RooFit;
 using namespace std;
 
-string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity/";
+string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_mm_only/";
 
 const bool do_bsmm_significance = false;
 const bool recompute_scale_factors = false;
@@ -37,14 +38,17 @@ const bool remake_input_workspaces = false;
 const bool update_scale_factors = false;
 const bool update_cross_sections = false;
 const bool produce_2D_conditional_projections = false;
+const bool no_bhh_in_toys = true;
 
 const double mm_mass_min = 4.9;
 const double mm_mass_max = 5.7;
 const double mm_mass_err_min = 0.005;
 const double mm_mass_err_max = 0.100;
 
-bool silent_roofit = true;
-bool store_projections = false;
+const bool silent_roofit = true;
+const bool plot_each_toy = false; // debugging option 
+
+const bool store_projections = false;
 // bool use_mc_truth_matching = true;
 
 struct Sample{
@@ -356,6 +360,9 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
   vector<float> yield_bsmm;
   vector<float> significance_bmm;
   vector<float> significance_bsmm;
+  string plot_name = "toy_gen-" + gen_model_name + "_fit-" + fit_model_name;
+
+  bool conditional_fit = fit_model_name == "model_2D_cond";
 
   TStopwatch stop_watch;
   TStopwatch stop_watch_fit;
@@ -380,7 +387,13 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
     if (gen_model_name != fit_model_name)
       ws.import(*ws_ref.pdf(fit_model_name.c_str()));
     auto mass = ws.var("mass");
+    auto mass_err = ws.var("mass_err");
     auto n_bmm = ws.var("n_bmm");
+    auto n_bkpi = ws.var("n_bkpi");
+    if (no_bhh_in_toys){
+      n_bkpi->setVal(0);
+      n_bkpi->setConstant(true);
+    }
     auto n_bsmm = ws.var("n_bsmm");
     auto gen_model = ws.pdf(gen_model_name.c_str());
     auto fit_model = ws.pdf(fit_model_name.c_str());
@@ -389,25 +402,60 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
 
     stop_watch_generate.Start(false);
     
-    RooDataSet *data = gen_model->generate(*gen_observables, Extended(kTRUE));
+    // RooDataSet *data = gen_model->generate(*gen_observables, Extended(kTRUE));
+    // https://sft.its.cern.ch/jira/browse/ROOT-8489
+    RooDataSet *data = new RooDataSet("data", "", *gen_observables);
+    RooAcceptReject generator(*gen_model, *gen_observables, *gen_model->getGeneratorConfig(), false, 0);
+    Double_t resample = 0.;
+    int n = n_bsmm->getVal() + n_bmm->getVal() + n_bkpi->getVal();
+    for (int i=0; i<n; i++)
+      data->add(*generator.generateEvent(n-i,resample));
+
     stop_watch_generate.Stop();
 
     stop_watch_fit.Start(false);
     RooFitResult* def_res(nullptr);
     if (silent_roofit){
-      def_res = fit_model->fitTo(*data, PrintEvalErrors(-1), PrintLevel(-1), Save(kTRUE));
+      if (conditional_fit)
+	def_res = fit_model->fitTo(*data, ConditionalObservables(*mass_err), PrintEvalErrors(-1), PrintLevel(-1), Save(kTRUE));
+      else
+	def_res = fit_model->fitTo(*data, PrintEvalErrors(-1), PrintLevel(-1), Save(kTRUE));
     } else{
-      def_res = fit_model->fitTo(*data, Save(kTRUE));
+      if (conditional_fit)
+	def_res = fit_model->fitTo(*data, ConditionalObservables(*mass_err), Save(kTRUE));
+      else
+	def_res = fit_model->fitTo(*data, Save(kTRUE));
     }
     stop_watch_fit.Stop();
 
     yield_bmm.push_back(n_bmm->getVal());
     yield_bsmm.push_back(n_bsmm->getVal());
+    
+    if (plot_each_toy){
+      auto frame = mass->frame() ;
+      data->plotOn(frame);
+      fit_model->plotOn(frame);
+      frame->Draw();
+      print_canvas(plot_name + "_toy" + to_string(i), output_path, gPad);
+      if ( gen_observables->find("mass_err") ){
+	auto mass_err = ws.var("mass_err");
+	auto frame = mass_err->frame() ;
+	data->plotOn(frame);
+	// fit_model->plotOn(frame);
+	frame->Draw();
+	print_canvas(plot_name + "_mass_err_toy" + to_string(i), output_path, gPad);
+      }
+    }
+
     n_bmm->setVal(0);
     n_bmm->setConstant(true);
 
     stop_watch_fit.Start(false);
-    auto nobmm_res = fit_model->fitTo(*data, PrintEvalErrors(-1), PrintLevel(-1), Save(kTRUE));
+    RooFitResult* nobmm_res(nullptr);
+    if (conditional_fit)
+      nobmm_res = fit_model->fitTo(*data, ConditionalObservables(*mass_err), PrintEvalErrors(-1), PrintLevel(-1), Save(kTRUE));
+    else
+      nobmm_res = fit_model->fitTo(*data, PrintEvalErrors(-1), PrintLevel(-1), Save(kTRUE));
     stop_watch_fit.Stop();
     significance_bmm.push_back(sqrt(max(0.,nobmm_res->minNll() - def_res->minNll())*2.));
 
@@ -416,7 +464,11 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
       n_bsmm->setVal(0);
       n_bsmm->setConstant(true);
       stop_watch_fit.Start(false);
-      auto nobsmm_res = fit_model->fitTo(*data, PrintEvalErrors(-1), PrintLevel(-1), Save(kTRUE));
+      RooFitResult* nobsmm_res(nullptr);
+      if (conditional_fit)
+	nobsmm_res = fit_model->fitTo(*data, ConditionalObservables(*mass_err), PrintEvalErrors(-1), PrintLevel(-1), Save(kTRUE));
+      else
+	nobsmm_res = fit_model->fitTo(*data, PrintEvalErrors(-1), PrintLevel(-1), Save(kTRUE));
       stop_watch_fit.Stop();
       significance_bsmm.push_back(sqrt(max(0.,nobsmm_res->minNll() - def_res->minNll())*2.));
     }
@@ -456,7 +508,6 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
   ws_ref.Print();
 
   result.yield_bsmm->Draw();
-  string plot_name = "toy_gen-" + gen_model_name + "_fit-" + fit_model_name;
   print_canvas(plot_name + "_n_bsmm", output_path, gPad);
   result.yield_bmm->Draw();
   print_canvas(plot_name + "_n_bmm", output_path, gPad);
@@ -532,6 +583,7 @@ void build_model_1D(RooWorkspace& workspace){
 }
 
 void build_model_2D(RooWorkspace& workspace){
+  string model_name = "model_2D";
   auto mass = workspace.var("mass");
   if (not mass)
     throw std::runtime_error("Cannot get mass var");
@@ -577,7 +629,7 @@ void build_model_2D(RooWorkspace& workspace){
   RooPlot* frame_mass_err_bsmm = mass_err->frame();
   pdf_mass_err_bsmm.plotOn(frame_mass_err_bsmm);
   frame_mass_err_bsmm->Draw();
-  print_canvas("mass_err_bsmm", output_path, gPad);
+  print_canvas(model_name + "_mass_err_bsmm", output_path, gPad);
   
   // Fit signal model to extract parameters
   pdf_bsmm.fitTo(*data_bsmm, ConditionalObservables(*mass_err), NumCPU(16), Timer(true));
@@ -592,11 +644,12 @@ void build_model_2D(RooWorkspace& workspace){
   // pdf_bsmm.plotOn(frame_bsmm, ProjWData(*mass_err, *data_bsmm));
   // pdf_bsmm.plotOn(frame_bsmm, ProjWData(*mass_err, *data_bsmm), NumCPU(16), Normalization(data_bsmm->sumEntries(), RooAbsReal::NumEvent));
   frame_bsmm->Draw();
-  print_canvas("gaus2D_bsmm", output_path, gPad);
+  print_canvas(model_name + "_bsmm", output_path, gPad);
 
   cb_alpha_mm.setConstant(true);
   cb_n_mm.setConstant(true);
   s_mm.setConstant(true);
+  mean_bsmm.setConstant(true);
 
   // Process BdToMuMu
 
@@ -613,7 +666,7 @@ void build_model_2D(RooWorkspace& workspace){
   RooPlot* frame_mass_err_bmm = mass_err->frame();
   pdf_mass_err_bmm.plotOn(frame_mass_err_bmm);
   frame_mass_err_bmm->Draw();
-  print_canvas("mass_err_bmm", output_path, gPad);
+  print_canvas(model_name + "_mass_err_bmm", output_path, gPad);
 
   // Make a full PDF
   RooProdPdf pdf2_bmm("pdf2_bmm","pdf2_bmm", pdf_mass_err_bmm, Conditional(pdf_bmm, *mass));
@@ -623,7 +676,9 @@ void build_model_2D(RooWorkspace& workspace){
   pdf2_bmm.plotOn(frame_bmm);
   // pdf_bmm.plotOn(frame_bmm, ProjWData(*mass_err, *data_bmm));
   frame_bmm->Draw();
-  print_canvas("gaus2D_bmm", output_path, gPad);
+  print_canvas(model_name + "_bmm", output_path, gPad);
+
+  mean_bmm.setConstant(true);
 
   // Process BToKPi
 
@@ -640,7 +695,7 @@ void build_model_2D(RooWorkspace& workspace){
   RooPlot* frame_mass_err_bkpi = mass_err->frame();
   pdf_mass_err_bkpi.plotOn(frame_mass_err_bkpi);
   frame_mass_err_bkpi->Draw();
-  print_canvas("mass_err_bkpi", output_path, gPad);
+  print_canvas(model_name + "_mass_err_bkpi", output_path, gPad);
 
   // Make a full PDF
   RooProdPdf pdf2_bkpi("pdf2_bkpi","pdf2_bkpi", pdf_mass_err_bkpi, Conditional(pdf_bkpi, *mass));
@@ -650,17 +705,41 @@ void build_model_2D(RooWorkspace& workspace){
   pdf2_bkpi.plotOn(frame_bkpi);
   // pdf_bkpi.plotOn(frame_bkpi, ProjWData(*mass_err, *data_bkpi));
   frame_bkpi->Draw();
-  print_canvas("gaus2D_bkpi", output_path, gPad);
+  print_canvas(model_name +"_bkpi", output_path, gPad);
 
+  cb_alpha_kpi.setConstant(true);
+  cb_n_kpi.setConstant(true);
+  s_kpi.setConstant(true);
+  mean_bkpi.setConstant(true);
 
   RooRealVar n_bsmm("n_bsmm", "n_bsmm", get_expected_event_yield(workspace, "bsmm"), 0., 1e9); 
   RooRealVar n_bmm( "n_bmm",  "n_bmm",  get_expected_event_yield(workspace, "bmm"),  0., 1e9); 
   RooRealVar n_bkpi("n_bkpi", "n_bsmm", get_expected_event_yield(workspace, "bkpi"), 0., 1e9); 
 
-  RooAddPdf model("model","model", RooArgList(pdf2_bsmm, pdf2_bmm, pdf2_bkpi), RooArgList(n_bsmm, n_bmm, n_bkpi));
+  RooAddPdf model(model_name.c_str(), model_name.c_str(), 
+		  RooArgList(pdf2_bsmm, pdf2_bmm, pdf2_bkpi), 
+		  RooArgList(n_bsmm, n_bmm, n_bkpi));
   
   workspace.import(model);
+
+  // Specify observables
+  workspace.defineSet(model_name.c_str(), "mass,mass_err");
   workspace.Print();
+  workspace.var("n_bmm")->Print();
+
+  auto frame = mass->frame() ;
+  model.plotOn(frame);
+  frame->Draw();
+  print_canvas(model_name, output_path, gPad);
+
+  // Conditional model
+  RooAddPdf model_cond((model_name + "_cond").c_str(), "",
+		       RooArgList(pdf_bsmm, pdf_bmm, pdf_bkpi), 
+		       RooArgList(n_bsmm, n_bmm, n_bkpi));
+  
+  workspace.import(model_cond, RenameConflictNodes("_cond"));
+
+
 }
 
 // Result fitHistogram(TH1* h_ref, TH1* h_test){
@@ -853,7 +932,7 @@ void sensitivity_study(){
   workspace.Print("V");
 
   build_model_1D(workspace);
-  // build_model_2D(workspace);
+  build_model_2D(workspace);
 
   /*  
   auto mass = workspace.var("mass");
@@ -874,8 +953,13 @@ void sensitivity_study(){
   */
 
   // Toy study
-  auto result = toy_study(workspace, "model_1D", "model_1D", 100);
-  
+  //  auto result = 
+  unsigned int n_toys = 10000;
+  toy_study(workspace, "model_1D", "model_1D", n_toys);
+  toy_study(workspace, "model_2D", "model_2D_cond", n_toys);
+  toy_study(workspace, "model_2D", "model_2D", n_toys);
+  toy_study(workspace, "model_2D", "model_1D", n_toys);
+
   // result.yield_bsmm->Draw();
   // print_canvas("toy_n_bsmm_2D", output_path, c1);
   // result.yield_bmm->Draw();
