@@ -26,6 +26,7 @@
 #include "TStopwatch.h"
 #include "RooProdPdf.h"
 #include "RooAcceptReject.h"
+#include "TStyle.h"
 
 using namespace RooFit;
 using namespace std;
@@ -87,7 +88,7 @@ void print_canvas(string output_name_without_extention,
   string s = path + "/" + output_name_without_extention;
   canvas->Print((s + ".png").c_str());
   canvas->Print((s + ".pdf").c_str());
-  // canvas->Print((s + ".root").c_str());
+  canvas->Print((s + ".root").c_str());
 }
 
 const RooWorkspace* process_sample(Sample& sample){
@@ -404,14 +405,22 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
     RooMsgService::instance().restoreState();
   ws_ref.Print();
 
+  gStyle->SetOptFit();
+
+  result.yield_bsmm->Fit("gaus");
   result.yield_bsmm->Draw();
   print_canvas(plot_name + "_n_bsmm", output_path, gPad);
+  result.yield_bmm->Fit("gaus");
   result.yield_bmm->Draw();
   print_canvas(plot_name + "_n_bmm", output_path, gPad);
+  result.significance_bmm->Fit("gaus");
   result.significance_bmm->Draw();
   print_canvas(plot_name + "_significance_bmm", output_path, gPad);
+  result.significance_bsmm->Fit("gaus");
   result.significance_bsmm->Draw();
   print_canvas(plot_name + "_significance_bsmm", output_path, gPad);
+
+  gStyle->SetOptFit(0);
 
   return result;
 }
@@ -472,8 +481,9 @@ void build_model_1D(RooWorkspace& workspace){
   //   model.plotOn(frame, Components(*(workspace.pdf("pdf_bkpi"))), FillColor(kMagenta), FillStyle(1001), DrawOption("F"));
   //   model.plotOn(frame, Components(RooArgSet(*(workspace.pdf("pdf_bmm")), *(workspace.pdf("pdf_bkpi")))), LineStyle(kDashed));
   // } else {
-  //   model.plotOn(frame, Components(*(workspace.pdf("pdf_bmm"))), LineStyle(kDashed));
-  // }
+  if (no_bhh_in_toys and workspace.pdf("pdf_bmm_1D")){
+    model.plotOn(frame, Components(*(workspace.pdf("pdf_bmm_1D"))), LineStyle(kDashed));
+  }
   frame->Draw();
 
   print_canvas(model_name, output_path, gPad);
@@ -692,13 +702,11 @@ void sensitivity_study(){
   build_model_1D(workspace);
   build_model_2D(workspace);
 
-  // Toy study
-  //  auto result = 
-  unsigned int n_toys = 10000;
-  // toy_study(workspace, "model_1D", "model_1D", n_toys);
+  // Toy studies
+  unsigned int n_toys = 1000;
+  toy_study(workspace, "model_1D", "model_1D", n_toys);
   toy_study(workspace, "model_2D", "model_2D_cond", n_toys);
-  // toy_study(workspace, "model_2D", "model_2D", n_toys);
-  // toy_study(workspace, "model_2D", "model_1D", n_toys);
+  toy_study(workspace, "model_2D", "model_2D", n_toys);
+  toy_study(workspace, "model_2D", "model_1D", n_toys);
 
-  return;
 }
