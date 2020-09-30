@@ -31,7 +31,7 @@
 using namespace RooFit;
 using namespace std;
 
-string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_kpi/";
+string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_kpi_trigger/";
 // string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_mm_only/";
 
 const bool do_bsmm_significance = false;
@@ -41,11 +41,13 @@ const bool update_scale_factors = false;     // Ignore scale factors in pre-proc
 const bool update_cross_sections = false;
 const bool produce_2D_conditional_projections = false;
 const bool mm_only = false;
-const bool pre_processing_only = false;
+const bool pre_processing_only = true; // Just produce samples 
 
 const int muon_id = 2; // 1 - loose, 2 - medium, 3 - mva
 const double mm_mass_min = 4.9;
 const double mm_mass_max = 5.7;
+const double mm_mass_blind_min = 5.1;
+const double mm_mass_blind_max = 5.5;
 const double mm_mass_err_min = 0.005;
 const double mm_mass_err_max = 0.100;
 
@@ -53,7 +55,9 @@ const bool silent_roofit = true;
 const bool plot_each_toy = false; // debugging option 
 
 struct Sample{
-  string name, files, selection;
+  string name; 
+  vector<string> files;
+  bool trigger;
   float cross_section, scale_factor;
   bool truth_match, blind;
 };
@@ -62,26 +66,35 @@ const float luminosity = 140e3; // [1/pb]
 
 // string storage_path = "/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/508/";
 string storage_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/508/";
+string skim_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD-skims/mm/508/";
     
 // Don't use symbols in the name
 vector<Sample> all_samples{
   { "bsmm", 
       // storage_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/35C867FA-837D-1F4C-82B7-694DBC862D16.root",
-      storage_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/*.root",
-      "", 2.98E-02, 1.0, true, false
+      {storage_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/*.root"},
+      true, 2.98E-02, 1.0, true, false
       },
   { "bmm", 
       // storage_path + "BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/4BC0052B-D9BF-6E46-9E0B-C56BC7BA107A.root",
-      storage_path + "BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root",
-      "", 3.26E-03, 1.0, true, false
+      {storage_path + "BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"},
+      true, 3.26E-03, 1.0, true, false
       },
   { "bkpi", 
       // storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/0E1049D2-8F42-E811-9DC2-7845C4FC37A9.root",
       // storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/*.root",
       // "", 5.76E+02, 8.64E-06, // muon fakes
-      storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root",
-      "", 5.76E+02, 8.64E-06, // muon fakes
+      {storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"},
+      false, 5.76E+02, 8.64E-06, // muon fakes
       true, false
+      },
+  { "data", 
+      { skim_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root", 
+	skim_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root",
+	skim_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root", 
+	skim_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root" 
+      },
+      true, 1.0, 1.0, false, true
       },
 };
 vector<Sample> samples;
@@ -116,6 +129,7 @@ const RooWorkspace* process_sample(Sample& sample){
     
   RooRealVar mass("mass", "mass", mm_mass_min, mm_mass_max);
   RooRealVar mass_err("mass_err", "mass_err", mm_mass_err_min, mm_mass_err_max);
+  RooRealVar mva("mva", "mva", 0.0, 1.0);
   RooCategory muonid("muonid", "muonid");
   // both muons satistify the requirement
   muonid.defineType("mva",    3);
@@ -126,10 +140,11 @@ const RooWorkspace* process_sample(Sample& sample){
   eta_bin.defineType("barrel", 0);
   eta_bin.defineType("endcap", 1);
   RooAbsData::setDefaultStorageType(RooAbsData::Tree);
-  RooDataSet data("data", "data", RooArgSet(mass, mass_err, muonid));
+  RooDataSet data("data", "data", RooArgSet(mass, mass_err, muonid, mva));
   printf("RooDataSet storage type: %u\n", RooAbsData::getDefaultStorageType());
   TChain* chain = new TChain("Events");
-  chain->Add(sample.files.c_str());
+  for (auto f: sample.files)
+    chain->Add(f.c_str());
   Long64_t n = chain->GetEntries();
   printf("Total number of events: %lld\n", n);
 
@@ -140,7 +155,8 @@ const RooWorkspace* process_sample(Sample& sample){
   chain->SetBranchAddress("nmm", &nmm, &b_nmm);
   Int_t      mm_gen_pdgId[200];
   TBranch* b_mm_gen_pdgId;
-  chain->SetBranchAddress("mm_gen_pdgId", mm_gen_pdgId, &b_mm_gen_pdgId);
+  if (sample.truth_match)
+    chain->SetBranchAddress("mm_gen_pdgId", mm_gen_pdgId, &b_mm_gen_pdgId);
   Int_t      mm_mu1_index[200];
   TBranch* b_mm_mu1_index;
   chain->SetBranchAddress("mm_mu1_index", mm_mu1_index, &b_mm_mu1_index);
@@ -171,6 +187,9 @@ const RooWorkspace* process_sample(Sample& sample){
   Float_t    mm_kin_vtx_chi2dof[200];
   TBranch* b_mm_kin_vtx_chi2dof;
   chain->SetBranchAddress("mm_kin_vtx_chi2dof", mm_kin_vtx_chi2dof, &b_mm_kin_vtx_chi2dof);
+  Float_t    mm_mva[200];
+  TBranch* b_mm_mva;
+  chain->SetBranchAddress("mm_mva", mm_mva, &b_mm_mva);
   // Muon
   Float_t    muon_softMva[200];
   TBranch* b_muon_softMva;
@@ -181,18 +200,33 @@ const RooWorkspace* process_sample(Sample& sample){
   Bool_t     muon_softMvaId[200];
   TBranch* b_muon_softMvaId;
   chain->SetBranchAddress("Muon_softMvaId", muon_softMvaId, &b_muon_softMvaId);
-
+  // Trigger
+  Bool_t     HLT_DoubleMu4_3_Bs;
+  TBranch* b_HLT_DoubleMu4_3_Bs;
+  chain->SetBranchAddress("HLT_DoubleMu4_3_Bs", &HLT_DoubleMu4_3_Bs, &b_HLT_DoubleMu4_3_Bs);
+    
   Long64_t n_saved_cands(0);
   Long64_t n_cands_passed_muon_id(0);
   Long64_t n_saved_events(0);
     
+  int i_permille_old = 0;
   for (unsigned int i=0; i < n; ++i){
+    int i_permille = (int)floor(100. * i / n);
+    if (i_permille != i_permille_old) {
+      printf("\015\033[32m ---> \033[1m\033[31m%d%%"
+             "\033[0m\033[32m <---\033[0m\015", i_permille);
+      fflush(stdout);
+      i_permille_old = i_permille;
+    }
     // Load a proper try and get relative even index
     Long64_t localEntry = chain->LoadTree(i);
+    b_HLT_DoubleMu4_3_Bs->GetEntry(localEntry);
+    if (sample.trigger && not HLT_DoubleMu4_3_Bs) continue;
     b_nmm->GetEntry(localEntry);
     if (nmm == 0) continue;
     // Get relevant branches
-    b_mm_gen_pdgId->GetEntry(localEntry);
+    if (sample.truth_match)
+      b_mm_gen_pdgId->GetEntry(localEntry);
     b_mm_mu1_index->GetEntry(localEntry);
     b_mm_mu2_index->GetEntry(localEntry);
     b_mm_mu1_eta->GetEntry(localEntry);
@@ -203,21 +237,27 @@ const RooWorkspace* process_sample(Sample& sample){
     b_mm_kin_massErr->GetEntry(localEntry);
     b_mm_kin_sl3d->GetEntry(localEntry);
     b_mm_kin_vtx_chi2dof->GetEntry(localEntry);
+    b_mm_mva->GetEntry(localEntry);
     b_muon_softMva->GetEntry(localEntry);
     b_muon_mediumId->GetEntry(localEntry);
     b_muon_softMvaId->GetEntry(localEntry);
+
     // Loop over candidates
     bool save_event = false;
     for (unsigned int cand=0; cand < nmm; ++cand){
       if (sample.truth_match and not mm_gen_pdgId[cand]) continue;
+      if (mm_kin_mass[cand] < mm_mass_min) continue;
+      if (mm_kin_mass[cand] > mm_mass_max) continue;
+      if (sample.blind){
+	if (mm_kin_mass[cand] > mm_mass_blind_min and 
+	    mm_kin_mass[cand] < mm_mass_blind_max) continue;
+      }
       if (fabs(mm_mu1_eta[cand]) > 1.4) continue;
       if (fabs(mm_mu2_eta[cand]) > 1.4) continue;
       if (mm_mu1_pt[cand] < 4.0) continue;
       if (mm_mu2_pt[cand] < 4.0) continue;
       if (mm_kin_sl3d[cand] < 4.0) continue;
       if (mm_kin_vtx_chi2dof[cand] > 5.0) continue;
-      if (mm_kin_mass[cand] < mm_mass_min) continue;
-      if (mm_kin_mass[cand] > mm_mass_max) continue;
       if (TMath::IsNaN(mm_kin_massErr[cand])) continue;
       if (mm_kin_massErr[cand] < mm_mass_err_min) continue;
       if (mm_kin_massErr[cand] > mm_mass_err_max) continue;
@@ -246,7 +286,8 @@ const RooWorkspace* process_sample(Sample& sample){
       if (muonid.getIndex() >= muon_id)
 	n_cands_passed_muon_id++;
 
-      data.add(RooArgSet(mass, mass_err, muonid));
+      mva = mm_mva[cand];
+      data.add(RooArgSet(mass, mass_err, muonid, mva));
     }
     if (save_event) n_saved_events++;
     // if (n_saved_cands > 10000) break;
