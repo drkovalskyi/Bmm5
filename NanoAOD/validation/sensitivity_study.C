@@ -41,7 +41,7 @@ const bool update_scale_factors = false;     // Ignore scale factors in pre-proc
 const bool update_cross_sections = false;
 const bool produce_2D_conditional_projections = false;
 const bool mm_only = false;
-const bool pre_processing_only = true; // Just produce samples 
+const bool pre_processing_only = false; // Just produce samples 
 
 const int muon_id = 2; // 1 - loose, 2 - medium, 3 - mva
 const double mm_mass_min = 4.9;
@@ -57,9 +57,8 @@ const bool plot_each_toy = false; // debugging option
 struct Sample{
   string name; 
   vector<string> files;
-  bool trigger;
   float cross_section, scale_factor;
-  bool truth_match, blind;
+  bool trigger, truth_match, blind, exclusive;
 };
 
 const float luminosity = 140e3; // [1/pb]
@@ -73,31 +72,39 @@ vector<Sample> all_samples{
   { "bsmm", 
       // storage_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/35C867FA-837D-1F4C-82B7-694DBC862D16.root",
       {storage_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/*.root"},
-      true, 2.98E-02, 1.0, true, false
-      },
+        2.98E-02, 1.0, 
+	// trigger, truth_match, blind, exclusive 
+	true,  true, false, true
+  },
   { "bmm", 
       // storage_path + "BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/4BC0052B-D9BF-6E46-9E0B-C56BC7BA107A.root",
       {storage_path + "BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"},
-      true, 3.26E-03, 1.0, true, false
-      },
+        3.26E-03, 1.0,
+	// trigger, truth_match, blind, exclusive 
+	true,  true, false, true
+  },
   { "bkpi", 
       // storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/0E1049D2-8F42-E811-9DC2-7845C4FC37A9.root",
       // storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/*.root",
       // "", 5.76E+02, 8.64E-06, // muon fakes
       {storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"},
-      false, 5.76E+02, 8.64E-06, // muon fakes
-      true, false
-      },
+        5.76E+02, 8.64E-06, // muon fakes
+	// trigger, truth_match, blind, exclusive 
+	false,  true, false, true
+  },
   { "data", 
       { skim_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root", 
 	skim_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root",
 	skim_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root", 
 	skim_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root" 
       },
-      true, 1.0, 1.0, false, true
-      },
+        1.0, 1.0,
+	// trigger, truth_match, blind, exclusive 
+	true,  false, true, false
+  },
 };
-vector<Sample> samples;
+vector<Sample> exclusive_samples;
+vector<Sample> other_samples;
 
 void print_canvas(string output_name_without_extention, 
 		  string path, 
@@ -139,7 +146,7 @@ const RooWorkspace* process_sample(Sample& sample){
   RooCategory eta_bin("eta_bin", "eta_bin");
   eta_bin.defineType("barrel", 0);
   eta_bin.defineType("endcap", 1);
-  RooAbsData::setDefaultStorageType(RooAbsData::Tree);
+  // RooAbsData::setDefaultStorageType(RooAbsData::Tree);
   RooDataSet data("data", "data", RooArgSet(mass, mass_err, muonid, mva));
   printf("RooDataSet storage type: %u\n", RooAbsData::getDefaultStorageType());
   TChain* chain = new TChain("Events");
@@ -393,7 +400,7 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
 
     Double_t resample = 0.;
     int n = 0;
-    for (auto s: samples){
+    for (auto s: exclusive_samples){
       auto n_x = ws.var(("n_" + s.name).c_str());
       n += n_x->getVal();
     }
@@ -521,7 +528,7 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
 
 float get_expected_event_yield(const RooWorkspace& workspace, string name){
   const Sample* sample(nullptr);
-  for (auto s: samples)
+  for (auto s: exclusive_samples)
     if (s.name == name)
       sample = &s;
   if (not sample)
@@ -541,7 +548,7 @@ void build_model_1D(RooWorkspace& workspace){
   if (not mass)
     throw std::runtime_error("Cannot get mass");
   
-  for (auto& sample: samples){
+  for (auto& sample: exclusive_samples){
     // auto ds = workspace.data(("data_" + sample.name).c_str());
     // if (not ds)
     //   throw std::runtime_error("Cannot get data_"  + sample.name);
@@ -625,7 +632,7 @@ void build_model_2D(RooWorkspace& workspace){
   RooArgList yields;
   // std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
-  for (auto sample: samples){
+  for (auto sample: exclusive_samples){
     printf("Building pdfs for %s\n", sample.name.c_str());
     auto data = workspace.data(("data_" + sample.name).c_str());
     if (not data)
@@ -697,6 +704,58 @@ void build_model_2D(RooWorkspace& workspace){
   workspace.import(full_model, RenameConflictNodes("_full"));
 }
 
+// void build_bkg_model_1D(RooWorkspace& workspace, const Sample& sample){
+//   const char* model_name = "bkg_1D";
+//   RooArgList pdfs;
+//   RooArgList yields;
+//   auto mass = workspace.var("mass");
+//   if (not mass)
+//     throw std::runtime_error("Cannot get mass");
+  
+//   for (auto& sample: samples){
+//     // auto ds = workspace.data(("data_" + sample.name).c_str());
+//     // if (not ds)
+//     //   throw std::runtime_error("Cannot get data_"  + sample.name);
+//     auto data = dynamic_cast<const RooDataHist*>(workspace.data(("data_hist_" + sample.name).c_str()));
+//     if (not data)
+//       throw std::runtime_error("Cannot get data_hist_" + sample.name);
+
+//     // Use 2nd order interpolation to smooth the shape
+//     RooHistPdf* pdf = new RooHistPdf(("pdf_" + sample.name + "_1D").c_str(), "", *mass, *data, 2);
+//     pdf->Print();
+//     pdfs.add(*pdf);
+//     printf("pdfs.getSize: %u\n", pdfs.getSize());
+//     float n_expected = get_expected_event_yield(workspace, sample.name);
+//     RooRealVar* n = new RooRealVar(("n_" + sample.name).c_str(), "blah", n_expected, 0., 1e9);
+//     n->Print();
+//     yields.add(*n);
+//     printf("yields.getSize: %u\n", yields.getSize());
+//   }
+  
+//   RooAddPdf model(model_name, model_name, pdfs, yields);
+  
+//   workspace.import(model);
+//   // Specify observables
+//   workspace.defineSet(model_name, "mass");
+//   workspace.Print();
+
+//   auto frame = mass->frame() ;
+
+//   model.plotOn(frame);
+//   // } else {
+//   if (mm_only and workspace.pdf("pdf_bmm_1D")){
+//     model.plotOn(frame, Components(*(workspace.pdf("pdf_bmm_1D"))), LineStyle(kDashed));
+//   }
+//   if (not mm_only and workspace.pdf("pdf_bmm_1D") and workspace.pdf("pdf_bkpi_1D")){
+//     model.plotOn(frame, Components(*(workspace.pdf("pdf_bkpi_1D"))), FillColor(kMagenta), FillStyle(1001), DrawOption("F"));
+//     model.plotOn(frame, Components(RooArgSet(*(workspace.pdf("pdf_bmm_1D")), *(workspace.pdf("pdf_bkpi_1D")))), LineStyle(kDashed));
+//   }
+
+//   frame->Draw();
+
+//   print_canvas(model_name, output_path, gPad);
+// }
+
 void import_var(RooWorkspace& target_ws, const RooWorkspace& source_ws, const char* var_name, const char* new_name){
   auto var = source_ws.var(var_name);
     if (not var) 
@@ -708,13 +767,17 @@ void import_var(RooWorkspace& target_ws, const RooWorkspace& source_ws, const ch
 
 void sensitivity_study(){
   for (auto sample: all_samples){
-    if (mm_only and sample.name!="bsmm" and sample.name!="bmm") continue;
-    samples.push_back(sample);
+    if (sample.exclusive){
+      if (mm_only and sample.name!="bsmm" and sample.name!="bmm") continue;
+      exclusive_samples.push_back(sample);
+    } else {
+      other_samples.push_back(sample);
+    }
   }
 
   TCanvas* c1 = new TCanvas("c1", "c1", 800, 800);
   RooWorkspace workspace("study_workspace","");
-  for (auto& sample: samples){
+  for (auto& sample: all_samples){
     // Process sample
     const RooWorkspace* sample_workspace = process_sample(sample);
     if (pre_processing_only) continue;
@@ -725,31 +788,51 @@ void sensitivity_study(){
     if (not sample_data) 
       throw std::runtime_error("RooDataSet \"data\" is missing");
     // Tree is easier to use for debugging purposes
-    sample_data->convertToTreeStore();
+    // sample_data->convertToTreeStore();
     workspace.import(*sample_data, Rename(("data_" + sample.name).c_str()));
 
     import_var(workspace, *sample_workspace, "eff",   ("eff_"   + sample.name).c_str());
     import_var(workspace, *sample_workspace, "xsec",  ("xsec_"  + sample.name).c_str());
     import_var(workspace, *sample_workspace, "scale", ("scale_" + sample.name).c_str());
 
-    TTree* tree = const_cast<TTree*>(sample_data->tree());
-    if (tree){
-      TH1D h_mass(("h_mass_" + sample.name).c_str(), "", 100, mm_mass_min, mm_mass_max);
-      tree->Draw(("mass>>h_mass_" + sample.name).c_str());
-      RooDataHist rdh(("data_hist_" + sample.name).c_str(), "", *workspace.var("mass"), &h_mass);
-      workspace.import(rdh);
+    RooRealVar* mass = sample_workspace->var("mass");
+    if (mass){
+      RooPlot* frame = mass->frame() ;
+      sample_data->plotOn(frame);
+      frame->Draw();
       print_canvas("mass_" + sample.name, output_path, c1);
 
-      tree->Draw("mass_err");
-      print_canvas("mass_err_" + sample.name, output_path, c1);
-    } else {
-      if (RooRealVar* mass = sample_workspace->var("mass")){
-	RooPlot* frame = mass->frame() ;
-	sample_workspace->data("data")->plotOn(frame);
-	frame->Draw();
-	print_canvas("mass_" + sample.name, output_path, c1);
-      }
+      RooDataHist rdh(("data_hist_" + sample.name).c_str(), "", *workspace.var("mass"), *sample_data);
+      workspace.import(rdh);
     }
+
+    RooRealVar* mass_err = sample_workspace->var("mass_err");
+    if (mass_err){
+      RooPlot* frame = mass_err->frame() ;
+      sample_data->plotOn(frame);
+      frame->Draw();
+      print_canvas("mass_err_" + sample.name, output_path, c1);
+    }
+
+
+    // TTree* tree = const_cast<TTree*>(sample_data->tree());
+    // if (tree){
+    //   TH1D h_mass(("h_mass_" + sample.name).c_str(), "", 100, mm_mass_min, mm_mass_max);
+    //   tree->Draw(("mass>>h_mass_" + sample.name).c_str());
+    //   RooDataHist rdh(("data_hist_" + sample.name).c_str(), "", *workspace.var("mass"), &h_mass);
+    //   workspace.import(rdh);
+    //   print_canvas("mass_" + sample.name, output_path, c1);
+
+    //   tree->Draw("mass_err");
+    //   print_canvas("mass_err_" + sample.name, output_path, c1);
+    // } else {
+    //   if (RooRealVar* mass = sample_workspace->var("mass")){
+    // 	RooPlot* frame = mass->frame() ;
+    // 	sample_workspace->data("data")->plotOn(frame);
+    // 	frame->Draw();
+    // 	print_canvas("mass_" + sample.name, output_path, c1);
+    //   }
+    // }
   }
   if (pre_processing_only) return;
 
@@ -767,3 +850,4 @@ void sensitivity_study(){
 
 
 }
+				//                   
