@@ -27,14 +27,17 @@
 #include "RooProdPdf.h"
 #include "RooAcceptReject.h"
 #include "TStyle.h"
+#include "RooBernstein.h"
+#include "RooExponential.h"
+#include "RooExtendPdf.h"
 
 using namespace RooFit;
 using namespace std;
 
-string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_kpi_trigger/";
+string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_kpi_trigger_0.85/";
 // string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_mm_only/";
 
-const bool do_bsmm_significance = false;
+const bool do_bsmm_significance = true;
 const bool compute_scale_factors = true;    // Compute muon selection efficiency for hadrons
 const bool remake_input_workspaces = false;
 const bool update_scale_factors = false;     // Ignore scale factors in pre-processed samples and get them from input provided by user in Samples
@@ -42,10 +45,11 @@ const bool update_cross_sections = false;
 const bool produce_2D_conditional_projections = false;
 const bool mm_only = false;
 const bool pre_processing_only = false; // Just produce samples 
+const char* final_selection = "mva>0.85"; // additional selection requirements applied to RooDatasets
 
 const int muon_id = 2; // 1 - loose, 2 - medium, 3 - mva
 const double mm_mass_min = 4.9;
-const double mm_mass_max = 5.7;
+const double mm_mass_max = 5.9;
 const double mm_mass_blind_min = 5.1;
 const double mm_mass_blind_max = 5.5;
 const double mm_mass_err_min = 0.005;
@@ -68,41 +72,58 @@ string storage_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/508/";
 string skim_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD-skims/mm/508/";
     
 // Don't use symbols in the name
-vector<Sample> all_samples{
-  { "bsmm", 
-      // storage_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/35C867FA-837D-1F4C-82B7-694DBC862D16.root",
-      {storage_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/*.root"},
-        2.98E-02, 1.0, 
-	// trigger, truth_match, blind, exclusive 
-	true,  true, false, true
-  },
-  { "bmm", 
-      // storage_path + "BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/4BC0052B-D9BF-6E46-9E0B-C56BC7BA107A.root",
-      {storage_path + "BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"},
-        3.26E-03, 1.0,
-	// trigger, truth_match, blind, exclusive 
-	true,  true, false, true
-  },
-  { "bkpi", 
-      // storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/0E1049D2-8F42-E811-9DC2-7845C4FC37A9.root",
-      // storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/*.root",
-      // "", 5.76E+02, 8.64E-06, // muon fakes
-      {storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"},
-        5.76E+02, 8.64E-06, // muon fakes
-	// trigger, truth_match, blind, exclusive 
-	false,  true, false, true
-  },
-  { "data", 
-      { skim_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root", 
-	skim_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root",
-	skim_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root", 
-	skim_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root" 
-      },
-        1.0, 1.0,
-	// trigger, truth_match, blind, exclusive 
-	true,  false, true, false
-  },
-};
+vector<Sample> all_samples;
+void add_samples(){
+  all_samples.push_back(
+			{ "bsmm", 
+			  {
+			    storage_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/*.root"
+			  },
+			  2.98E-02, 1.0, 
+			  // trigger, truth_match, blind, exclusive 
+			  true,  true, false, true
+			});
+  all_samples.push_back(
+			{ "bmm", 
+			  {
+			    storage_path + "BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"
+			  },
+			  3.26E-03, 1.0,
+			  // trigger, truth_match, blind, exclusive 
+			  true,  true, false, true
+			});
+  if (not mm_only){
+    all_samples.push_back(
+			  { "data", 
+			    {   
+			      // Run2017 
+			      skim_path + "Charmonium+Run2017B-31Mar2018-v1+MINIAOD/*.root",
+			      skim_path + "Charmonium+Run2017C-31Mar2018-v1+MINIAOD/*.root",
+			      skim_path + "Charmonium+Run2017D-31Mar2018-v1+MINIAOD/*.root",
+			      skim_path + "Charmonium+Run2017E-31Mar2018-v1+MINIAOD/*.root",
+			      skim_path + "Charmonium+Run2017F-31Mar2018-v1+MINIAOD/*.root",
+			      // Run2018
+			      skim_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root", 
+			      skim_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root",
+			      skim_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root", 
+			      skim_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root" 
+			    },
+			    1.0, 1.0,
+			    // trigger, truth_match, blind, exclusive 
+			    true,  false, true, false
+			  });
+    all_samples.push_back( 
+			  { "bkpi", 
+			    {
+			      storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"
+			    },
+			    5.76E+02, 8.64E-06, // muon fakes
+			    // trigger, truth_match, blind, exclusive 
+			    false,  true, false, true
+			  });
+  }
+}
+
 vector<Sample> exclusive_samples;
 vector<Sample> other_samples;
 
@@ -548,24 +569,50 @@ void build_model_1D(RooWorkspace& workspace){
   if (not mass)
     throw std::runtime_error("Cannot get mass");
   
-  for (auto& sample: exclusive_samples){
-    // auto ds = workspace.data(("data_" + sample.name).c_str());
-    // if (not ds)
-    //   throw std::runtime_error("Cannot get data_"  + sample.name);
-    auto data = dynamic_cast<const RooDataHist*>(workspace.data(("data_hist_" + sample.name).c_str()));
-    if (not data)
-      throw std::runtime_error("Cannot get data_hist_" + sample.name);
+  // for (auto& sample: exclusive_samples){
+  for (auto& sample: all_samples){
+    string pdf_name = "pdf_" + sample.name + "_1D";
+    if (sample.exclusive){
+      auto data = dynamic_cast<const RooDataHist*>(workspace.data(("data_hist_" + sample.name).c_str()));
+      if (not data)
+	throw std::runtime_error("Cannot get data_hist_" + sample.name);
 
-    // Use 2nd order interpolation to smooth the shape
-    RooHistPdf* pdf = new RooHistPdf(("pdf_" + sample.name + "_1D").c_str(), "", *mass, *data, 2);
-    pdf->Print();
-    pdfs.add(*pdf);
-    printf("pdfs.getSize: %u\n", pdfs.getSize());
-    float n_expected = get_expected_event_yield(workspace, sample.name);
-    RooRealVar* n = new RooRealVar(("n_" + sample.name).c_str(), "blah", n_expected, 0., 1e9);
-    n->Print();
-    yields.add(*n);
-    printf("yields.getSize: %u\n", yields.getSize());
+      // Use 2nd order interpolation to smooth the shape
+      RooHistPdf pdf(pdf_name.c_str(), "", *mass, *data, 2);
+      workspace.import(pdf);
+      auto pdf_ptr = workspace.pdf(pdf_name.c_str());
+      pdfs.add(*pdf_ptr);
+
+      float n_expected = get_expected_event_yield(workspace, sample.name);
+      RooRealVar* n = new RooRealVar(("n_" + sample.name).c_str(), "blah", n_expected, 0., 1e9);
+      yields.add(*n);
+    } else {
+      auto data = workspace.data(("data_" + sample.name).c_str());
+      if (not data)
+	throw std::runtime_error("Cannot get data_" + sample.name);
+      RooRealVar exp_c("exp_c","exp_c", -1, -1000., 0.);
+      RooExponential pdf(pdf_name.c_str(), "Background", *mass, exp_c);
+      mass->setRange("LeftSideBand", mm_mass_min, mm_mass_blind_min);
+      mass->setRange("RightSideBand", mm_mass_blind_max, mm_mass_max);
+
+      pdf.fitTo(*data, Range("LeftSideBand,RightSideBand"));
+      auto fraction = pdf.createIntegral(*mass, *mass, "LeftSideBand,RightSideBand");
+      float n_expected = data->numEntries()*fraction->getVal();
+      RooRealVar* n = new RooRealVar(("n_" + sample.name).c_str(), "blah", n_expected, 0., 1e9);
+      yields.add(*n);
+      
+      auto frame = mass->frame();
+      data->plotOn(frame);
+      pdf.plotOn(frame);
+      frame->Draw();
+      print_canvas(pdf_name, output_path, gPad);
+      mass->removeRange("LeftSideBand");
+      mass->removeRange("RightSideBand");
+      
+      workspace.import(pdf);
+      auto pdf_ptr = workspace.pdf(pdf_name.c_str());
+      pdfs.add(*pdf_ptr);
+    }
   }
   
   RooAddPdf model(model_name, model_name, pdfs, yields);
@@ -598,30 +645,6 @@ void build_model_2D(RooWorkspace& workspace){
   if (not mass) throw std::runtime_error("Cannot get mass var");
   auto mass_err = workspace.var("mass_err");
   if (not mass_err) throw std::runtime_error("Cannot get mass_err var");
-
-  // RooRealVar mean_bsmm("mean_bsmm", "mean_bsmm", 5.35, 5.32, 5.40);
-  // RooRealVar mean_bmm( "mean_bmm",  "mean_bmm",  5.29, 5.25, 5.31);
-  // RooRealVar mean_bkpi("mean_bkpi", "mean_bkpi", 5.23, 5.20, 5.25);
-
-  // RooRealVar s_mm("s_mm","resolution", 1, 0, 20);
-  // RooFormulaVar sigma_mm("sigma_mm", "", "@0*@1", RooArgList(s_mm, *mass_err));
-
-  // RooRealVar s_kpi("s_kpi","resolution", 1, 0, 20);
-  // RooFormulaVar sigma_kpi("sigma_kpi", "", "@0*@1", RooArgList(s_kpi, *mass_err));
-
-  // RooGaussian pdf_bsmm("pdf_bsmm", "pdf_bsmm", *mass, mean_bsmm, sigma_mm); 
-  // RooGaussian pdf_bsmm("pdf_bsmm", "pdf_bsmm", *mass, mean_bsmm, *mass_err); 
-  // RooRealVar cb_alpha_mm("cb_alpha_mm", "Crystal-Ball gaussian cutoff for mm signal", 1, 0.1, 10);
-  // RooRealVar cb_n_mm("cb_n_mm", "Crystal-Ball exponent of the power-low tail for mm signal", 5, 0, 10000);
-  // RooCBShape pdf_bmm( "pdf_bmm",  "pdf_bmm",  *mass, mean_bmm,  sigma_mm, cb_alpha_mm, cb_n_mm);
-
-  // RooRealVar cb_alpha_kpi("cb_alpha_kpi", "Crystal-Ball gaussian cutoff for kpi events", 1, 0.1, 10);
-  // RooRealVar cb_n_kpi("cb_n_kpi", "Crystal-Ball exponent of the power-low tail for kpi events", 5, 0, 10000);
-  // RooCBShape pdf_bkpi("pdf_bkpi", "pdf_bkpi", *mass, mean_bkpi, sigma_kpi, cb_alpha_kpi, cb_n_kpi);
-
-  // RooGaussian pdf_bmm( "pdf_bmm",  "pdf_bmm",  *mass, mean_bmm,  sigma_mm); 
-  // RooGaussian pdf_bkpi("pdf_bkpi", "pdf_bkpi", *mass, mean_bkpi, sigma_kpi);
-  
 
   // Conditional PDFs (mass|mass_err)
   RooArgList cond_pdfs;
@@ -704,21 +727,38 @@ void build_model_2D(RooWorkspace& workspace){
   workspace.import(full_model, RenameConflictNodes("_full"));
 }
 
-// void build_bkg_model_1D(RooWorkspace& workspace, const Sample& sample){
-//   const char* model_name = "bkg_1D";
-//   RooArgList pdfs;
-//   RooArgList yields;
-//   auto mass = workspace.var("mass");
-//   if (not mass)
-//     throw std::runtime_error("Cannot get mass");
+void build_bkg_model_1D(RooWorkspace& workspace, const Sample& sample){
+  const char* model_name = "bkg_1D";
+  RooArgList pdfs;
+  RooArgList yields;
+  auto mass = workspace.var("mass");
+  if (not mass)
+    throw std::runtime_error("Cannot get mass");
   
-//   for (auto& sample: samples){
-//     // auto ds = workspace.data(("data_" + sample.name).c_str());
-//     // if (not ds)
-//     //   throw std::runtime_error("Cannot get data_"  + sample.name);
-//     auto data = dynamic_cast<const RooDataHist*>(workspace.data(("data_hist_" + sample.name).c_str()));
-//     if (not data)
-//       throw std::runtime_error("Cannot get data_hist_" + sample.name);
+  auto data = workspace.data(("data_" + sample.name).c_str());
+  if (not data)
+    throw std::runtime_error("Cannot get data_" + sample.name);
+
+  // RooRealVar br1("br1", "", 0.5, 0. , 1);
+  // RooRealVar br2("br2", "", 0.5, 0. , 1);
+  // RooBernstein bkg("bkg", "Background", *mass, RooArgList(br1, br2));
+
+  RooRealVar exp_c("exp_c","exp_c", -1, -1000., 0.);
+  RooExponential bkg(model_name, "Background", *mass, exp_c);
+  // RooRealVar n_data("n_data", "", 1, 0, 1e9) ; 
+  // RooExtendPdf ebkg("ebkg","ebkg", bkg, n_data) ;  
+  mass->setRange("LeftSideBand", mm_mass_min, mm_mass_blind_min);
+  mass->setRange("RightSideBand", mm_mass_blind_max, mm_mass_max);
+
+  bkg.fitTo(*data, Range("LeftSideBand,RightSideBand"));
+  printf("fraction: %0.3f\n", bkg.createIntegral(*mass, *mass, "LeftSideBand,RightSideBand")->getVal()) ;
+  
+  auto frame = mass->frame();
+  data->plotOn(frame);
+  bkg.plotOn(frame);
+  frame->Draw();
+  print_canvas(model_name, output_path, gPad);
+  workspace.import(bkg);
 
 //     // Use 2nd order interpolation to smooth the shape
 //     RooHistPdf* pdf = new RooHistPdf(("pdf_" + sample.name + "_1D").c_str(), "", *mass, *data, 2);
@@ -754,18 +794,20 @@ void build_model_2D(RooWorkspace& workspace){
 //   frame->Draw();
 
 //   print_canvas(model_name, output_path, gPad);
-// }
+}
 
-void import_var(RooWorkspace& target_ws, const RooWorkspace& source_ws, const char* var_name, const char* new_name){
+void import_var(RooWorkspace& target_ws, const RooWorkspace& source_ws, const char* var_name, const char* new_name, float scale = 1.0){
   auto var = source_ws.var(var_name);
     if (not var) 
       throw std::runtime_error(string(var_name) +" is missing");
     RooRealVar new_var(*var);
     new_var.SetName(new_name);
+    new_var.setVal(new_var.getVal()*scale);
     target_ws.import(new_var);
 }
 
 void sensitivity_study(){
+  add_samples();
   for (auto sample: all_samples){
     if (sample.exclusive){
       if (mm_only and sample.name!="bsmm" and sample.name!="bmm") continue;
@@ -784,14 +826,14 @@ void sensitivity_study(){
 
     // Import sample workspace into the main workspace
     auto sample_data = sample_workspace->data("data");
-    // sample_data = sample_data->reduce("mass_err<0.035");
     if (not sample_data) 
       throw std::runtime_error("RooDataSet \"data\" is missing");
-    // Tree is easier to use for debugging purposes
-    // sample_data->convertToTreeStore();
+    double n_0 = sample_data->numEntries();
+    sample_data = sample_data->reduce(final_selection);
+
     workspace.import(*sample_data, Rename(("data_" + sample.name).c_str()));
 
-    import_var(workspace, *sample_workspace, "eff",   ("eff_"   + sample.name).c_str());
+    import_var(workspace, *sample_workspace, "eff",   ("eff_"   + sample.name).c_str(), sample_data->numEntries()/n_0);
     import_var(workspace, *sample_workspace, "xsec",  ("xsec_"  + sample.name).c_str());
     import_var(workspace, *sample_workspace, "scale", ("scale_" + sample.name).c_str());
 
@@ -836,17 +878,19 @@ void sensitivity_study(){
   }
   if (pre_processing_only) return;
 
-  workspace.Print("V");
+  // build_bkg_model_1D(workspace, other_samples.front());
 
   build_model_1D(workspace);
-  build_model_2D(workspace);
+  // build_model_2D(workspace);
+
+  workspace.Print("V");
 
   // Toy studies
   unsigned int n_toys = 1000;
   toy_study(workspace, "model_1D", "model_1D", n_toys);
-  toy_study(workspace, "model_2D_full", "model_2D_cond", n_toys);
-  toy_study(workspace, "model_2D_full", "model_1D", n_toys);
-  // toy_study(workspace, "model_2D", "model_2D", n_toys);
+  // toy_study(workspace, "model_2D_full", "model_2D_cond", n_toys);
+  // toy_study(workspace, "model_2D_full", "model_1D", n_toys);
+  // // toy_study(workspace, "model_2D", "model_2D", n_toys);
 
 
 }
