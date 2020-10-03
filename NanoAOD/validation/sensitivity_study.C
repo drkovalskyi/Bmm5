@@ -34,7 +34,8 @@
 using namespace RooFit;
 using namespace std;
 
-string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_kpi_trigger_0.85/";
+string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_test/";
+// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_kpi_trigger_0.75/";
 // string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_mm_only/";
 
 const bool do_bsmm_significance = true;
@@ -43,17 +44,18 @@ const bool remake_input_workspaces = false;
 const bool update_scale_factors = false;     // Ignore scale factors in pre-processed samples and get them from input provided by user in Samples
 const bool update_cross_sections = false;
 const bool produce_2D_conditional_projections = false;
-const bool mm_only = false;
+const bool exclude_bhh = true;
 const bool pre_processing_only = false; // Just produce samples 
-const char* final_selection = "mva>0.85"; // additional selection requirements applied to RooDatasets
+const char* final_selection = "mva>0.75&&muonid==3"; // additional selection requirements applied to RooDatasets
 
 const int muon_id = 2; // 1 - loose, 2 - medium, 3 - mva
-const double mm_mass_min = 4.9;
-const double mm_mass_max = 5.9;
-const double mm_mass_blind_min = 5.1;
-const double mm_mass_blind_max = 5.5;
+const double mm_mass_min = 4.95;
+const double mm_mass_max = 5.90;
+const double mm_mass_blind_min = 5.15;
+const double mm_mass_blind_max = 5.50;
 const double mm_mass_err_min = 0.005;
 const double mm_mass_err_max = 0.100;
+const double mm_min_mva = 0.5;
 
 const bool silent_roofit = true;
 const bool plot_each_toy = false; // debugging option 
@@ -92,26 +94,26 @@ void add_samples(){
 			  // trigger, truth_match, blind, exclusive 
 			  true,  true, false, true
 			});
-  if (not mm_only){
-    all_samples.push_back(
-			  { "data", 
-			    {   
-			      // Run2017 
-			      skim_path + "Charmonium+Run2017B-31Mar2018-v1+MINIAOD/*.root",
-			      skim_path + "Charmonium+Run2017C-31Mar2018-v1+MINIAOD/*.root",
-			      skim_path + "Charmonium+Run2017D-31Mar2018-v1+MINIAOD/*.root",
-			      skim_path + "Charmonium+Run2017E-31Mar2018-v1+MINIAOD/*.root",
-			      skim_path + "Charmonium+Run2017F-31Mar2018-v1+MINIAOD/*.root",
-			      // Run2018
-			      skim_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root", 
-			      skim_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root",
-			      skim_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root", 
-			      skim_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root" 
-			    },
-			    1.0, 1.0,
-			    // trigger, truth_match, blind, exclusive 
-			    true,  false, true, false
-			  });
+  all_samples.push_back(
+			{ "data", 
+			  {   
+			    // Run2017 
+			    skim_path + "Charmonium+Run2017B-31Mar2018-v1+MINIAOD/*.root",
+			    skim_path + "Charmonium+Run2017C-31Mar2018-v1+MINIAOD/*.root",
+			    skim_path + "Charmonium+Run2017D-31Mar2018-v1+MINIAOD/*.root",
+			    skim_path + "Charmonium+Run2017E-31Mar2018-v1+MINIAOD/*.root",
+			    skim_path + "Charmonium+Run2017F-31Mar2018-v1+MINIAOD/*.root",
+			    // Run2018
+			    skim_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root", 
+			    skim_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root",
+			    skim_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root", 
+			    skim_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root" 
+			  },
+			  1.0, 1.0,
+			  // trigger, truth_match, blind, exclusive 
+			  true,  false, true, false
+			});
+  if (not exclude_bhh){
     all_samples.push_back( 
 			  { "bkpi", 
 			    {
@@ -130,7 +132,7 @@ vector<Sample> other_samples;
 void print_canvas(string output_name_without_extention, 
 		  string path, 
 		  TVirtualPad* canvas){
-  if (gSystem->AccessPathName(path.c_str())){
+ if (gSystem->AccessPathName(path.c_str())){
     gSystem->Exec(("mkdir -p " + path).c_str());
   }
   string s = path + "/" + output_name_without_extention;
@@ -139,12 +141,11 @@ void print_canvas(string output_name_without_extention,
   canvas->Print((s + ".root").c_str());
 }
 
-const RooWorkspace* process_sample(Sample& sample){
-  string file_name = "sensitivity_study-" + sample.name + ".root";
-  
+
+const RooWorkspace* get_workspace(const char* file_name){
   // Check if we already have histograms prepared
-  if (not remake_input_workspaces and not gSystem->AccessPathName(file_name.c_str())){
-    TFile *f = TFile::Open(file_name.c_str()) ;
+  if (not remake_input_workspaces and not gSystem->AccessPathName(file_name)){
+    TFile *f = TFile::Open(file_name) ;
     if (not f) 
       throw std::runtime_error( "File is not found" );
     const RooWorkspace* ws = dynamic_cast<const RooWorkspace*>(f->Get("workspace"));
@@ -152,7 +153,12 @@ const RooWorkspace* process_sample(Sample& sample){
       throw std::runtime_error( "Workspace is not found" );
     return ws;
   }
-  
+  return nullptr;
+}
+
+void create_workspace(Sample& sample){
+  string file_name = "sensitivity_study-" + sample.name + ".root";
+
   printf("Recreating histograms for %s\n", sample.name.c_str());
     
   RooRealVar mass("mass", "mass", mm_mass_min, mm_mass_max);
@@ -289,6 +295,7 @@ const RooWorkspace* process_sample(Sample& sample){
       if (TMath::IsNaN(mm_kin_massErr[cand])) continue;
       if (mm_kin_massErr[cand] < mm_mass_err_min) continue;
       if (mm_kin_massErr[cand] > mm_mass_err_max) continue;
+      if (mm_mva[cand] < mm_min_mva) continue;
       save_event = true;
       n_saved_cands++;
       mass = mm_kin_mass[cand];
@@ -326,18 +333,29 @@ const RooWorkspace* process_sample(Sample& sample){
   // data.Print("v");
 
   // Create a new empty workspace
-  RooWorkspace *ws = new RooWorkspace("workspace","workspace");
-  ws->import(data) ;
+  RooWorkspace ws("workspace","workspace");
+  ws.import(data) ;
   RooRealVar eff("eff", "Event selection efficiency", double(n_saved_events)/n);
-  ws->import(eff);
+  ws.import(eff);
   RooRealVar xsec("xsec", "Effective cross-section before event selection, [pb]", sample.cross_section);
-  ws->import(xsec);
+  ws.import(xsec);
   RooRealVar scale("scale", "Correction scale factor", sample.scale_factor);
   if (compute_scale_factors)
     scale.setVal(double(n_cands_passed_muon_id)/n_saved_cands);
-  ws->import(scale);
-  ws->writeToFile(file_name.c_str()) ;
-  return ws;
+  ws.import(scale);
+  ws.writeToFile(file_name.c_str()) ;
+}
+
+const RooWorkspace* process_sample(Sample& sample){
+  string file_name = "sensitivity_study-" + sample.name + ".root";
+
+  auto ws = get_workspace(file_name.c_str());
+
+  if (ws) return ws;
+
+  create_workspace(sample);
+  
+  return get_workspace(file_name.c_str());
 }
 
 struct Result {
@@ -402,7 +420,7 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
     auto mass_err = ws.var("mass_err");
     auto n_bmm = ws.var("n_bmm");
     //  auto n_bkpi = ws.var("n_bkpi");
-    // if (mm_only){
+    // if (exclude_bhh){
     //   n_bkpi->setVal(0);
     //   n_bkpi->setConstant(true);
     // }
@@ -590,11 +608,17 @@ void build_model_1D(RooWorkspace& workspace){
       auto data = workspace.data(("data_" + sample.name).c_str());
       if (not data)
 	throw std::runtime_error("Cannot get data_" + sample.name);
-      RooRealVar exp_c("exp_c","exp_c", -1, -1000., 0.);
-      RooExponential pdf(pdf_name.c_str(), "Background", *mass, exp_c);
+      RooRealVar exp_c_left("exp_c_left","exp_c_left", -1, -1000., 0.);
+      RooRealVar exp_c_right("exp_c_right","exp_c_right", -1, -1000., 0.);
+      RooRealVar exp_frac("exp_frac","", 0.5, 0, 1);
+      RooExponential pdf_left((pdf_name + "_left").c_str(), "Background", *mass, exp_c_left);
+      RooExponential pdf_right((pdf_name + "_right").c_str(), "Background", *mass, exp_c_right);
+      RooAddPdf pdf(pdf_name.c_str(), "", RooArgList(pdf_left, pdf_right), exp_frac);
       mass->setRange("LeftSideBand", mm_mass_min, mm_mass_blind_min);
       mass->setRange("RightSideBand", mm_mass_blind_max, mm_mass_max);
 
+      pdf_right.fitTo(*data, Range("RightSideBand"));
+      exp_c_right.setConstant(true);
       pdf.fitTo(*data, Range("LeftSideBand,RightSideBand"));
       auto fraction = pdf.createIntegral(*mass, *mass, "LeftSideBand,RightSideBand");
       float n_expected = data->numEntries()*fraction->getVal();
@@ -626,10 +650,10 @@ void build_model_1D(RooWorkspace& workspace){
 
   model.plotOn(frame);
   // } else {
-  if (mm_only and workspace.pdf("pdf_bmm_1D")){
+  if (exclude_bhh and workspace.pdf("pdf_bmm_1D")){
     model.plotOn(frame, Components(*(workspace.pdf("pdf_bmm_1D"))), LineStyle(kDashed));
   }
-  if (not mm_only and workspace.pdf("pdf_bmm_1D") and workspace.pdf("pdf_bkpi_1D")){
+  if (not exclude_bhh and workspace.pdf("pdf_bmm_1D") and workspace.pdf("pdf_bkpi_1D")){
     model.plotOn(frame, Components(*(workspace.pdf("pdf_bkpi_1D"))), FillColor(kMagenta), FillStyle(1001), DrawOption("F"));
     model.plotOn(frame, Components(RooArgSet(*(workspace.pdf("pdf_bmm_1D")), *(workspace.pdf("pdf_bkpi_1D")))), LineStyle(kDashed));
   }
@@ -783,10 +807,10 @@ void build_bkg_model_1D(RooWorkspace& workspace, const Sample& sample){
 
 //   model.plotOn(frame);
 //   // } else {
-//   if (mm_only and workspace.pdf("pdf_bmm_1D")){
+//   if (exclude_bhh and workspace.pdf("pdf_bmm_1D")){
 //     model.plotOn(frame, Components(*(workspace.pdf("pdf_bmm_1D"))), LineStyle(kDashed));
 //   }
-//   if (not mm_only and workspace.pdf("pdf_bmm_1D") and workspace.pdf("pdf_bkpi_1D")){
+//   if (not exclude_bhh and workspace.pdf("pdf_bmm_1D") and workspace.pdf("pdf_bkpi_1D")){
 //     model.plotOn(frame, Components(*(workspace.pdf("pdf_bkpi_1D"))), FillColor(kMagenta), FillStyle(1001), DrawOption("F"));
 //     model.plotOn(frame, Components(RooArgSet(*(workspace.pdf("pdf_bmm_1D")), *(workspace.pdf("pdf_bkpi_1D")))), LineStyle(kDashed));
 //   }
@@ -810,7 +834,7 @@ void sensitivity_study(){
   add_samples();
   for (auto sample: all_samples){
     if (sample.exclusive){
-      if (mm_only and sample.name!="bsmm" and sample.name!="bmm") continue;
+      if (exclude_bhh and sample.name!="bsmm" and sample.name!="bmm") continue;
       exclusive_samples.push_back(sample);
     } else {
       other_samples.push_back(sample);
