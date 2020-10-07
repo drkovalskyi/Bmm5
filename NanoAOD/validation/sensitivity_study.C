@@ -46,11 +46,13 @@ const bool update_cross_sections = false;
 const bool produce_2D_conditional_projections = false;
 const bool exclude_bhh = true;
 const bool pre_processing_only = false; // Just produce samples 
-const char* final_selection = "mva>0.75&&muonid==3"; // additional selection requirements applied to RooDatasets
+const string final_selection = "mva>0.99&&muonid==3"; // additional selection requirements applied to RooDatasets
+// const string final_selection = "";
+const bool exclude_data = false;
 
 const int muon_id = 2; // 1 - loose, 2 - medium, 3 - mva
 const double mm_mass_min = 4.95;
-const double mm_mass_max = 5.90;
+const double mm_mass_max = 5.95;
 const double mm_mass_blind_min = 5.15;
 const double mm_mass_blind_max = 5.50;
 const double mm_mass_err_min = 0.005;
@@ -74,9 +76,9 @@ string storage_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/508/";
 string skim_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD-skims/mm/508/";
     
 // Don't use symbols in the name
-vector<Sample> all_samples;
+vector<Sample> samples;
 void add_samples(){
-  all_samples.push_back(
+  samples.push_back(
 			{ "bsmm", 
 			  {
 			    storage_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/*.root"
@@ -85,7 +87,7 @@ void add_samples(){
 			  // trigger, truth_match, blind, exclusive 
 			  true,  true, false, true
 			});
-  all_samples.push_back(
+  samples.push_back(
 			{ "bmm", 
 			  {
 			    storage_path + "BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"
@@ -94,27 +96,37 @@ void add_samples(){
 			  // trigger, truth_match, blind, exclusive 
 			  true,  true, false, true
 			});
-  all_samples.push_back(
-			{ "data", 
-			  {   
-			    // Run2017 
-			    skim_path + "Charmonium+Run2017B-31Mar2018-v1+MINIAOD/*.root",
-			    skim_path + "Charmonium+Run2017C-31Mar2018-v1+MINIAOD/*.root",
-			    skim_path + "Charmonium+Run2017D-31Mar2018-v1+MINIAOD/*.root",
-			    skim_path + "Charmonium+Run2017E-31Mar2018-v1+MINIAOD/*.root",
-			    skim_path + "Charmonium+Run2017F-31Mar2018-v1+MINIAOD/*.root",
-			    // Run2018
-			    skim_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root", 
-			    skim_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root",
-			    skim_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root", 
-			    skim_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root" 
-			  },
-			  1.0, 1.0,
-			  // trigger, truth_match, blind, exclusive 
-			  true,  false, true, false
-			});
+  if (not exclude_data){
+    samples.push_back(
+		      { "data", 
+			{   
+			  // Run2016 
+			  skim_path + "Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD/*.root",
+			  skim_path + "Charmonium+Run2016C-17Jul2018-v1+MINIAOD/*.root",
+			  skim_path + "Charmonium+Run2016D-17Jul2018-v1+MINIAOD/*.root",
+			  skim_path + "Charmonium+Run2016E-17Jul2018-v1+MINIAOD/*.root",
+			  skim_path + "Charmonium+Run2016F-17Jul2018-v1+MINIAOD/*.root",
+			  skim_path + "Charmonium+Run2016G-17Jul2018-v1+MINIAOD/*.root",
+			  skim_path + "Charmonium+Run2016H-17Jul2018-v1+MINIAOD/*.root",
+			  // Run2017 
+			  skim_path + "Charmonium+Run2017B-31Mar2018-v1+MINIAOD/*.root",
+			  skim_path + "Charmonium+Run2017C-31Mar2018-v1+MINIAOD/*.root",
+			  skim_path + "Charmonium+Run2017D-31Mar2018-v1+MINIAOD/*.root",
+			  skim_path + "Charmonium+Run2017E-31Mar2018-v1+MINIAOD/*.root",
+			  skim_path + "Charmonium+Run2017F-31Mar2018-v1+MINIAOD/*.root",
+			  // Run2018
+			  skim_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root", 
+			  skim_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root",
+			  skim_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root", 
+			  skim_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root" 
+			},
+			1.0, 1.0,
+			// trigger, truth_match, blind, exclusive 
+			true,  false, true, false
+		      });
+  }
   if (not exclude_bhh){
-    all_samples.push_back( 
+    samples.push_back( 
 			  { "bkpi", 
 			    {
 			      storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"
@@ -125,10 +137,6 @@ void add_samples(){
 			  });
   }
 }
-
-vector<Sample> exclusive_samples;
-vector<Sample> other_samples;
-
 void print_canvas(string output_name_without_extention, 
 		  string path, 
 		  TVirtualPad* canvas){
@@ -432,19 +440,26 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
 
     stop_watch_generate.Start(false);
 
-    // RooDataSet *data = gen_model->generate(*gen_observables, Extended(kTRUE));
+    RooDataSet *data = gen_model->generate(*gen_observables, Extended(kTRUE));
+    // WARNING:
+    // RooCBRooCBShape won't work due to a bug reported at
     // https://sft.its.cern.ch/jira/browse/ROOT-8489
-    RooDataSet *data = new RooDataSet("data", "", *gen_observables);
-    RooAcceptReject generator(*gen_model, *gen_observables, *gen_model->getGeneratorConfig(), false, 0);
+    // use MRooCBRooCBShape
 
-    Double_t resample = 0.;
-    int n = 0;
-    for (auto s: exclusive_samples){
-      auto n_x = ws.var(("n_" + s.name).c_str());
-      n += n_x->getVal();
-    }
-    for (int i=0; i<n; i++)
-      data->add(*generator.generateEvent(n-i,resample));
+    //// A workaround for the bug - works only for simple PDFs.
+    // RooDataSet *data = new RooDataSet("data", "", *gen_observables);
+    // RooAcceptReject generator(*gen_model, *gen_observables, *gen_model->getGeneratorConfig(), false, 0);
+
+    // Double_t resample = 0.;
+    // int n = 0;
+    // for (auto s: samples){
+    //   auto n_x = ws.var(("n_" + s.name).c_str());
+    //   printf("%s = %f\n", ("n_" + s.name).c_str(), n_x->getVal());
+    //   n += n_x->getVal();
+    // }
+    // printf("n = %d\n", n);
+    // for (int i=0; i<n; i++)
+    //   data->add(*generator.generateEvent(n-i,resample));
 
     stop_watch_generate.Stop();
 
@@ -567,7 +582,7 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
 
 float get_expected_event_yield(const RooWorkspace& workspace, string name){
   const Sample* sample(nullptr);
-  for (auto s: exclusive_samples)
+  for (auto s: samples)
     if (s.name == name)
       sample = &s;
   if (not sample)
@@ -587,8 +602,8 @@ void build_model_1D(RooWorkspace& workspace){
   if (not mass)
     throw std::runtime_error("Cannot get mass");
   
-  // for (auto& sample: exclusive_samples){
-  for (auto& sample: all_samples){
+  // for (auto& sample: samples){
+  for (auto& sample: samples){
     string pdf_name = "pdf_" + sample.name + "_1D";
     if (sample.exclusive){
       auto data = dynamic_cast<const RooDataHist*>(workspace.data(("data_hist_" + sample.name).c_str()));
@@ -602,7 +617,9 @@ void build_model_1D(RooWorkspace& workspace){
       pdfs.add(*pdf_ptr);
 
       float n_expected = get_expected_event_yield(workspace, sample.name);
-      RooRealVar* n = new RooRealVar(("n_" + sample.name).c_str(), "blah", n_expected, 0., 1e9);
+      const char* n_name = ("n_" + sample.name).c_str();
+      RooRealVar* n = new RooRealVar(n_name, "blah", n_expected, 0., 1e9);
+      printf("%s = %f\n", n_name, n->getVal());
       yields.add(*n);
     } else {
       auto data = workspace.data(("data_" + sample.name).c_str());
@@ -622,7 +639,9 @@ void build_model_1D(RooWorkspace& workspace){
       pdf.fitTo(*data, Range("LeftSideBand,RightSideBand"));
       auto fraction = pdf.createIntegral(*mass, *mass, "LeftSideBand,RightSideBand");
       float n_expected = data->numEntries()*fraction->getVal();
-      RooRealVar* n = new RooRealVar(("n_" + sample.name).c_str(), "blah", n_expected, 0., 1e9);
+      const char* n_name = ("n_" + sample.name).c_str();
+      RooRealVar* n = new RooRealVar(n_name, "blah", n_expected, 0., 1e9);
+      printf("%s = %f\n", n_name, n->getVal());
       yields.add(*n);
       
       auto frame = mass->frame();
@@ -679,7 +698,9 @@ void build_model_2D(RooWorkspace& workspace){
   RooArgList yields;
   // std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
-  for (auto sample: exclusive_samples){
+  for (auto sample: samples){
+    if (sample.name == "data")
+      throw std::runtime_error("2D model is not ready for combinatorial background");
     printf("Building pdfs for %s\n", sample.name.c_str());
     auto data = workspace.data(("data_" + sample.name).c_str());
     if (not data)
@@ -832,18 +853,10 @@ void import_var(RooWorkspace& target_ws, const RooWorkspace& source_ws, const ch
 
 void sensitivity_study(){
   add_samples();
-  for (auto sample: all_samples){
-    if (sample.exclusive){
-      if (exclude_bhh and sample.name!="bsmm" and sample.name!="bmm") continue;
-      exclusive_samples.push_back(sample);
-    } else {
-      other_samples.push_back(sample);
-    }
-  }
 
   TCanvas* c1 = new TCanvas("c1", "c1", 800, 800);
   RooWorkspace workspace("study_workspace","");
-  for (auto& sample: all_samples){
+  for (auto& sample: samples){
     // Process sample
     const RooWorkspace* sample_workspace = process_sample(sample);
     if (pre_processing_only) continue;
@@ -853,7 +866,8 @@ void sensitivity_study(){
     if (not sample_data) 
       throw std::runtime_error("RooDataSet \"data\" is missing");
     double n_0 = sample_data->numEntries();
-    sample_data = sample_data->reduce(final_selection);
+    if (final_selection != "")
+      sample_data = sample_data->reduce(final_selection.c_str());
 
     workspace.import(*sample_data, Rename(("data_" + sample.name).c_str()));
 
@@ -902,9 +916,8 @@ void sensitivity_study(){
   }
   if (pre_processing_only) return;
 
-  // build_bkg_model_1D(workspace, other_samples.front());
-
   build_model_1D(workspace);
+
   // build_model_2D(workspace);
 
   workspace.Print("V");
