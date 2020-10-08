@@ -7,7 +7,7 @@
 #include "TChain.h"
 #include "RooDataHist.h"
 #include "RooRealVar.h"
-#include "RooCBShape.h"
+#include "MRooCBShape.h"
 #include "RooChebychev.h"
 #include "RooAddPdf.h"
 #include "RooPlot.h"
@@ -34,21 +34,21 @@
 using namespace RooFit;
 using namespace std;
 
-string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_test/";
+// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_test/";
 // string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_kpi_trigger_0.75/";
-// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_mm_only/";
+string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_muon_mva/";
 
+const bool exclude_bhh = true;
+const bool exclude_data = true;
 const bool do_bsmm_significance = true;
 const bool compute_scale_factors = true;    // Compute muon selection efficiency for hadrons
 const bool remake_input_workspaces = false;
 const bool update_scale_factors = false;     // Ignore scale factors in pre-processed samples and get them from input provided by user in Samples
 const bool update_cross_sections = false;
 const bool produce_2D_conditional_projections = false;
-const bool exclude_bhh = true;
 const bool pre_processing_only = false; // Just produce samples 
-const string final_selection = "mva>0.99&&muonid==3"; // additional selection requirements applied to RooDatasets
-// const string final_selection = "";
-const bool exclude_data = false;
+// const string final_selection = "mva>0.99&&muonid==3"; // additional selection requirements applied to RooDatasets
+const string final_selection = "muonid==3";
 
 const int muon_id = 2; // 1 - loose, 2 - medium, 3 - mva
 const double mm_mass_min = 4.95;
@@ -57,7 +57,9 @@ const double mm_mass_blind_min = 5.15;
 const double mm_mass_blind_max = 5.50;
 const double mm_mass_err_min = 0.005;
 const double mm_mass_err_max = 0.100;
-const double mm_min_mva = 0.5;
+// const double mm_min_mva = 0.5;
+const double mm_min_mva = -1;
+const double trigger_efficiency = 0.6; // applied when sample cannot be used with an explicit trigger requirement
 
 const bool silent_roofit = true;
 const bool plot_each_toy = false; // debugging option 
@@ -343,7 +345,10 @@ void create_workspace(Sample& sample){
   // Create a new empty workspace
   RooWorkspace ws("workspace","workspace");
   ws.import(data) ;
-  RooRealVar eff("eff", "Event selection efficiency", double(n_saved_events)/n);
+  double efficiency = double(n_saved_events)/n;
+  if (not sample.trigger)
+    efficiency *= trigger_efficiency;
+  RooRealVar eff("eff", "Event selection efficiency", efficiency);
   ws.import(eff);
   RooRealVar xsec("xsec", "Effective cross-section before event selection, [pb]", sample.cross_section);
   ws.import(xsec);
@@ -721,7 +726,7 @@ void build_model_2D(RooWorkspace& workspace){
     RooFormulaVar sigma(("sigma_" + sample.name).c_str(), "", "@0*@1", RooArgList(s, *mass_err));
     RooRealVar cb_alpha(("cb_alpha_" + sample.name).c_str(), "Crystal-Ball gaussian cutoff", 1, 0.1, 10);
     RooRealVar cb_n(("cb_n_" + sample.name).c_str(), "Crystal-Ball exponent of the power-low tail", 5, 0, 10000);
-    RooCBShape cond_pdf(("cond_pdf_" + sample.name).c_str(), "Conditional PDF", *mass, mean, sigma, cb_alpha, cb_n);
+    MRooCBShape cond_pdf(("cond_pdf_" + sample.name).c_str(), "Conditional PDF", *mass, mean, sigma, cb_alpha, cb_n);
     // Fit signal model to extract parameters
     cond_pdf.fitTo(*data, ConditionalObservables(*mass_err), NumCPU(16), Timer(true));
     
@@ -918,15 +923,15 @@ void sensitivity_study(){
 
   build_model_1D(workspace);
 
-  // build_model_2D(workspace);
+  build_model_2D(workspace);
 
   workspace.Print("V");
 
   // Toy studies
   unsigned int n_toys = 1000;
   toy_study(workspace, "model_1D", "model_1D", n_toys);
-  // toy_study(workspace, "model_2D_full", "model_2D_cond", n_toys);
-  // toy_study(workspace, "model_2D_full", "model_1D", n_toys);
+  toy_study(workspace, "model_2D_full", "model_2D_cond", n_toys);
+  toy_study(workspace, "model_2D_full", "model_1D", n_toys);
   // // toy_study(workspace, "model_2D", "model_2D", n_toys);
 
 
