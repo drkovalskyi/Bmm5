@@ -45,6 +45,25 @@ public:
   virtual Int_t getAnalyticalIntegral( RooArgSet& allVars,  RooArgSet& analVars, const char* rangeName=0 ) const;
   virtual Double_t analyticalIntegral( Int_t code, const char* rangeName=0 ) const;
 
+  // Optimized accept/reject generator support
+  virtual Int_t getMaxVal(const RooArgSet& vars) const
+  {
+    RooArgSet dummy ;
+    
+    if (matchArgs(vars,dummy,m)) {
+      return 1 ;
+    }
+    return 0 ;
+  }
+
+  virtual Double_t maxVal(Int_t code) const
+  {
+    R__ASSERT(code==1) ;
+
+    // The maximum value for given (m0,alpha,n,sigma)
+  return 1.0/analyticalIntegral(1) ;
+  }
+
 protected:
 
   Double_t ApproxErf(Double_t arg) const ;
