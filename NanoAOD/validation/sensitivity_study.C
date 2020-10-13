@@ -34,10 +34,9 @@
 using namespace RooFit;
 using namespace std;
 
-string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_test/";
+// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_test/";
 // string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_kpi_trigger_0.75/";
-// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_muon_mva/";
-
+string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_softMvaId_bhh/";
 
 // Study parameters
 const bool exclude_bhh = false;
@@ -153,9 +152,17 @@ void add_samples(){
   }
   if (not exclude_bhh){
     Sample s;
+    s.trigger = false;
+    s.truth_match = true;
+    s.blind = false;
+    s.exclusive = true;
+    s.apply_muon_id = false;
+
+    // bkpi
     s.name = "bkpi";
+    s.files.clear();
     s.files.push_back(storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root");
-    s.cross_section = 5.76E+02; // pb
+    s.cross_section = 5.70E+02; // pb
     switch(muon_id){
     case 2:
       s.scale_factor = 6/(1.24689e+06 + 16 + 6);
@@ -166,11 +173,41 @@ void add_samples(){
     default:
       throw std::runtime_error( "Unsupported muon id" );
     }
-    s.trigger = false;
-    s.truth_match = true;
-    s.blind = false;
-    s.exclusive = true;
-    s.apply_muon_id = false;
+    samples.push_back(s);
+
+    // bskk
+    s.name = "bskk";
+    s.files.clear();
+    s.files.push_back(storage_path + "BsToKK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root");
+    s.cross_section = 2.23E+02; // pb
+    switch(muon_id){
+    case 2:
+      s.scale_factor = (6 + 3) / (1.21657e+06 + 26 + 6 + 3);
+      break;
+    case 3:
+      s.scale_factor = 3 / (1.21657e+06 + 26 + 6 + 3);
+      break;
+    default:
+      throw std::runtime_error( "Unsupported muon id" );
+    }
+    samples.push_back(s);
+
+    // bpipi
+    s.name = "bpipi";
+    s.files.clear();
+    s.files.push_back(storage_path + "BdToPiPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root");
+
+    s.cross_section = 1.47E+02; // pb
+    switch(muon_id){
+    case 2:
+      s.scale_factor = 3e-6; // rough estimate based on other samples
+      break;
+    case 3:
+      s.scale_factor = 1e-6; // rough estimate based on other samples
+      break;
+    default:
+      throw std::runtime_error( "Unsupported muon id" );
+    }
     samples.push_back(s);
   }
 }
@@ -659,7 +696,6 @@ void build_model_1D(RooWorkspace& workspace){
       pdfs.add(*pdf_ptr);
 
       float n_expected = get_expected_event_yield(workspace, sample.name);
-      printf("n_expected: %f\n", n_expected);
       const char* n_name = ("n_" + sample.name).c_str();
       RooRealVar* n = new RooRealVar(n_name, "blah", n_expected, 0., 1e9);
       printf("%s = %f\n", n_name, n->getVal());
@@ -715,9 +751,15 @@ void build_model_1D(RooWorkspace& workspace){
   if (exclude_bhh and workspace.pdf("pdf_bmm_1D")){
     model.plotOn(frame, Components(*(workspace.pdf("pdf_bmm_1D"))), LineStyle(kDashed));
   }
-  if (not exclude_bhh and workspace.pdf("pdf_bmm_1D") and workspace.pdf("pdf_bkpi_1D")){
-    model.plotOn(frame, Components(*(workspace.pdf("pdf_bkpi_1D"))), FillColor(kMagenta), FillStyle(1001), DrawOption("F"));
-    model.plotOn(frame, Components(RooArgSet(*(workspace.pdf("pdf_bmm_1D")), *(workspace.pdf("pdf_bkpi_1D")))), LineStyle(kDashed));
+  if (not exclude_bhh and workspace.pdf("pdf_bmm_1D")){
+    RooArgSet components;
+    if (auto pdf = workspace.pdf("pdf_bkpi_1D")) components.add(*pdf);
+    if (auto pdf = workspace.pdf("pdf_bskk_1D")) components.add(*pdf);
+    if (auto pdf = workspace.pdf("pdf_bpipi_1D")) components.add(*pdf);
+    model.plotOn(frame, Components(components), FillColor(kMagenta), FillStyle(1001), DrawOption("F"));
+    // model.plotOn(frame, Components(RooArgSet(*(workspace.pdf("pdf_bmm_1D")), *(workspace.pdf("pdf_bkpi_1D")))), LineStyle(kDashed));
+    components.add(*workspace.pdf("pdf_bmm_1D"));
+    model.plotOn(frame, Components(components), LineStyle(kDashed));
   }
 
   frame->Draw();
@@ -815,75 +857,6 @@ void build_model_2D(RooWorkspace& workspace){
   workspace.import(full_model, RenameConflictNodes("_full"));
 }
 
-void build_bkg_model_1D(RooWorkspace& workspace, const Sample& sample){
-  const char* model_name = "bkg_1D";
-  RooArgList pdfs;
-  RooArgList yields;
-  auto mass = workspace.var("mass");
-  if (not mass)
-    throw std::runtime_error("Cannot get mass");
-  
-  auto data = workspace.data(("data_" + sample.name).c_str());
-  if (not data)
-    throw std::runtime_error("Cannot get data_" + sample.name);
-
-  // RooRealVar br1("br1", "", 0.5, 0. , 1);
-  // RooRealVar br2("br2", "", 0.5, 0. , 1);
-  // RooBernstein bkg("bkg", "Background", *mass, RooArgList(br1, br2));
-
-  RooRealVar exp_c("exp_c","exp_c", -1, -1000., 0.);
-  RooExponential bkg(model_name, "Background", *mass, exp_c);
-  // RooRealVar n_data("n_data", "", 1, 0, 1e9) ; 
-  // RooExtendPdf ebkg("ebkg","ebkg", bkg, n_data) ;  
-  mass->setRange("LeftSideBand", mm_mass_min, mm_mass_blind_min);
-  mass->setRange("RightSideBand", mm_mass_blind_max, mm_mass_max);
-
-  bkg.fitTo(*data, Range("LeftSideBand,RightSideBand"));
-  printf("fraction: %0.3f\n", bkg.createIntegral(*mass, *mass, "LeftSideBand,RightSideBand")->getVal()) ;
-  
-  auto frame = mass->frame();
-  data->plotOn(frame);
-  bkg.plotOn(frame);
-  frame->Draw();
-  print_canvas(model_name, output_path, gPad);
-  workspace.import(bkg);
-
-//     // Use 2nd order interpolation to smooth the shape
-//     RooHistPdf* pdf = new RooHistPdf(("pdf_" + sample.name + "_1D").c_str(), "", *mass, *data, 2);
-//     pdf->Print();
-//     pdfs.add(*pdf);
-//     printf("pdfs.getSize: %u\n", pdfs.getSize());
-//     float n_expected = get_expected_event_yield(workspace, sample.name);
-//     RooRealVar* n = new RooRealVar(("n_" + sample.name).c_str(), "blah", n_expected, 0., 1e9);
-//     n->Print();
-//     yields.add(*n);
-//     printf("yields.getSize: %u\n", yields.getSize());
-//   }
-  
-//   RooAddPdf model(model_name, model_name, pdfs, yields);
-  
-//   workspace.import(model);
-//   // Specify observables
-//   workspace.defineSet(model_name, "mass");
-//   workspace.Print();
-
-//   auto frame = mass->frame() ;
-
-//   model.plotOn(frame);
-//   // } else {
-//   if (exclude_bhh and workspace.pdf("pdf_bmm_1D")){
-//     model.plotOn(frame, Components(*(workspace.pdf("pdf_bmm_1D"))), LineStyle(kDashed));
-//   }
-//   if (not exclude_bhh and workspace.pdf("pdf_bmm_1D") and workspace.pdf("pdf_bkpi_1D")){
-//     model.plotOn(frame, Components(*(workspace.pdf("pdf_bkpi_1D"))), FillColor(kMagenta), FillStyle(1001), DrawOption("F"));
-//     model.plotOn(frame, Components(RooArgSet(*(workspace.pdf("pdf_bmm_1D")), *(workspace.pdf("pdf_bkpi_1D")))), LineStyle(kDashed));
-//   }
-
-//   frame->Draw();
-
-//   print_canvas(model_name, output_path, gPad);
-}
-
 void import_var(RooWorkspace& target_ws, const RooWorkspace& source_ws, const char* var_name, const char* new_name, float scale = 1.0){
   auto var = source_ws.var(var_name);
     if (not var) 
@@ -929,8 +902,16 @@ void sensitivity_study(){
 
     RooRealVar* mass = sample_workspace->var("mass");
     if (mass){
+      RooRealVar mean("mean", "", 5.30, 5.20, 5.40);
+      RooRealVar sigma("sigma", "", 0.05, 0.0, 0.2);
+      RooRealVar alpha("alpha", "", 1, 0.1, 10);
+      RooRealVar n("n","", 5, 0, 10000);
+      MRooCBShape pdf("pdf", "", *mass, mean, sigma, alpha, n);
+      pdf.fitTo(*sample_data);
       RooPlot* frame = mass->frame() ;
       sample_data->plotOn(frame);
+      pdf.plotOn(frame);
+      pdf.paramOn(frame);
       frame->Draw();
       print_canvas("mass_" + sample.name, output_path, c1);
 
@@ -969,7 +950,7 @@ void sensitivity_study(){
   if (pre_processing_only) return;
 
   build_model_1D(workspace);
-
+  
   build_model_2D(workspace);
 
   workspace.Print("V");
