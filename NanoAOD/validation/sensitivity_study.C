@@ -34,23 +34,46 @@
 using namespace RooFit;
 using namespace std;
 
-// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_test/";
+string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_test/";
 // string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_kpi_trigger_0.75/";
-string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_muon_mva/";
+// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_muon_mva/";
 
-const bool exclude_bhh = true;
+
+// Study parameters
+const bool exclude_bhh = false;
 const bool exclude_data = true;
 const bool do_bsmm_significance = true;
-const bool compute_scale_factors = true;    // Compute muon selection efficiency for hadrons
+// const bool compute_scale_factors = true;    // Compute muon selection efficiency for hadrons
 const bool remake_input_workspaces = false;
-const bool update_scale_factors = false;     // Ignore scale factors in pre-processed samples and get them from input provided by user in Samples
+// const bool update_scale_factors = false;     // Ignore scale factors in pre-processed samples and get them from input provided by user in Samples
 const bool update_cross_sections = false;
 const bool produce_2D_conditional_projections = false;
 const bool pre_processing_only = false; // Just produce samples 
-// const string final_selection = "mva>0.99&&muonid==3"; // additional selection requirements applied to RooDatasets
-const string final_selection = "muonid==3";
 
-const int muon_id = 2; // 1 - loose, 2 - medium, 3 - mva
+// Muon ID
+//
+// Muon selection requires special treatmean because of the peaking
+// B->hh backgrounds.  The MC samples for these processes are not
+// large enough. That's why no muon selection is required and the
+// normalization is scaled using the Sample.scale_factor, which
+// depends on the id in use.
+//
+// Supported options
+// * 2 - medidum id
+// * 3 - soft MVA id
+//
+// The final cut is added to the final selection automatically.
+// WARNING: don't add muonid selection final_selection - it will
+// lead to a wrong normalization of B->hh background
+const int muon_id = 3; 
+
+// Additional selection requirements applied to RooDatasets
+// const string final_selection = "mva>0.99"; 
+const string final_selection = "";
+
+// Event preselection parameters
+// 1 - loose, 2 - medium, 3 - mva
+// muon id is not applied, but introduced as an efficiency correction
 const double mm_mass_min = 4.95;
 const double mm_mass_max = 5.95;
 const double mm_mass_blind_min = 5.15;
@@ -61,6 +84,7 @@ const double mm_mass_err_max = 0.100;
 const double mm_min_mva = -1;
 const double trigger_efficiency = 0.6; // applied when sample cannot be used with an explicit trigger requirement
 
+// Running options
 const bool silent_roofit = true;
 const bool plot_each_toy = false; // debugging option 
 
@@ -68,7 +92,7 @@ struct Sample{
   string name; 
   vector<string> files;
   float cross_section, scale_factor;
-  bool trigger, truth_match, blind, exclusive;
+  bool trigger, truth_match, blind, exclusive, apply_muon_id;
 };
 
 const float luminosity = 140e3; // [1/pb]
@@ -86,8 +110,8 @@ void add_samples(){
 			    storage_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/*.root"
 			  },
 			  2.98E-02, 1.0, 
-			  // trigger, truth_match, blind, exclusive 
-			  true,  true, false, true
+			  // trigger, truth_match, blind, exclusive, apply_muon_id
+			  true,  true, false, true, true
 			});
   samples.push_back(
 			{ "bmm", 
@@ -95,8 +119,8 @@ void add_samples(){
 			    storage_path + "BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"
 			  },
 			  3.26E-03, 1.0,
-			  // trigger, truth_match, blind, exclusive 
-			  true,  true, false, true
+			  // trigger, truth_match, blind, exclusive, apply_muon_id
+			  true,  true, false, true, true
 			});
   if (not exclude_data){
     samples.push_back(
@@ -123,20 +147,31 @@ void add_samples(){
 			  skim_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root" 
 			},
 			1.0, 1.0,
-			// trigger, truth_match, blind, exclusive 
-			true,  false, true, false
+			// trigger, truth_match, blind, exclusive, apply_muon_id 
+			true,  false, true, false, false
 		      });
   }
   if (not exclude_bhh){
-    samples.push_back( 
-			  { "bkpi", 
-			    {
-			      storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"
-			    },
-			    5.76E+02, 8.64E-06, // muon fakes
-			    // trigger, truth_match, blind, exclusive 
-			    false,  true, false, true
-			  });
+    Sample s;
+    s.name = "bkpi";
+    s.files.push_back(storage_path + "BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root");
+    s.cross_section = 5.76E+02; // pb
+    switch(muon_id){
+    case 2:
+      s.scale_factor = 6/(1.24689e+06 + 16 + 6);
+      break;
+    case 3:
+      s.scale_factor = 6/(1.24689e+06 + 16 + 6)*6e-4/2e-3*5e-4/1.25e-3;
+      break;
+    default:
+      throw std::runtime_error( "Unsupported muon id" );
+    }
+    s.trigger = false;
+    s.truth_match = true;
+    s.blind = false;
+    s.exclusive = true;
+    s.apply_muon_id = false;
+    samples.push_back(s);
   }
 }
 void print_canvas(string output_name_without_extention, 
@@ -250,7 +285,7 @@ void create_workspace(Sample& sample){
   chain->SetBranchAddress("HLT_DoubleMu4_3_Bs", &HLT_DoubleMu4_3_Bs, &b_HLT_DoubleMu4_3_Bs);
     
   Long64_t n_saved_cands(0);
-  Long64_t n_cands_passed_muon_id(0);
+  // Long64_t n_cands_passed_muon_id(0);
   Long64_t n_saved_events(0);
     
   int i_permille_old = 0;
@@ -328,8 +363,7 @@ void create_workspace(Sample& sample){
       //       else
       // 	muonid.setIndex(0);
       
-      if (muonid.getIndex() >= muon_id)
-	n_cands_passed_muon_id++;
+      // if (muonid.getIndex() >= muon_id) n_cands_passed_muon_id++;
 
       mva = mm_mva[cand];
       data.add(RooArgSet(mass, mass_err, muonid, mva));
@@ -339,7 +373,7 @@ void create_workspace(Sample& sample){
   }
   printf("Number of saved events: %lld\n", n_saved_events);
   printf("Number of saved candidates: %lld\n", n_saved_cands);
-  printf("Number of saved candidates that passed muon id: %lld\n", n_cands_passed_muon_id);
+  // printf("Number of saved candidates that passed muon id: %lld\n", n_cands_passed_muon_id);
   // data.Print("v");
 
   // Create a new empty workspace
@@ -352,10 +386,10 @@ void create_workspace(Sample& sample){
   ws.import(eff);
   RooRealVar xsec("xsec", "Effective cross-section before event selection, [pb]", sample.cross_section);
   ws.import(xsec);
-  RooRealVar scale("scale", "Correction scale factor", sample.scale_factor);
-  if (compute_scale_factors)
-    scale.setVal(double(n_cands_passed_muon_id)/n_saved_cands);
-  ws.import(scale);
+  // RooRealVar scale("scale", "Correction scale factor", sample.scale_factor);
+  // if (compute_scale_factors)
+  //  scale.setVal(double(n_cands_passed_muon_id)/n_saved_cands);
+  // ws.import(scale);
   ws.writeToFile(file_name.c_str()) ;
 }
 
@@ -586,21 +620,21 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
 }
 
 float get_expected_event_yield(const RooWorkspace& workspace, string name){
-  const Sample* sample(nullptr);
-  for (auto s: samples)
-    if (s.name == name)
-      sample = &s;
-  if (not sample)
-    throw std::runtime_error("Cannot find sample with name: " + name);
-    
-  float cross_section = update_cross_sections ? sample->cross_section : workspace.var(("xsec_"  + name).c_str())->getVal();
-  float scale_factor  = update_scale_factors ? sample->scale_factor : workspace.var(("scale_" + name).c_str())->getVal();
-  float efficiency = workspace.var(("eff_"  + name).c_str())->getVal();
-  return luminosity * cross_section * scale_factor * efficiency;
+  for (auto sample: samples)
+    if (sample.name == name){
+      float cross_section = update_cross_sections ? sample.cross_section : workspace.var(("xsec_"  + name).c_str())->getVal();
+      // float scale_factor  = update_scale_factors ? sample.scale_factor : workspace.var(("scale_" + name).c_str())->getVal();
+      float scale_factor  = sample.scale_factor;
+      float efficiency = workspace.var(("eff_"  + name).c_str())->getVal();
+      // printf("get_expected_event_yield for %s\n\tcross_section: %f\n\tscale_factor: %f\n\tefficiency: %f\n", name.c_str(), cross_section, scale_factor, efficiency);
+      return luminosity * cross_section * scale_factor * efficiency;
+    }
+  throw std::runtime_error("Cannot find sample with name: " + name);
 }
 
 void build_model_1D(RooWorkspace& workspace){
   const char* model_name = "model_1D";
+  printf("Building %s\n", model_name); 
   RooArgList pdfs;
   RooArgList yields;
   auto mass = workspace.var("mass");
@@ -609,7 +643,10 @@ void build_model_1D(RooWorkspace& workspace){
   
   // for (auto& sample: samples){
   for (auto& sample: samples){
+    printf("Processing %s\n", sample.name.c_str()); 
     string pdf_name = "pdf_" + sample.name + "_1D";
+    // printf("sample %s has scale_factor: %f\n", sample.name.c_str(), sample.scale_factor);
+
     if (sample.exclusive){
       auto data = dynamic_cast<const RooDataHist*>(workspace.data(("data_hist_" + sample.name).c_str()));
       if (not data)
@@ -622,6 +659,7 @@ void build_model_1D(RooWorkspace& workspace){
       pdfs.add(*pdf_ptr);
 
       float n_expected = get_expected_event_yield(workspace, sample.name);
+      printf("n_expected: %f\n", n_expected);
       const char* n_name = ("n_" + sample.name).c_str();
       RooRealVar* n = new RooRealVar(n_name, "blah", n_expected, 0., 1e9);
       printf("%s = %f\n", n_name, n->getVal());
@@ -863,6 +901,8 @@ void sensitivity_study(){
   RooWorkspace workspace("study_workspace","");
   for (auto& sample: samples){
     // Process sample
+    // printf("sample %s has scale_factor: %f\n", sample.name.c_str(), sample.scale_factor);
+    
     const RooWorkspace* sample_workspace = process_sample(sample);
     if (pre_processing_only) continue;
 
@@ -871,14 +911,21 @@ void sensitivity_study(){
     if (not sample_data) 
       throw std::runtime_error("RooDataSet \"data\" is missing");
     double n_0 = sample_data->numEntries();
-    if (final_selection != "")
-      sample_data = sample_data->reduce(final_selection.c_str());
+    string selection(final_selection);
+    if (sample.apply_muon_id){
+      if (selection == "")
+	selection = "muonid>=" + to_string(muon_id);
+      else
+	selection = "&&muonid>=" + to_string(muon_id);
+    }
+    if (selection != "")
+      sample_data = sample_data->reduce(selection.c_str());
 
     workspace.import(*sample_data, Rename(("data_" + sample.name).c_str()));
 
     import_var(workspace, *sample_workspace, "eff",   ("eff_"   + sample.name).c_str(), sample_data->numEntries()/n_0);
     import_var(workspace, *sample_workspace, "xsec",  ("xsec_"  + sample.name).c_str());
-    import_var(workspace, *sample_workspace, "scale", ("scale_" + sample.name).c_str());
+    // import_var(workspace, *sample_workspace, "scale", ("scale_" + sample.name).c_str());
 
     RooRealVar* mass = sample_workspace->var("mass");
     if (mass){
