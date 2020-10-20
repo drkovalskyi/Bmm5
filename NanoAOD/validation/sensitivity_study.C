@@ -36,11 +36,16 @@ using namespace std;
 
 // string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_test/";
 // string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_kpi_trigger_0.75/";
-string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_softMvaId_bhh/";
+// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_softMvaId_bhh/";
+// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_softMvaId_bhh_data/";
+// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_softMvaId_bhh_data_mva0.99/";
+// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_softMvaId_bhh_data_mva0.998/";
+string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_softMvaId_data_mva0.996/";
+// string output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/sensitivity_mediumId_bhh/";
 
 // Study parameters
-const bool exclude_bhh = false;
-const bool exclude_data = true;
+const bool exclude_bhh = true;
+const bool exclude_data = false;
 const bool do_bsmm_significance = true;
 // const bool compute_scale_factors = true;    // Compute muon selection efficiency for hadrons
 const bool remake_input_workspaces = false;
@@ -48,6 +53,8 @@ const bool remake_input_workspaces = false;
 const bool update_cross_sections = false;
 const bool produce_2D_conditional_projections = false;
 const bool pre_processing_only = false; // Just produce samples 
+const bool fit_samples = false; // no effect on results, just extra info on plots
+const bool fix_bhh_normalization = false;
 
 // Muon ID
 //
@@ -67,8 +74,8 @@ const bool pre_processing_only = false; // Just produce samples
 const int muon_id = 3; 
 
 // Additional selection requirements applied to RooDatasets
-// const string final_selection = "mva>0.99"; 
-const string final_selection = "";
+const string final_selection = "mva>0.996"; 
+// const string final_selection = "";
 
 // Event preselection parameters
 // 1 - loose, 2 - medium, 3 - mva
@@ -79,8 +86,8 @@ const double mm_mass_blind_min = 5.15;
 const double mm_mass_blind_max = 5.50;
 const double mm_mass_err_min = 0.005;
 const double mm_mass_err_max = 0.100;
-// const double mm_min_mva = 0.5;
-const double mm_min_mva = -1;
+const double mm_min_mva = 0.5;
+// const double mm_min_mva = -1;
 const double trigger_efficiency = 0.6; // applied when sample cannot be used with an explicit trigger requirement
 
 // Running options
@@ -91,7 +98,7 @@ struct Sample{
   string name; 
   vector<string> files;
   float cross_section, scale_factor;
-  bool trigger, truth_match, blind, exclusive, apply_muon_id;
+  bool trigger, truth_match, blind, exclusive, apply_muon_id, bhh;
 };
 
 const float luminosity = 140e3; // [1/pb]
@@ -110,7 +117,7 @@ void add_samples(){
 			  },
 			  2.98E-02, 1.0, 
 			  // trigger, truth_match, blind, exclusive, apply_muon_id
-			  true,  true, false, true, true
+			  true,  true, false, true, true, false
 			});
   samples.push_back(
 			{ "bmm", 
@@ -119,7 +126,7 @@ void add_samples(){
 			  },
 			  3.26E-03, 1.0,
 			  // trigger, truth_match, blind, exclusive, apply_muon_id
-			  true,  true, false, true, true
+			  true,  true, false, true, true, false
 			});
   if (not exclude_data){
     samples.push_back(
@@ -147,7 +154,7 @@ void add_samples(){
 			},
 			1.0, 1.0,
 			// trigger, truth_match, blind, exclusive, apply_muon_id 
-			true,  false, true, false, false
+			true,  false, true, false, false, false
 		      });
   }
   if (not exclude_bhh){
@@ -157,7 +164,8 @@ void add_samples(){
     s.blind = false;
     s.exclusive = true;
     s.apply_muon_id = false;
-
+    s.bhh = true;
+    
     // bkpi
     s.name = "bkpi";
     s.files.clear();
@@ -209,6 +217,24 @@ void add_samples(){
       throw std::runtime_error( "Unsupported muon id" );
     }
     samples.push_back(s);
+
+    // // bppi
+    // s.name = "bppi";
+    // s.files.clear();
+    // s.files.push_back(storage_path + "LambdaBToPPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root");
+
+    // s.cross_section = 1.36E+01; // pb
+    // switch(muon_id){
+    // case 2:
+    //   s.scale_factor = 3e-6; // rough estimate based on other samples
+    //   break;
+    // case 3:
+    //   s.scale_factor = 1e-6; // rough estimate based on other samples
+    //   break;
+    // default:
+    //   throw std::runtime_error( "Unsupported muon id" );
+    // }
+    // samples.push_back(s);
   }
 }
 void print_canvas(string output_name_without_extention, 
@@ -537,6 +563,14 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
     // for (int i=0; i<n; i++)
     //   data->add(*generator.generateEvent(n-i,resample));
 
+    if (fix_bhh_normalization){
+      for (auto sample: samples){
+	if (not sample.bhh) continue;
+	if (auto n = ws.var(("n_" + sample.name).c_str()))
+	  n->setConstant(true);
+      }
+    }
+    
     stop_watch_generate.Stop();
 
     stop_watch_fit.Start(false);
@@ -561,6 +595,7 @@ ToyStudy toy_study(const RooWorkspace& ws_ref, string gen_model_name,
       auto frame = mass->frame() ;
       data->plotOn(frame);
       fit_model->plotOn(frame);
+      fit_model->paramOn(frame);
       frame->Draw();
       print_canvas(plot_name + "_toy" + to_string(i), output_path, gPad);
       if ( gen_observables->find("mass_err") ){
@@ -889,7 +924,7 @@ void sensitivity_study(){
       if (selection == "")
 	selection = "muonid>=" + to_string(muon_id);
       else
-	selection = "&&muonid>=" + to_string(muon_id);
+	selection += "&&muonid>=" + to_string(muon_id);
     }
     if (selection != "")
       sample_data = sample_data->reduce(selection.c_str());
@@ -907,11 +942,13 @@ void sensitivity_study(){
       RooRealVar alpha("alpha", "", 1, 0.1, 10);
       RooRealVar n("n","", 5, 0, 10000);
       MRooCBShape pdf("pdf", "", *mass, mean, sigma, alpha, n);
-      pdf.fitTo(*sample_data);
       RooPlot* frame = mass->frame() ;
       sample_data->plotOn(frame);
-      pdf.plotOn(frame);
-      pdf.paramOn(frame);
+      if (fit_samples) {
+	pdf.fitTo(*sample_data);
+	pdf.plotOn(frame);
+	pdf.paramOn(frame);
+      }
       frame->Draw();
       print_canvas("mass_" + sample.name, output_path, c1);
 
@@ -951,15 +988,15 @@ void sensitivity_study(){
 
   build_model_1D(workspace);
   
-  build_model_2D(workspace);
+  // build_model_2D(workspace);
 
   workspace.Print("V");
 
   // Toy studies
-  unsigned int n_toys = 1000;
+  unsigned int n_toys = 200;
   toy_study(workspace, "model_1D", "model_1D", n_toys);
-  toy_study(workspace, "model_2D_full", "model_2D_cond", n_toys);
-  toy_study(workspace, "model_2D_full", "model_1D", n_toys);
+  // toy_study(workspace, "model_2D_full", "model_2D_cond", n_toys);
+  // toy_study(workspace, "model_2D_full", "model_1D", n_toys);
   // // toy_study(workspace, "model_2D", "model_2D", n_toys);
 
 
