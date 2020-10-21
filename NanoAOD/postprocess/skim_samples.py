@@ -15,13 +15,16 @@ skims = {
     'mm':{
         'cuts':[
             # Trigger like cuts
+            "mm_mu1_index>=0", "mm_mu2_index>=0",
             "abs(Muon_eta[mm_mu1_index])<1.4", "Muon_pt[mm_mu1_index]>4",
             "abs(Muon_eta[mm_mu2_index])<1.4", "Muon_pt[mm_mu2_index]>4",
-            "abs(mm_kin_mass-5.4)<0.5", "mm_kin_sl3d>4", "mm_kin_vtx_chi2dof<5"
+            "mm_kin_mass>4.9", "mm_kin_mass<6.0", "mm_kin_sl3d>4", "mm_kin_vtx_chi2dof<5",
+            "HLT_DoubleMu4_3_Bs"
         ]
     },
     'bkmm':{
         'cuts':[
+            "mm_mu1_index[bkmm_mm_index]>=0", "mm_mu2_index[bkmm_mm_index]>=0",
             "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4", "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4",
             "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4", "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4",
             "mm_kin_sl3d[bkmm_mm_index]>4", "mm_kin_vtx_chi2dof[bkmm_mm_index]<5",
@@ -35,9 +38,9 @@ skims = {
     }
 }
 
-version = 507
+version = 508
 
-output_eos_dir = "/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD-skims/"
+output_eos_dir = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD-skims/"
 
 output_tmp_dir = "/tmp/dmytro/NanoAOD-skims/"
 
@@ -59,88 +62,92 @@ samples = {
    # 'Charmonium+Run2016B_1':{
    #     'file_with_pfns':'lists/Charmonium+Run2016B-17Jul2018_ver1-v1+MINIAOD.txt',
    #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
+   #     'skims':['mm']
    # },
-   # 'Charmonium+Run2016B_2':{
-   #     'file_with_pfns':'lists/Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2016C':{
-   #     'file_with_pfns':'lists/Charmonium+Run2016C-17Jul2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2016D':{
-   #     'file_with_pfns':'lists/Charmonium+Run2016D-17Jul2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2016E':{
-   #     'file_with_pfns':'lists/Charmonium+Run2016E-17Jul2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2016F':{
-   #     'file_with_pfns':'lists/Charmonium+Run2016F-17Jul2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2016G':{
-   #     'file_with_pfns':'lists/Charmonium+Run2016G-17Jul2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2016H':{
-   #     'file_with_pfns':'lists/Charmonium+Run2016H-17Jul2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2017B':{
-   #     'file_with_pfns':'lists/Charmonium+Run2017B-31Mar2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2017C':{
-   #     'file_with_pfns':'lists/Charmonium+Run2017C-31Mar2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2017D':{
-   #    'file_with_pfns':'lists/Charmonium+Run2017D-31Mar2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2017E':{
-   #     'file_with_pfns':'lists/Charmonium+Run2017E-31Mar2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2017F':{
-   #     'file_with_pfns':'lists/Charmonium+Run2017F-31Mar2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2018A':{
-   #     'file_with_pfns':'lists/Charmonium+Run2018A-17Sep2018-v1+MINIAOD.txt',
-   #     'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-   # 'Charmonium+Run2018B':{
-   #      'file_with_pfns':'lists/Charmonium+Run2018B-17Sep2018-v1+MINIAOD.txt',
-   #      'files_per_job':100,
-   #     'skims':['mm', 'bkmm', 'ks']
-   # },
-    # 'Charmonium+Run2018C':{
-    #     'file_with_pfns':'lists/Charmonium+Run2018C-17Sep2018-v1+MINIAOD.txt',
-    #     'files_per_job':100,
-    #     'skims':['mm', 'bkmm', 'ks']
-    # },
-    # 'Charmonium+Run2018D':{
-    #     'file_with_pfns':'lists/Charmonium+Run2018D-PromptReco-v2+MINIAOD.txt',
-    #     'files_per_job':100,
-    #      'skims':['mm', 'bkmm', 'ks']
-    # },
+   'Charmonium+Run2016B_2':{
+       'file_with_pfns':'lists/Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2016C':{
+       'file_with_pfns':'lists/Charmonium+Run2016C-17Jul2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2016D':{
+       'file_with_pfns':'lists/Charmonium+Run2016D-17Jul2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2016E':{
+       'file_with_pfns':'lists/Charmonium+Run2016E-17Jul2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2016F':{
+       'file_with_pfns':'lists/Charmonium+Run2016F-17Jul2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2016G':{
+       'file_with_pfns':'lists/Charmonium+Run2016G-17Jul2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2016H':{
+       'file_with_pfns':'lists/Charmonium+Run2016H-17Jul2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2017B':{
+       'file_with_pfns':'lists/Charmonium+Run2017B-31Mar2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2017C':{
+       'file_with_pfns':'lists/Charmonium+Run2017C-31Mar2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2017D':{
+      'file_with_pfns':'lists/Charmonium+Run2017D-31Mar2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2017E':{
+       'file_with_pfns':'lists/Charmonium+Run2017E-31Mar2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2017F':{
+       'file_with_pfns':'lists/Charmonium+Run2017F-31Mar2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       'skims':['mm']
+   },
+   'Charmonium+Run2018A':{
+       'file_with_pfns':'lists/Charmonium+Run2018A-17Sep2018-v1+MINIAOD.txt',
+       'files_per_job':100,
+       # 'skims':['mm', 'bkmm', 'ks']
+       'skims':['mm']
+   },
+   'Charmonium+Run2018B':{
+        'file_with_pfns':'lists/Charmonium+Run2018B-17Sep2018-v1+MINIAOD.txt',
+        'files_per_job':100,
+       # 'skims':['mm', 'bkmm', 'ks']
+       'skims':['mm']
+   },
+    'Charmonium+Run2018C':{
+        'file_with_pfns':'lists/Charmonium+Run2018C-17Sep2018-v1+MINIAOD.txt',
+        'files_per_job':100,
+        # 'skims':['mm', 'bkmm', 'ks']
+        'skims':['mm']
+    },
+    'Charmonium+Run2018D':{
+        'file_with_pfns':'lists/Charmonium+Run2018D-PromptReco-v2+MINIAOD.txt',
+        'files_per_job':100,
+        # 'skims':['mm', 'bkmm', 'ks']
+         'skims':['mm']
+    },
     # 'BsToMuMu':{
     #     'file_with_pfns':'lists/BsToMuMu_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.txt',
     #     'match':True
@@ -182,21 +189,21 @@ samples = {
     #     'file_with_pfns':'lists/CD_Pt-30toInf_BmmGenFilter-NanoAOD.txt',
     #     'files_per_job':10,
     # }
-    'BuToJpsiK_BMuonFilter_RunIIAutumn18MiniAOD':{
-        'file_with_pfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.txt',
-        'files_per_job':10,
-        'skims':['bkmm','ks']
-    },
-    'BuToJpsiK_BMuonFilter_RunIIFall17MiniAODv2':{
-        'file_with_pfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v3+MINIAODSIM.txt',
-        'files_per_job':10,
-        'skims':['bkmm','ks']
-    },
-    'BuToJpsiK_BMuonFilter_RunIISummer16MiniAODv2':{
-        'file_with_pfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCUEP8M1_13TeV-pythia8-evtgen+RunIISummer16MiniAODv2-PUMoriond17_80X_mcRun2_asymptotic_2016_TrancheIV_v6_ext1-v1+MINIAODSIM.txt',
-        'files_per_job':10,
-        'skims':['bkmm','ks']
-    },
+    # 'BuToJpsiK_BMuonFilter_RunIIAutumn18MiniAOD':{
+    #     'file_with_pfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.txt',
+    #     'files_per_job':10,
+    #     'skims':['bkmm','ks']
+    # },
+    # 'BuToJpsiK_BMuonFilter_RunIIFall17MiniAODv2':{
+    #     'file_with_pfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v3+MINIAODSIM.txt',
+    #     'files_per_job':10,
+    #     'skims':['bkmm','ks']
+    # },
+    # 'BuToJpsiK_BMuonFilter_RunIISummer16MiniAODv2':{
+    #     'file_with_pfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCUEP8M1_13TeV-pythia8-evtgen+RunIISummer16MiniAODv2-PUMoriond17_80X_mcRun2_asymptotic_2016_TrancheIV_v6_ext1-v1+MINIAODSIM.txt',
+    #     'files_per_job':10,
+    #     'skims':['bkmm','ks']
+    # },
 }
 
 def getPFNs(lfns):
@@ -372,15 +379,21 @@ def parallel_process(input_files, files_per_job, skims):
             # the case we can run out of memory using very long job queue.
             for list_file in list_files:
                 if list_file != "":
-                    with open(list_file) as f:
-                        files = []
-                        for entry in f:
-                            file = entry.strip("\n")
-                            if file != "":
-                                assigned_files.append(entry)
-                        if len(job_sets) == 0:
-                            job_sets.append([])
-                        job_sets[0].append(files)
+                    # check if we have valid root file
+                    root_file = re.sub("\.list$", ".root", list_file)
+                    if not _is_good_file(root_file):
+                        print "WARNING: no valid ROOT file is found for %s. Reprocessing" % list_file
+                        subprocess.call("rm -v %s" % list_file, shell=True)
+                    else:
+                        with open(list_file) as f:
+                            files = []
+                            for entry in f:
+                                file = entry.strip("\n")
+                                if file != "":
+                                    assigned_files.append(file)
+                            if len(job_sets) == 0:
+                                job_sets.append([])
+                            job_sets[0].append(files)
 
             print "Number of assigned files: %u" % len(assigned_files)
             if len(job_sets) > 0:
@@ -389,7 +402,9 @@ def parallel_process(input_files, files_per_job, skims):
         for f in input_files:
             if not f in assigned_files:
                 new_files.append(f)
-
+            
+        print "Number of new files: %u" % len(new_files)
+                
         r = len(input_files)/nProcesses
         if r<files_per_job:
             if r>0: 
