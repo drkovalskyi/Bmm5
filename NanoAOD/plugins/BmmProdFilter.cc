@@ -111,6 +111,7 @@ BmmProdFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
   iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder",theTTBuilder_);
   edm::Handle<edm::View<reco::Muon>> muonHandle;
+  iEvent.getByToken(muonToken_, muonHandle);
   auto nMuons = muonHandle->size();
   if ( nMuons > 1 ){
     for (unsigned int i = 0; i < nMuons-1; ++i) {
