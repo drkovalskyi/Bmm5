@@ -4,15 +4,18 @@ from DataFormats.FWLite import Events, Handle
 from ROOT import TFile,TTree,TH1,TROOT,TDirectory,TPad,TCanvas,TColor
 from math import *
 
-output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/muon_fake_sources"
+output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/muon_fake_sources_test"
 dump_info = False
-min_pt = 10
+min_pt = 4
+# muon_id = None
+muon_id = "SoftMvaId"
 
 events = Events (
 	[
 		# '/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/muon_fake_skim.root'
-		'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen_RunIIAutumn18MiniAOD_muon_fake_skim.root',
-		'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/LambdaBToPPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.root'
+		# '/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen_RunIIAutumn18MiniAOD_muon_fake_skim.root',
+		# '/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/LambdaBToPPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.root'
+		'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/test.root'
 	]
 )
 
@@ -38,9 +41,14 @@ def find_parent(cand):
 def isGoodMuon(muon):
 	if not muon.isTrackerMuon(): return False
 	if not muon.isGlobalMuon(): return False
-	if not muon.isLooseMuon(): return False;
+	if not muon.isLooseMuon(): return False
 	if not muon.innerTrack().quality(ROOT.reco.Track.highPurity): return False 
 	if muon.pt() < min_pt or abs(muon.eta()) > 1.4: return False
+	if muon_id:
+		if muon_id == "SoftMvaId":
+			if not muon.passed(ROOT.reco.Muon.SoftMvaId): return False
+		else:
+			raise Exception("Uknown muon_id: %s" % muon_id)
 	return True
 
 def deltaPhi(phi1,phi2):
