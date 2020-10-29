@@ -1,23 +1,61 @@
 import ROOT
-import sys, os
+import sys, os, subprocess
 from DataFormats.FWLite import Events, Handle
 from ROOT import TFile,TTree,TH1,TROOT,TDirectory,TPad,TCanvas,TColor
 from math import *
 
-output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/muon_fake_sources_test"
+# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/muon_fake_sources_bhh_medium"
+# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/muon_fake_sources_bhh_loose"
+output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/muon_fake_sources_bhh_mva"
+# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-508/muon_fake_sources_mu_enriched_loose"
 dump_info = False
 min_pt = 4
 # muon_id = None
 muon_id = "SoftMvaId"
+# muon_id = "MediumId"
 
-events = Events (
-	[
-		# '/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/muon_fake_skim.root'
-		# '/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen_RunIIAutumn18MiniAOD_muon_fake_skim.root',
-		# '/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/LambdaBToPPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.root'
-		'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/test.root'
-	]
-)
+files = []
+
+# find files
+path = "/eos/cms/store/user/dmytro/"
+pds = [
+	# 'JpsiToMuMu_JpsiPt8_TuneCP5_13TeV-pythia8'
+
+	# MuEnriched - lots of data
+	# 'QCD_Pt-20to30_MuEnrichedPt5_TuneCP5_13TeV_pythia8/crab_MuonFakeSkim_QCD_Pt-20to30_MuEnrichedPt5_TuneCP5_13TeV_pythia8_1603447990',
+	# 'QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8/crab_MuonFakeSkim_QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8_1603446796',
+	# 'QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8/crab_MuonFakeSkim_QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8_1603448253',
+	# 'QCD_Pt-80to120_MuEnrichedPt5_TuneCP5_13TeV_pythia8/crab_MuonFakeSkim_QCD_Pt-80to120_MuEnrichedPt5_TuneCP5_13TeV_pythia8_1603448316',
+	# 'QCD_Pt-120to170_MuEnrichedPt5_TuneCP5_13TeV_pythia8/crab_MuonFakeSkim_QCD_Pt-120to170_MuEnrichedPt5_TuneCP5_13TeV_pythia8_1603448633'
+	
+	# # Bhh
+	'BdToKK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/crab_MuonFakeSkim_BdToKK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen_1603710814',
+	'BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/crab_MuonFakeSkim_BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen_1603711796',
+	'BdToPiPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/crab_MuonFakeSkim_BdToPiPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen_1603711442',
+	'BsToKK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/crab_MuonFakeSkim_BsToKK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen_1603711503',
+	'BsToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/crab_MuonFakeSkim_BsToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen_1603731003',
+	'LambdaBToPK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/crab_MuonFakeSkim_LambdaBToPK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen_1603711266',
+	'LambdaBToPPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/crab_MuonFakeSkim_LambdaBToPPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen_1603710918'
+	
+]
+for pd in pds:
+	for f in subprocess.check_output("find %s/%s/ -type f -name '*.root'|grep crab_MuonFakeSkim" % (path, pd), shell=True).split("\n"):
+		if f != "": 
+			files.append(f)
+			# break # use just the first file
+
+print "Number of files: %u" % len(files)
+
+events = Events(files)
+
+# events = Events (
+# 	[
+# 		# '/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/muon_fake_skim.root'
+# 		'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/BdToKPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen_RunIIAutumn18MiniAOD_muon_fake_skim.root',
+# 		'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/LambdaBToPPi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.root'
+# 		# '/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/test/test.root'
+# 	]
+# )
 
 def isAncestor(a,p) :
 	if a == p : 
@@ -47,6 +85,8 @@ def isGoodMuon(muon):
 	if muon_id:
 		if muon_id == "SoftMvaId":
 			if not muon.passed(ROOT.reco.Muon.SoftMvaId): return False
+		elif muon_id == "MediumId":
+			if not muon.passed(ROOT.reco.Muon.CutBasedIdMedium): return False
 		else:
 			raise Exception("Uknown muon_id: %s" % muon_id)
 	return True
@@ -63,6 +103,7 @@ def print_canvas(output_name_without_extention, path, canvas=ROOT.gPad):
     canvas.Print("%s/%s.png"%(path,output_name_without_extention))
     canvas.Print("%s/%s.pdf"%(path,output_name_without_extention))
     canvas.Print("%s/%s.root"%(path,output_name_without_extention))
+    canvas.Print("%s/%s.C"%(path,output_name_without_extention))
 
 fake_types = {
 	211:'pion',
@@ -97,10 +138,16 @@ labelPacked = ("packedGenParticles")
 muonHandle, muonLabel = Handle("std::vector<pat::Muon>"),"slimmedMuons"
 
 h_sim_match = dict()
+h_genid_not_matched = dict()
 h_sim_relative_pt = dict()
 h_sim_relative_pt_type_matched = dict()
+h_sim_relative_pt_wrong_type_matched = dict()
+h_sim_relative_pt_matched_to_other = dict()
 h_sim_decay_rho = dict()
 h_sim_decay_rho_type_matched = dict()
+h_sim_decay_rho_wrong_type_matched = dict()
+h_sim_decay_rho_matched_to_other = dict()
+h_sim_decay_rho_matched_to_other_same_pt = dict()
 for id,name in fake_types.items():
 	h_sim_match[name] = ROOT.TH1D("h_sim_match_%s" % name,
 								  "Muon matching based on simulated hits", 5, 0, 5)
@@ -109,15 +156,60 @@ for id,name in fake_types.items():
 	h_sim_match[name].GetXaxis().SetBinLabel(3, "Muon from Kaon")
 	h_sim_match[name].GetXaxis().SetBinLabel(4, "Muon from Proton")
 	h_sim_match[name].GetXaxis().SetBinLabel(5, "Other")
+	h_sim_match[name].SetFillColor(ROOT.kMagenta)
 
+	h_genid_not_matched[name] = ROOT.TH1D("h_genid_not_matched_%s" % name,
+									"Gen |pdgId| for muons not matched by simulated hits", 350, 0, 350)
+	h_genid_not_matched[name].SetLineColor(ROOT.kBlue)
+	h_genid_not_matched[name].SetLineWidth(2)
+	h_genid_not_matched[name].GetXaxis().SetTitle("|pdgId|")
+	
 	h_sim_relative_pt[name] = ROOT.TH1D("h_sim_relative_pt_%s" % name,
 										"Relative Pt of sim-matched particle", 100, 0, 2)
+	h_sim_relative_pt[name].SetLineColor(ROOT.kBlue)
+	h_sim_relative_pt[name].SetLineWidth(2)
+	h_sim_relative_pt[name].GetXaxis().SetTitle("Pt_{sim}/Pt_{reco}")
 	h_sim_relative_pt_type_matched[name] = ROOT.TH1D("h_sim_relative_pt_type_matched_%s" % name,
 										"Relative Pt of sim particle (type matched)", 100, 0, 2)
+	h_sim_relative_pt_type_matched[name].SetLineColor(ROOT.kBlue)
+	h_sim_relative_pt_type_matched[name].SetLineWidth(2)
+	h_sim_relative_pt_type_matched[name].GetXaxis().SetTitle("Pt_{sim}/Pt_{reco}")
+	h_sim_relative_pt_wrong_type_matched[name] = ROOT.TH1D("h_sim_relative_pt_wrong_type_matched_%s" % name,
+														   "Relative Pt of sim particle (wrong match)", 100, 0, 2)
+	h_sim_relative_pt_wrong_type_matched[name].SetLineColor(ROOT.kBlue)
+	h_sim_relative_pt_wrong_type_matched[name].SetLineWidth(2)
+	h_sim_relative_pt_wrong_type_matched[name].GetXaxis().SetTitle("Pt_{sim}/Pt_{reco}")
+	h_sim_relative_pt_matched_to_other[name] = ROOT.TH1D("h_sim_relative_pt_matched_to_other_%s" % name,
+														   "Relative Pt of sim particle (other match)", 100, 0, 2)
+	h_sim_relative_pt_matched_to_other[name].SetLineColor(ROOT.kBlue)
+	h_sim_relative_pt_matched_to_other[name].SetLineWidth(2)
+	h_sim_relative_pt_matched_to_other[name].GetXaxis().SetTitle("Pt_{sim}/Pt_{reco}")
+
 	h_sim_decay_rho[name] = ROOT.TH1D("h_sim_decay_rho_%s" % name,
 									  "Decay radius", 100, 0, 400)
+	h_sim_decay_rho[name].SetLineColor(ROOT.kBlue)
+	h_sim_decay_rho[name].SetLineWidth(2)
+	h_sim_decay_rho[name].GetXaxis().SetTitle("#rho")
 	h_sim_decay_rho_type_matched[name] = ROOT.TH1D("h_sim_decay_rho_type_matched_%s" % name,
-												   "Decay radius for matched types", 100, 0, 400)
+												   "Decay radius for type matched", 100, 0, 400)
+	h_sim_decay_rho_type_matched[name].SetLineColor(ROOT.kBlue)
+	h_sim_decay_rho_type_matched[name].SetLineWidth(2)
+	h_sim_decay_rho_type_matched[name].GetXaxis().SetTitle("#rho")
+	h_sim_decay_rho_wrong_type_matched[name] = ROOT.TH1D("h_sim_decay_rho_wrong_type_matched_%s" % name,
+												   "Decay radius for matched to wrong type", 100, 0, 400)
+	h_sim_decay_rho_wrong_type_matched[name].SetLineColor(ROOT.kBlue)
+	h_sim_decay_rho_wrong_type_matched[name].SetLineWidth(2)
+	h_sim_decay_rho_wrong_type_matched[name].GetXaxis().SetTitle("#rho")
+	h_sim_decay_rho_matched_to_other[name] = ROOT.TH1D("h_sim_decay_rho_matched_to_other_%s" % name,
+												   "Decay radius for matched to other type", 100, 0, 400)
+	h_sim_decay_rho_matched_to_other[name].SetLineColor(ROOT.kBlue)
+	h_sim_decay_rho_matched_to_other[name].SetLineWidth(2)
+	h_sim_decay_rho_matched_to_other[name].GetXaxis().SetTitle("#rho")
+	h_sim_decay_rho_matched_to_other_same_pt[name] = ROOT.TH1D("h_sim_decay_rho_matched_to_other_same_pt_%s" % name,
+												   "Decay radius for matched to 'other' type with |Pt_sim/Pt_reco-1|<0.05", 100, 0, 400)
+	h_sim_decay_rho_matched_to_other_same_pt[name].SetLineColor(ROOT.kBlue)
+	h_sim_decay_rho_matched_to_other_same_pt[name].SetLineWidth(2)
+	h_sim_decay_rho_matched_to_other_same_pt[name].GetXaxis().SetTitle("#rho")
 	
 # loop over events
 count= 0
@@ -162,6 +254,19 @@ for event in events:
 			if fake_type == get_sim_type(muon):
 				h_sim_relative_pt_type_matched[fake_type].Fill(min(muon.simPt()/p.pt(), 1.999))
 				h_sim_decay_rho_type_matched[fake_type].Fill(min(muon.simProdRho(), 399.999))
+			else:
+				h_sim_relative_pt_wrong_type_matched[fake_type].Fill(min(muon.simPt()/p.pt(), 1.999))
+				h_sim_decay_rho_wrong_type_matched[fake_type].Fill(min(muon.simProdRho(), 399.999))
+				if get_sim_type(muon) == 'other':
+					h_sim_relative_pt_matched_to_other[fake_type].Fill(min(muon.simPt()/p.pt(), 1.999))
+					h_sim_decay_rho_matched_to_other[fake_type].Fill(min(muon.simProdRho(), 399.999))
+					if abs(muon.simPt()/p.pt() - 1) < 0.05:
+						h_sim_decay_rho_matched_to_other_same_pt[fake_type].Fill(min(muon.simProdRho(), 399.999))
+		else:
+			if muon.genParticle():
+				h_genid_not_matched[fake_type].Fill(min(abs(muon.genParticle().pdgId()),399.999))
+			else:
+				h_genid_not_matched[fake_type].Fill(0)
 			
 		interesting_event = True
 		
@@ -232,14 +337,26 @@ c1 = TCanvas("c1", "c1", 800, 800)
 for id,name in fake_types.items():
 	h_sim_match[name].Draw()
 	print_canvas("sim_match_%s" % name, output_path)
+	h_genid_not_matched[name].Draw()
+	print_canvas("h_genid_not_matched_%s" % name, output_path)
 	h_sim_relative_pt[name].Draw()
 	print_canvas("sim_relative_pt_%s" % name, output_path)
 	h_sim_relative_pt_type_matched[name].Draw()
 	print_canvas("sim_relative_pt_type_matched_%s" % name, output_path)
+	h_sim_relative_pt_wrong_type_matched[name].Draw()
+	print_canvas("sim_relative_pt_wrong_type_matched_%s" % name, output_path)
+	h_sim_relative_pt_matched_to_other[name].Draw()
+	print_canvas("sim_relative_pt_matched_to_other_%s" % name, output_path)
 	h_sim_decay_rho[name].Draw()
 	print_canvas("sim_decay_rho_%s" % name, output_path)
 	h_sim_decay_rho_type_matched[name].Draw()
 	print_canvas("h_sim_decay_rho_type_matched_%s" % name, output_path)
+	h_sim_decay_rho_wrong_type_matched[name].Draw()
+	print_canvas("h_sim_decay_rho_wrong_type_matched_%s" % name, output_path)
+	h_sim_decay_rho_matched_to_other[name].Draw()
+	print_canvas("h_sim_decay_rho_matched_to_other_%s" % name, output_path)
+	h_sim_decay_rho_matched_to_other_same_pt[name].Draw()
+	print_canvas("h_sim_decay_rho_matched_to_other_same_pt_%s" % name, output_path)
 
 	
 # Local Variables:
