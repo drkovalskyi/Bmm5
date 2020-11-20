@@ -194,12 +194,15 @@ private:
 
   bool isGoodMuon(const pat::Muon& muon);
   bool isGoodTrack(const pat::PackedCandidate& track);
-  bool isDisplacedTrack(const pat::PackedCandidate& track);
+  bool displacedTrack(const pat::PackedCandidate& track);
   bool isGoodMuonProbe(const pat::PackedCandidate& track);
   bool isGoodPion(const pat::PackedCandidate& track);
   bool isGoodPair(const pat::PackedCandidate& track1,
 		  const pat::PackedCandidate& track2);
     
+  float
+  trackImpactParameterSignificance( const pat::PackedCandidate& track);
+  
   KinematicFitResult 
   vertexWithKinematicFitter(std::vector<const reco::Track*> trks,
 			    std::vector<float> masses);
@@ -300,9 +303,12 @@ bool V0Producer::isGoodTrack(const pat::PackedCandidate& track){
   return true;
 }
 
-bool V0Producer::isDisplacedTrack(const pat::PackedCandidate& track){
-  double sigDxy = track.bestTrack()->dxyError()>0 ? fabs(track.bestTrack()->dxy(*beamSpot_))/track.bestTrack()->dxyError():0.0;
-  return sigDxy > minDisplaceTrackSignificance_;
+float V0Producer::trackImpactParameterSignificance(const pat::PackedCandidate& track){
+  return track.bestTrack()->dxyError()>0 ? fabs(track.bestTrack()->dxy(*beamSpot_))/track.bestTrack()->dxyError():0.0;
+}
+
+bool V0Producer::displacedTrack(const pat::PackedCandidate& track){
+  return trackImpactParameterSignificance(track) > minDisplaceTrackSignificance_;
 }
 
 bool V0Producer::isGoodMuonProbe(const pat::PackedCandidate& track){
@@ -451,8 +457,8 @@ void V0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 	  if ( not isGoodPair(pfCand1,pfCand2) ) continue;
 
 	  // KsToPiPi
-	  if ( not isDisplacedTrack(pfCand1) or 
-	       not isDisplacedTrack(pfCand2) ) continue;
+	  if ( not displacedTrack(pfCand1) or 
+	       not displacedTrack(pfCand2) ) continue;
 
 	  pat::CompositeCandidate ksCand;
 	  ksCand.addDaughter( pfCand1 , "pion1" );
@@ -472,6 +478,8 @@ void V0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 	  ksCand.addUserFloat( "trk2_pt",  pfCand2.pt() );
 	  ksCand.addUserFloat( "trk2_eta", pfCand2.eta() );
 	  ksCand.addUserFloat( "trk2_phi", pfCand2.phi() );
+	  ksCand.addUserFloat( "trk1_sip", trackImpactParameterSignificance(pfCand1) );
+	  ksCand.addUserFloat( "trk2_sip", trackImpactParameterSignificance(pfCand2) );
 	  ksCand.addUserInt( "trk1_mu_index", match_to_muon(pfCand1,*muonHandle));
 	  ksCand.addUserInt( "trk2_mu_index", match_to_muon(pfCand2,*muonHandle));
 
