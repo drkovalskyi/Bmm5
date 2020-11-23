@@ -19,7 +19,7 @@ def merge_psets(*argv):
     return result
 
 V0ForMuonFake = cms.EDProducer(
-    "V0Producer",
+    "BmmV0Producer",
     beamSpot=cms.InputTag("offlineBeamSpot"),
     muonCollection = cms.InputTag("linkedObjects","muons"),
     PFCandCollection = cms.InputTag("packedPFCandidates"),

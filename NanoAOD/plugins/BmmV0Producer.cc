@@ -43,7 +43,7 @@
 #include <algorithm>
 
 // 
-// V0Producer is designed for Bs/d->mumu analysis
+// BmmV0Producer is designed for Bs/d->mumu analysis
 //
 
 typedef reco::Candidate::LorentzVector LorentzVector;
@@ -179,13 +179,13 @@ using namespace std;
 ///                             P L U G I N
 ///////////////////////////////////////////////////////////////////////////
 
-class V0Producer : public edm::EDProducer {
+class BmmV0Producer : public edm::EDProducer {
     
 public:
     
-  explicit V0Producer(const edm::ParameterSet &iConfig);
+  explicit BmmV0Producer(const edm::ParameterSet &iConfig);
     
-  ~V0Producer() override {};
+  ~BmmV0Producer() override {};
     
     
 private:
@@ -203,6 +203,11 @@ private:
   float
   trackImpactParameterSignificance( const pat::PackedCandidate& track);
   
+  pat::CompositeCandidate
+  getKsToPiPi(const edm::Event& iEvent,
+	      const pat::PackedCandidate& pfCand1,
+	      const pat::PackedCandidate& pfCand2);
+
   KinematicFitResult 
   vertexWithKinematicFitter(std::vector<const reco::Track*> trks,
 			    std::vector<float> masses);
@@ -246,7 +251,8 @@ private:
   edm::ESHandle<TransientTrackBuilder> theTTBuilder_;
   edm::ESHandle<MagneticField> bFieldHandle_;
   edm::Handle<edm::View<pat::PackedCandidate>> pfCandHandle_;
-  edm::Handle<reco::VertexCollection> pvHandle_;
+  edm::Handle<std::vector<pat::Muon>> muonHandle_;
+    edm::Handle<reco::VertexCollection> pvHandle_;
 
   const AnalyticalImpactPointExtrapolator* impactPointExtrapolator_;
 
@@ -269,7 +275,7 @@ private:
   double minVtxProb_;
 };
 
-V0Producer::V0Producer(const edm::ParameterSet &iConfig):
+BmmV0Producer::BmmV0Producer(const edm::ParameterSet &iConfig):
 beamSpotToken_( consumes<reco::BeamSpot> ( iConfig.getParameter<edm::InputTag>( "beamSpot" ) ) ),
 beamSpot_(nullptr),
 muonToken_( consumes<std::vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
@@ -296,30 +302,30 @@ minVtxProb_( iConfig.getParameter<double>( "minVtxProb" ) )
     produces<pat::CompositeCandidateCollection>("Ks");
 }
 
-bool V0Producer::isGoodTrack(const pat::PackedCandidate& track){
+bool BmmV0Producer::isGoodTrack(const pat::PackedCandidate& track){
   if (track.charge() == 0 ) return false;
   if ( not track.hasTrackDetails() ) return false;
   if ( not track.bestTrack()->quality(reco::Track::highPurity) ) return false; 
   return true;
 }
 
-float V0Producer::trackImpactParameterSignificance(const pat::PackedCandidate& track){
+float BmmV0Producer::trackImpactParameterSignificance(const pat::PackedCandidate& track){
   return track.bestTrack()->dxyError()>0 ? fabs(track.bestTrack()->dxy(*beamSpot_))/track.bestTrack()->dxyError():0.0;
 }
 
-bool V0Producer::displacedTrack(const pat::PackedCandidate& track){
+bool BmmV0Producer::displacedTrack(const pat::PackedCandidate& track){
   return trackImpactParameterSignificance(track) > minDisplaceTrackSignificance_;
 }
 
-bool V0Producer::isGoodMuonProbe(const pat::PackedCandidate& track){
+bool BmmV0Producer::isGoodMuonProbe(const pat::PackedCandidate& track){
   return fabs(track.eta()) < maxMuonEta_ and track.pt()>minMuonPt_;
 }
 
-bool V0Producer::isGoodPion(const pat::PackedCandidate& track){
+bool BmmV0Producer::isGoodPion(const pat::PackedCandidate& track){
   return fabs(track.eta()) < maxPionEta_ and track.pt()>minPionPt_;
 }
 
-bool V0Producer::isGoodPair(const pat::PackedCandidate& track1,
+bool BmmV0Producer::isGoodPair(const pat::PackedCandidate& track1,
 			    const pat::PackedCandidate& track2){
   return (isGoodMuonProbe(track1) and isGoodPion(track2)) or 
     (isGoodMuonProbe(track2) and isGoodPion(track1));
@@ -342,7 +348,7 @@ namespace {
 }
 
 KinematicFitResult 
-V0Producer::fillKsInfo(pat::CompositeCandidate& ksCand,
+BmmV0Producer::fillKsInfo(pat::CompositeCandidate& ksCand,
 		       const edm::Event& iEvent,
 		       const pat::PackedCandidate & pion1,
 		       const pat::PackedCandidate & pion2) 
@@ -406,7 +412,7 @@ namespace{
   }
 }
 
-void V0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void BmmV0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
     iSetup.get<IdealMagneticFieldRecord>().get(bFieldHandle_);
     iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder",theTTBuilder_);
@@ -419,14 +425,12 @@ void V0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     iEvent.getByToken(beamSpotToken_, beamSpotHandle);
     
     if ( ! beamSpotHandle.isValid() ) {
-        edm::LogError("V0Producer") << "No beam spot available from EventSetup" ;
+        edm::LogError("BmmV0Producer") << "No beam spot available from EventSetup" ;
     }
     
     beamSpot_ = beamSpotHandle.product();
 
-    edm::Handle<std::vector<pat::Muon>> muonHandle;
-    
-    iEvent.getByToken(muonToken_, muonHandle);
+    iEvent.getByToken(muonToken_, muonHandle_);
     iEvent.getByToken(pfCandToken_, pfCandHandle_);
     
     edm::Handle<std::vector<pat::PackedGenParticle> > packedGenParticleHandle;
@@ -437,12 +441,11 @@ void V0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       packedGenParticles_ = nullptr;
     }
 
-    // auto nMuons = muonHandle->size();
+    // auto nMuons = muonHandle_->size();
     auto nPFCands = pfCandHandle_->size();
     
     // Output collection
     auto kss  = std::make_unique<pat::CompositeCandidateCollection>();
-    AddFourMomenta addP4;
 
     // Build V0 candidates first
 
@@ -456,43 +459,21 @@ void V0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 	  if ( not isGoodTrack(pfCand2) ) continue;
 	  if ( not isGoodPair(pfCand1,pfCand2) ) continue;
 
-	  // KsToPiPi
+	  // Look for V0s built from displaced tracks
 	  if ( not displacedTrack(pfCand1) or 
 	       not displacedTrack(pfCand2) ) continue;
 
-	  pat::CompositeCandidate ksCand;
-	  ksCand.addDaughter( pfCand1 , "pion1" );
-	  ksCand.addDaughter( pfCand2 , "pion2" );
-	  addP4.set( ksCand );
-
-	  if ( ksCand.mass() < minKsPreselectMass_ or  
-	       ksCand.mass() > maxKsPreselectMass_ ) continue;
-
 	  auto tt_doca = distanceOfClosestApproach(pfCand1.bestTrack(),
 						   pfCand2.bestTrack());
-	  if ( maxTwoTrackDOCA_>0 and tt_doca > maxTwoTrackDOCA_ ) continue;
-	  ksCand.addUserFloat( "doca", tt_doca);
-	  ksCand.addUserFloat( "trk1_pt",  pfCand1.pt() );
-	  ksCand.addUserFloat( "trk1_eta", pfCand1.eta() );
-	  ksCand.addUserFloat( "trk1_phi", pfCand1.phi() );
-	  ksCand.addUserFloat( "trk2_pt",  pfCand2.pt() );
-	  ksCand.addUserFloat( "trk2_eta", pfCand2.eta() );
-	  ksCand.addUserFloat( "trk2_phi", pfCand2.phi() );
-	  ksCand.addUserFloat( "trk1_sip", trackImpactParameterSignificance(pfCand1) );
-	  ksCand.addUserFloat( "trk2_sip", trackImpactParameterSignificance(pfCand2) );
-	  ksCand.addUserInt( "trk1_mu_index", match_to_muon(pfCand1,*muonHandle));
-	  ksCand.addUserInt( "trk2_mu_index", match_to_muon(pfCand2,*muonHandle));
-
-	  auto ksVtxFit = fillKsInfo(ksCand,iEvent,pfCand1,pfCand2);
+	  if ( maxTwoTrackDOCA_>0 and tt_doca > maxTwoTrackDOCA_ )
+	    continue;
 	  
-	  if ( not ksVtxFit.valid() ) continue;
-	  if ( ksVtxFit.vtxProb() < minVtxProb_) continue;
-	  if ( ksVtxFit.mass() < minKsMass_ or  
-	       ksVtxFit.mass() > maxKsMass_ ) continue;
-	  if ( ksVtxFit.lxy > maxLxy_ ) continue;
-	  if ( ksVtxFit.sigLxy < minSigLxy_ ) continue;
-	  
-	  kss->push_back(ksCand);
+	  // KsToPiPi
+	  auto ksCand = getKsToPiPi(iEvent, pfCand1, pfCand2);
+	  if (ksCand.numberOfDaughters()>0){
+	    ksCand.addUserFloat( "doca", tt_doca);
+	    kss->push_back(ksCand);
+	  }
 	}
       }
     }
@@ -500,8 +481,84 @@ void V0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     iEvent.put(std::move(kss), "Ks");
 }
 
+pat::CompositeCandidate
+BmmV0Producer::getKsToPiPi(const edm::Event& iEvent,
+			   const pat::PackedCandidate& pfCand1,
+			   const pat::PackedCandidate& pfCand2)
+{
+  pat::CompositeCandidate ksCand;
+  ksCand.addDaughter( pfCand1 , "pion1" );
+  ksCand.addDaughter( pfCand2 , "pion2" );
+  AddFourMomenta addP4;
+  addP4.set( ksCand );
+
+  if ( ksCand.mass() < minKsPreselectMass_ or ksCand.mass() > maxKsPreselectMass_ )
+    return pat::CompositeCandidate();
+
+  ksCand.addUserFloat( "trk1_pt",  pfCand1.pt() );
+  ksCand.addUserFloat( "trk1_eta", pfCand1.eta() );
+  ksCand.addUserFloat( "trk1_phi", pfCand1.phi() );
+  ksCand.addUserFloat( "trk2_pt",  pfCand2.pt() );
+  ksCand.addUserFloat( "trk2_eta", pfCand2.eta() );
+  ksCand.addUserFloat( "trk2_phi", pfCand2.phi() );
+  ksCand.addUserFloat( "trk1_sip", trackImpactParameterSignificance(pfCand1) );
+  ksCand.addUserFloat( "trk2_sip", trackImpactParameterSignificance(pfCand2) );
+  ksCand.addUserInt( "trk1_mu_index", match_to_muon(pfCand1,*muonHandle_));
+  ksCand.addUserInt( "trk2_mu_index", match_to_muon(pfCand2,*muonHandle_));
+
+  auto ksVtxFit = fillKsInfo(ksCand,iEvent,pfCand1,pfCand2);
+	  
+  if ( not ksVtxFit.valid()  or 
+       ksVtxFit.vtxProb() < minVtxProb_ or
+       ksVtxFit.mass() < minKsMass_ or  
+       ksVtxFit.mass() > maxKsMass_ or
+       ksVtxFit.lxy > maxLxy_ or 
+       ksVtxFit.sigLxy < minSigLxy_ ) return pat::CompositeCandidate();
+
+  return ksCand;
+}
+
+// pat::CompositeCandidate
+// BmmV0Producer::getD0ToKPi(const edm::Event& iEvent,
+// 		       const pat::PackedCandidate& kaonCand,
+// 		       const pat::PackedCandidate& pion)
+// {
+//   pat::CompositeCandidate d0Cand;
+//   pat::PackedCandidate kaon(kaonCand);
+//   kaon.setMass(kaon_mass_);
+//   d0Cand.addDaughter( kaon , "kaon" );
+//   d0Cand.addDaughter( pion , "pion" );
+//   addP4.set( d0Cand );
+  
+//   if ( d0Cand.mass() < minD0PreselectMass_ or d0Cand.mass() > maxD0PreselectMass_ )
+//     return pat::CompositeCandidate();
+
+//   d0Cand.addUserFloat( "doca", tt_doca);
+//   d0Cand.addUserFloat( "kaon_pt",  kaon.pt() );
+//   d0Cand.addUserFloat( "kaon_eta", kaon.eta() );
+//   d0Cand.addUserFloat( "kaon_phi", kaon.phi() );
+//   d0Cand.addUserFloat( "pion_pt",  pion.pt() );
+//   d0Cand.addUserFloat( "pion_eta", pion.eta() );
+//   d0Cand.addUserFloat( "pion_phi", pion.phi() );
+//   d0Cand.addUserFloat( "kaon_sip", trackImpactParameterSignificance(kaon) );
+//   d0Cand.addUserFloat( "pion_sip", trackImpactParameterSignificance(pion) );
+//   d0Cand.addUserInt( "kaon_mu_index", match_to_muon(kaon, *muonHandle_));
+//   d0Cand.addUserInt( "pion_mu_index", match_to_muon(pion, *muonHandle_));
+
+//   auto d0VtxFit = fillKsInfo(d0Cand,iEvent,kaon,pion);
+	  
+//   if ( not ksVtxFit.valid()  or 
+//        ksVtxFit.vtxProb() < minVtxProb_ or
+//        ksVtxFit.mass() < minKsMass_ or  
+//        ksVtxFit.mass() > maxKsMass_ or
+//        ksVtxFit.lxy > maxLxy_ or 
+//        ksVtxFit.sigLxy < minSigLxy_ ) return pat::CompositeCandidate();
+
+//   return d0Cand;
+// }
+
 KinematicFitResult 
-V0Producer::vertexWithKinematicFitter(std::vector<const reco::Track*> trks,
+BmmV0Producer::vertexWithKinematicFitter(std::vector<const reco::Track*> trks,
 					    std::vector<float> masses)
 {
   // https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideKinematicVertexFit
@@ -550,7 +607,7 @@ V0Producer::vertexWithKinematicFitter(std::vector<const reco::Track*> trks,
 }
 
 
-pair<double,double> V0Producer::computeDCA(const pat::PackedCandidate &kaon,
+pair<double,double> BmmV0Producer::computeDCA(const pat::PackedCandidate &kaon,
                                                  reco::BeamSpot beamSpot){
 
   const reco::TransientTrack trackTT((*(kaon.bestTrack())), &(*bFieldHandle_));
@@ -566,10 +623,20 @@ pair<double,double> V0Producer::computeDCA(const pat::PackedCandidate &kaon,
 }
 namespace{
 
-  bool dr_match(const LorentzVector& reco , const LorentzVector& gen){
-    if (fabs(reco.pt()-gen.pt())/gen.pt()<0.1 and deltaR(reco,gen)<0.02)
-      return true;
-    return false;
+  const pat::PackedGenParticle*
+    gen_match(const std::vector<pat::PackedGenParticle>& packedGenParticles,
+	      const LorentzVector& reco)
+  {
+    const pat::PackedGenParticle* best_match(nullptr);
+    float min_delta = 1e9;
+    for (auto const & gen: packedGenParticles){
+      if (deltaR(reco,gen) > 0.15) continue;
+      float delta = fabs(reco.pt()-gen.pt())/gen.pt();
+      if (delta > min_delta) continue;
+      min_delta = delta;
+      best_match = &gen;
+    }
+    return best_match;
   }
 
   std::vector<unsigned int> 
@@ -650,21 +717,17 @@ namespace{
 
 }
 
-GenKsMatchInfo V0Producer::getGenKsMatchInfo( const pat::PackedCandidate& track1,
-					      const pat::PackedCandidate& track2 )
+GenKsMatchInfo BmmV0Producer::getGenKsMatchInfo( const pat::PackedCandidate& track1,
+						 const pat::PackedCandidate& track2 )
 {
   GenKsMatchInfo result;
   std::vector<const reco::Candidate*> daughters;
-  for (auto const & genParticle: *packedGenParticles_){
-    if (dr_match(track1.p4(),genParticle.p4())){
-      result.mc_trk1 = &genParticle;
-      daughters.push_back(result.mc_trk1);
-    }
-    if (dr_match(track2.p4(),genParticle.p4())){
-      result.mc_trk2 = &genParticle;
-      daughters.push_back(result.mc_trk2);
-    }
-  }
+  result.mc_trk1 = gen_match(*packedGenParticles_, track1.p4());
+  if (result.mc_trk1)
+    daughters.push_back(result.mc_trk1);
+  result.mc_trk2 = gen_match(*packedGenParticles_, track2.p4());
+  if (result.mc_trk2)
+    daughters.push_back(result.mc_trk2);
   if (daughters.size()==2){
     const auto* mother = find_common_ancestor(daughters);
     if (mother) result.match        = mother;
@@ -672,7 +735,7 @@ GenKsMatchInfo V0Producer::getGenKsMatchInfo( const pat::PackedCandidate& track1
   return result;
 }
 
-float V0Producer::distanceOfClosestApproach( const reco::Track* track1,
+float BmmV0Producer::distanceOfClosestApproach( const reco::Track* track1,
 					     const reco::Track* track2)
 {
   TwoTrackMinimumDistance md;
@@ -683,7 +746,7 @@ float V0Producer::distanceOfClosestApproach( const reco::Track* track1,
 }
 
 Measurement1D 
-V0Producer::distanceOfClosestApproach( const reco::Track* track,
+BmmV0Producer::distanceOfClosestApproach( const reco::Track* track,
 					     RefCountedKinematicVertex vertex)
 {
   if (not vertex->vertexIsValid()) return Measurement1D(-1.0,-1.0);
@@ -697,7 +760,7 @@ V0Producer::distanceOfClosestApproach( const reco::Track* track,
 }
 
 Measurement1D 
-V0Producer::distanceOfClosestApproach( const reco::Track* track,
+BmmV0Producer::distanceOfClosestApproach( const reco::Track* track,
 					     const reco::Vertex& vertex)
 {
   VertexDistance3D distance3D;
@@ -710,6 +773,6 @@ V0Producer::distanceOfClosestApproach( const reco::Track* track,
 }
 
 
-DEFINE_FWK_MODULE(V0Producer);
+DEFINE_FWK_MODULE(BmmV0Producer);
 
 //  LocalWords:  vertices

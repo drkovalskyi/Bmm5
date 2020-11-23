@@ -14,7 +14,7 @@ def nanoAOD_customizeBxToMuMu(process):
     return process
 
 def nanoAOD_customizeV0ForMuonFake(process):
-    process.load('Bmm5.NanoAOD.V0ForMuonFake_cff')
+    process.load('Bmm5.NanoAOD.BmmV0ForMuonFake_cff')
     process.load('Bmm5.NanoAOD.UpdateSlimmedMuons_cff')
     # Data 
     process.nanoSequence   = cms.Sequence(process.slimmedMuons + process.nanoSequence + process.V0ForMuonFakeSequence + process.V0ForMuonFakeTables)
