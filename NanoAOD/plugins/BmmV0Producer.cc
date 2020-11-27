@@ -54,6 +54,7 @@ namespace {
   const float mass_err_      = 1.6e-5;
   const float pion_mass_     = 0.139570;
   const float jpsi_mass_     = 3.0969;
+  const float proton_mass_   = 0.9382;
 };
 
 struct KinematicFitResult{
@@ -165,11 +166,11 @@ struct KinematicFitResult{
   
 };
 
-struct GenKsMatchInfo{
+struct GenMatchInfo{
   const pat::PackedGenParticle* mc_trk1;
   const pat::PackedGenParticle* mc_trk2;
   const reco::Candidate*   match;
-  GenKsMatchInfo():mc_trk1(0), mc_trk2(0), match(0)
+  GenMatchInfo():mc_trk1(0), mc_trk2(0), match(0)
   {}
 };
 
@@ -207,6 +208,18 @@ private:
   getKsToPiPi(const edm::Event& iEvent,
 	      const pat::PackedCandidate& pfCand1,
 	      const pat::PackedCandidate& pfCand2);
+  pat::CompositeCandidate
+  getD0ToKPi(const edm::Event& iEvent,
+	     const pat::PackedCandidate& kaonCand,
+	     const pat::PackedCandidate& pion);
+  pat::CompositeCandidate
+  getPhiToKK(const edm::Event& iEvent,
+	     const pat::PackedCandidate& pfCand1,
+	     const pat::PackedCandidate& pfCand2);
+  pat::CompositeCandidate
+  getLambdaToPPi(const edm::Event& iEvent,
+		 const pat::PackedCandidate& pfCand1,
+		 const pat::PackedCandidate& pfCand2);
 
   KinematicFitResult 
   vertexWithKinematicFitter(std::vector<const reco::Track*> trks,
@@ -214,7 +227,7 @@ private:
 
   pair<double,double> computeDCA(const pat::PackedCandidate &kaon,
    				 reco::BeamSpot beamSpot);
-  GenKsMatchInfo getGenKsMatchInfo( const pat::PackedCandidate& track1,
+  GenMatchInfo getGenMatchInfo( const pat::PackedCandidate& track1,
 				    const pat::PackedCandidate& track2);
   // Two track DOCA
   float 
@@ -232,10 +245,12 @@ private:
 			     const reco::Vertex& vertex);
 
   KinematicFitResult 
-  fillKsInfo(pat::CompositeCandidate& ksCand,
-	     const edm::Event& iEvent,
-	     const pat::PackedCandidate & pion1,
-	     const pat::PackedCandidate & pion2); 
+  fillInfo(pat::CompositeCandidate& ksCand,
+	   const edm::Event& iEvent,
+	   const pat::PackedCandidate & cand1,
+	   const pat::PackedCandidate & cand2, 
+	   string cand1_name = "trk1",
+	   string cand2_name = "trk2");
 
   // ----------member data ---------------------------
     
@@ -267,6 +282,18 @@ private:
   double maxKsPreselectMass_;
   double minKsMass_;
   double maxKsMass_;
+  double minPhiPreselectMass_;
+  double maxPhiPreselectMass_;
+  double minPhiMass_;
+  double maxPhiMass_;
+  double minD0PreselectMass_;
+  double maxD0PreselectMass_;
+  double minD0Mass_;
+  double maxD0Mass_;
+  double minLambdaPreselectMass_;
+  double maxLambdaPreselectMass_;
+  double minLambdaMass_;
+  double maxLambdaMass_;
   double maxTwoTrackDOCA_;
   double minDisplaceTrackSignificance_;
   double maxLxy_;
@@ -292,6 +319,18 @@ minKsPreselectMass_(     iConfig.getParameter<double>( "minKsPreselectMass" ) ),
 maxKsPreselectMass_(     iConfig.getParameter<double>( "maxKsPreselectMass" ) ),
 minKsMass_(     iConfig.getParameter<double>( "minKsMass" ) ),
 maxKsMass_(     iConfig.getParameter<double>( "maxKsMass" ) ),
+minPhiPreselectMass_(     iConfig.getParameter<double>( "minPhiPreselectMass" ) ),
+maxPhiPreselectMass_(     iConfig.getParameter<double>( "maxPhiPreselectMass" ) ),
+minPhiMass_(     iConfig.getParameter<double>( "minPhiMass" ) ),
+maxPhiMass_(     iConfig.getParameter<double>( "maxPhiMass" ) ),
+minD0PreselectMass_(     iConfig.getParameter<double>( "minD0PreselectMass" ) ),
+maxD0PreselectMass_(     iConfig.getParameter<double>( "maxD0PreselectMass" ) ),
+minD0Mass_(     iConfig.getParameter<double>( "minD0Mass" ) ),
+maxD0Mass_(     iConfig.getParameter<double>( "maxD0Mass" ) ),
+minLambdaPreselectMass_(     iConfig.getParameter<double>( "minLambdaPreselectMass" ) ),
+maxLambdaPreselectMass_(     iConfig.getParameter<double>( "maxLambdaPreselectMass" ) ),
+minLambdaMass_(     iConfig.getParameter<double>( "minLambdaMass" ) ),
+maxLambdaMass_(     iConfig.getParameter<double>( "maxLambdaMass" ) ),
 maxTwoTrackDOCA_( iConfig.getParameter<double>( "maxTwoTrackDOCA" ) ),
 minDisplaceTrackSignificance_( iConfig.getParameter<double>( "minDisplaceTrackSignificance" ) ),
 maxLxy_( iConfig.getParameter<double>( "maxLxy" ) ),
@@ -300,10 +339,13 @@ minCosAlpha_( iConfig.getParameter<double>( "minCosAlpha" ) ),
 minVtxProb_( iConfig.getParameter<double>( "minVtxProb" ) )
 {
     produces<pat::CompositeCandidateCollection>("Ks");
+    produces<pat::CompositeCandidateCollection>("D0");
+    produces<pat::CompositeCandidateCollection>("Phi");
+    produces<pat::CompositeCandidateCollection>("Lambda");
 }
 
 bool BmmV0Producer::isGoodTrack(const pat::PackedCandidate& track){
-  if (track.charge() == 0 ) return false;
+  if ( track.charge() == 0 ) return false;
   if ( not track.hasTrackDetails() ) return false;
   if ( not track.bestTrack()->quality(reco::Track::highPurity) ) return false; 
   return true;
@@ -348,54 +390,56 @@ namespace {
 }
 
 KinematicFitResult 
-BmmV0Producer::fillKsInfo(pat::CompositeCandidate& ksCand,
-		       const edm::Event& iEvent,
-		       const pat::PackedCandidate & pion1,
-		       const pat::PackedCandidate & pion2) 
+BmmV0Producer::fillInfo(pat::CompositeCandidate& v0Cand,
+			const edm::Event& iEvent,
+			const pat::PackedCandidate & cand1,
+			const pat::PackedCandidate & cand2,
+			string cand1_name,
+			string cand2_name)
 {
   std::vector<const reco::Track*> trks;
   std::vector<float> masses;
-  trks.push_back( pion1.bestTrack() );
-  masses.push_back(pion_mass_);
-  trks.push_back( pion2.bestTrack() );
-  masses.push_back(pion_mass_);
-  auto vtxFit = vertexWithKinematicFitter(trks,masses);
+  trks.push_back(cand1.bestTrack());
+  trks.push_back(cand2.bestTrack());
+  masses.push_back(cand1.mass());
+  masses.push_back(cand2.mass());
+  auto vtxFit = vertexWithKinematicFitter(trks, masses);
   vtxFit.postprocess(*beamSpot_);
 
   // printf("vtxFit (x,y,z): (%7.3f,%7.3f,%7.3f)\n", 
   // 	 vtxFit.refitVertex->position().x(),
   // 	 vtxFit.refitVertex->position().y(),
   // 	 vtxFit.refitVertex->position().z());
-  addFitInfo(ksCand, vtxFit, "kin");
+  addFitInfo(v0Cand, vtxFit, "kin");
   
   if (isMC_){
-    auto gen_tt = getGenKsMatchInfo( pion1, pion2 );
+    auto gen_tt = getGenMatchInfo( cand1, cand2 );
     if (gen_tt.mc_trk1){
-      ksCand.addUserInt(  "gen_trk1_pdgId",   gen_tt.mc_trk1->pdgId() );
-      ksCand.addUserInt(  "gen_trk1_mpdgId",  gen_tt.mc_trk1->numberOfMothers()>0?gen_tt.mc_trk1->mother(0)->pdgId():0 );
-      ksCand.addUserFloat("gen_trk1_pt",      gen_tt.mc_trk1->pt() );
+      v0Cand.addUserInt(  "gen_" + cand1_name + "_pdgId",   gen_tt.mc_trk1->pdgId() );
+      v0Cand.addUserInt(  "gen_" + cand1_name + "_mpdgId",  gen_tt.mc_trk1->numberOfMothers()>0?gen_tt.mc_trk1->mother(0)->pdgId():0 );
+      v0Cand.addUserFloat("gen_" + cand1_name + "_pt",      gen_tt.mc_trk1->pt() );
     } else {
-      ksCand.addUserInt(  "gen_trk1_pdgId",   0 );
-      ksCand.addUserInt(  "gen_trk1_mpdgId",  0 );
-      ksCand.addUserFloat("gen_trk1_pt",      0 );
+      v0Cand.addUserInt(  "gen_" + cand1_name + "_pdgId",   0 );
+      v0Cand.addUserInt(  "gen_" + cand1_name + "_mpdgId",  0 );
+      v0Cand.addUserFloat("gen_" + cand1_name + "_pt",      0 );
     }
     if (gen_tt.mc_trk2){
-      ksCand.addUserInt(  "gen_trk2_pdgId",   gen_tt.mc_trk2->pdgId() );
-      ksCand.addUserInt(  "gen_trk2_mpdgId",  gen_tt.mc_trk2->numberOfMothers()>0?gen_tt.mc_trk2->mother(0)->pdgId():0 );
-      ksCand.addUserFloat("gen_trk2_pt",      gen_tt.mc_trk2->pt() );
+      v0Cand.addUserInt(  "gen_" + cand2_name + "_pdgId",   gen_tt.mc_trk2->pdgId() );
+      v0Cand.addUserInt(  "gen_" + cand2_name + "_mpdgId",  gen_tt.mc_trk2->numberOfMothers()>0?gen_tt.mc_trk2->mother(0)->pdgId():0 );
+      v0Cand.addUserFloat("gen_" + cand2_name + "_pt",      gen_tt.mc_trk2->pt() );
     } else {
-      ksCand.addUserInt(  "gen_trk2_pdgId",   0 );
-      ksCand.addUserInt(  "gen_trk2_mpdgId",  0 );
-      ksCand.addUserFloat("gen_trk2_pt",      0 );
+      v0Cand.addUserInt(  "gen_" + cand2_name + "_pdgId",   0 );
+      v0Cand.addUserInt(  "gen_" + cand2_name + "_mpdgId",  0 );
+      v0Cand.addUserFloat("gen_" + cand2_name + "_pt",      0 );
     }
     if (gen_tt.match){
-      ksCand.addUserFloat("gen_mass",         gen_tt.match->mass() );
-      ksCand.addUserFloat("gen_pt",           gen_tt.match->pt() );
-      ksCand.addUserInt(  "gen_pdgId",        gen_tt.match->pdgId() );
+      v0Cand.addUserFloat("gen_mass",         gen_tt.match->mass() );
+      v0Cand.addUserFloat("gen_pt",           gen_tt.match->pt() );
+      v0Cand.addUserInt(  "gen_pdgId",        gen_tt.match->pdgId() );
     } else {
-      ksCand.addUserFloat("gen_mass",         0 );
-      ksCand.addUserFloat("gen_pt",           0 );
-      ksCand.addUserInt(  "gen_pdgId",        0 );
+      v0Cand.addUserFloat("gen_mass",         0 );
+      v0Cand.addUserFloat("gen_pt",           0 );
+      v0Cand.addUserInt(  "gen_pdgId",        0 );
     }
   }
   return vtxFit;
@@ -446,6 +490,9 @@ void BmmV0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     
     // Output collection
     auto kss  = std::make_unique<pat::CompositeCandidateCollection>();
+    auto d0s  = std::make_unique<pat::CompositeCandidateCollection>();
+    auto phis = std::make_unique<pat::CompositeCandidateCollection>();
+    auto lambdas = std::make_unique<pat::CompositeCandidateCollection>();
 
     // Build V0 candidates first
 
@@ -459,26 +506,61 @@ void BmmV0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 	  if ( not isGoodTrack(pfCand2) ) continue;
 	  if ( not isGoodPair(pfCand1,pfCand2) ) continue;
 
-	  // Look for V0s built from displaced tracks
-	  if ( not displacedTrack(pfCand1) or 
-	       not displacedTrack(pfCand2) ) continue;
-
 	  auto tt_doca = distanceOfClosestApproach(pfCand1.bestTrack(),
 						   pfCand2.bestTrack());
 	  if ( maxTwoTrackDOCA_>0 and tt_doca > maxTwoTrackDOCA_ )
 	    continue;
 	  
+	  // PhiToKK
+	  auto phiCand = getPhiToKK(iEvent, pfCand1, pfCand2);
+	  if (phiCand.numberOfDaughters() > 0){
+	    phiCand.addUserFloat( "doca", tt_doca);
+	    phis->push_back(phiCand);
+	  }
+
+	  // Look for V0s built from displaced tracks
+	  if ( not displacedTrack(pfCand1) or 
+	       not displacedTrack(pfCand2) ) continue;
+
 	  // KsToPiPi
 	  auto ksCand = getKsToPiPi(iEvent, pfCand1, pfCand2);
-	  if (ksCand.numberOfDaughters()>0){
+	  if (ksCand.numberOfDaughters() > 0){
 	    ksCand.addUserFloat( "doca", tt_doca);
 	    kss->push_back(ksCand);
 	  }
+
+	  // D0ToKPi
+	  auto d0Cand1 = getD0ToKPi(iEvent, pfCand1, pfCand2);
+	  if (d0Cand1.numberOfDaughters() > 0){
+	    d0Cand1.addUserFloat( "doca", tt_doca);
+	    d0s->push_back(d0Cand1);
+	  }
+	  auto d0Cand2 = getD0ToKPi(iEvent, pfCand2, pfCand1);
+	  if (d0Cand2.numberOfDaughters() > 0){
+	    d0Cand2.addUserFloat( "doca", tt_doca);
+	    d0s->push_back(d0Cand2);
+	  }
+	  
+	  // LambdaToPPi
+	  auto lambdaCand1 = getLambdaToPPi(iEvent, pfCand1, pfCand2);
+	  if (lambdaCand1.numberOfDaughters() > 0){
+	    lambdaCand1.addUserFloat( "doca", tt_doca);
+	    lambdas->push_back(lambdaCand1);
+	  }
+	  auto lambdaCand2 = getLambdaToPPi(iEvent, pfCand2, pfCand1);
+	  if (lambdaCand2.numberOfDaughters() > 0){
+	    lambdaCand2.addUserFloat( "doca", tt_doca);
+	    lambdas->push_back(lambdaCand2);
+	  }
+
 	}
       }
     }
     
     iEvent.put(std::move(kss), "Ks");
+    iEvent.put(std::move(d0s), "D0");
+    iEvent.put(std::move(phis), "Phi");
+    iEvent.put(std::move(lambdas), "Lambda");
 }
 
 pat::CompositeCandidate
@@ -487,8 +569,8 @@ BmmV0Producer::getKsToPiPi(const edm::Event& iEvent,
 			   const pat::PackedCandidate& pfCand2)
 {
   pat::CompositeCandidate ksCand;
-  ksCand.addDaughter( pfCand1 , "pion1" );
-  ksCand.addDaughter( pfCand2 , "pion2" );
+  ksCand.addDaughter( pfCand1 , "trk1" );
+  ksCand.addDaughter( pfCand2 , "trk2" );
   AddFourMomenta addP4;
   addP4.set( ksCand );
 
@@ -506,7 +588,7 @@ BmmV0Producer::getKsToPiPi(const edm::Event& iEvent,
   ksCand.addUserInt( "trk1_mu_index", match_to_muon(pfCand1,*muonHandle_));
   ksCand.addUserInt( "trk2_mu_index", match_to_muon(pfCand2,*muonHandle_));
 
-  auto ksVtxFit = fillKsInfo(ksCand,iEvent,pfCand1,pfCand2);
+  auto ksVtxFit = fillInfo(ksCand, iEvent, pfCand1, pfCand2);
 	  
   if ( not ksVtxFit.valid()  or 
        ksVtxFit.vtxProb() < minVtxProb_ or
@@ -518,44 +600,123 @@ BmmV0Producer::getKsToPiPi(const edm::Event& iEvent,
   return ksCand;
 }
 
-// pat::CompositeCandidate
-// BmmV0Producer::getD0ToKPi(const edm::Event& iEvent,
-// 		       const pat::PackedCandidate& kaonCand,
-// 		       const pat::PackedCandidate& pion)
-// {
-//   pat::CompositeCandidate d0Cand;
-//   pat::PackedCandidate kaon(kaonCand);
-//   kaon.setMass(kaon_mass_);
-//   d0Cand.addDaughter( kaon , "kaon" );
-//   d0Cand.addDaughter( pion , "pion" );
-//   addP4.set( d0Cand );
+pat::CompositeCandidate
+BmmV0Producer::getD0ToKPi(const edm::Event& iEvent,
+		       const pat::PackedCandidate& kaonCand,
+		       const pat::PackedCandidate& pion)
+{
+  pat::CompositeCandidate d0Cand;
+  pat::PackedCandidate kaon(kaonCand);
+  kaon.setMass(kaon_mass_);
+  d0Cand.addDaughter( kaon , "kaon" );
+  d0Cand.addDaughter( pion , "pion" );
+  AddFourMomenta addP4;
+  addP4.set( d0Cand );
   
-//   if ( d0Cand.mass() < minD0PreselectMass_ or d0Cand.mass() > maxD0PreselectMass_ )
-//     return pat::CompositeCandidate();
+  if ( d0Cand.mass() < minD0PreselectMass_ or d0Cand.mass() > maxD0PreselectMass_ )
+    return pat::CompositeCandidate();
 
-//   d0Cand.addUserFloat( "doca", tt_doca);
-//   d0Cand.addUserFloat( "kaon_pt",  kaon.pt() );
-//   d0Cand.addUserFloat( "kaon_eta", kaon.eta() );
-//   d0Cand.addUserFloat( "kaon_phi", kaon.phi() );
-//   d0Cand.addUserFloat( "pion_pt",  pion.pt() );
-//   d0Cand.addUserFloat( "pion_eta", pion.eta() );
-//   d0Cand.addUserFloat( "pion_phi", pion.phi() );
-//   d0Cand.addUserFloat( "kaon_sip", trackImpactParameterSignificance(kaon) );
-//   d0Cand.addUserFloat( "pion_sip", trackImpactParameterSignificance(pion) );
-//   d0Cand.addUserInt( "kaon_mu_index", match_to_muon(kaon, *muonHandle_));
-//   d0Cand.addUserInt( "pion_mu_index", match_to_muon(pion, *muonHandle_));
+  d0Cand.addUserFloat( "kaon_pt",  kaon.pt() );
+  d0Cand.addUserFloat( "kaon_eta", kaon.eta() );
+  d0Cand.addUserFloat( "kaon_phi", kaon.phi() );
+  d0Cand.addUserFloat( "pion_pt",  pion.pt() );
+  d0Cand.addUserFloat( "pion_eta", pion.eta() );
+  d0Cand.addUserFloat( "pion_phi", pion.phi() );
+  d0Cand.addUserFloat( "kaon_sip", trackImpactParameterSignificance(kaon) );
+  d0Cand.addUserFloat( "pion_sip", trackImpactParameterSignificance(pion) );
+  d0Cand.addUserInt( "kaon_mu_index", match_to_muon(kaon, *muonHandle_));
+  d0Cand.addUserInt( "pion_mu_index", match_to_muon(pion, *muonHandle_));
 
-//   auto d0VtxFit = fillKsInfo(d0Cand,iEvent,kaon,pion);
+  auto d0VtxFit = fillInfo(d0Cand, iEvent, kaon, pion, "kaon", "pion");
 	  
-//   if ( not ksVtxFit.valid()  or 
-//        ksVtxFit.vtxProb() < minVtxProb_ or
-//        ksVtxFit.mass() < minKsMass_ or  
-//        ksVtxFit.mass() > maxKsMass_ or
-//        ksVtxFit.lxy > maxLxy_ or 
-//        ksVtxFit.sigLxy < minSigLxy_ ) return pat::CompositeCandidate();
+  if ( not d0VtxFit.valid()  or 
+       d0VtxFit.vtxProb() < minVtxProb_ or
+       d0VtxFit.mass() < minD0Mass_ or  
+       d0VtxFit.mass() > maxD0Mass_ or
+       d0VtxFit.lxy > maxLxy_ or 
+       d0VtxFit.sigLxy < minSigLxy_ ) return pat::CompositeCandidate();
 
-//   return d0Cand;
-// }
+  return d0Cand;
+}
+
+pat::CompositeCandidate
+BmmV0Producer::getPhiToKK(const edm::Event& iEvent,
+			  const pat::PackedCandidate& ipfCand1,
+			  const pat::PackedCandidate& ipfCand2)
+{
+  pat::CompositeCandidate phiCand;
+  pat::PackedCandidate pfCand1(ipfCand1);
+  pfCand1.setMass(kaon_mass_);
+  pat::PackedCandidate pfCand2(ipfCand2);
+  pfCand2.setMass(kaon_mass_);
+  phiCand.addDaughter( pfCand1 , "trk1" );
+  phiCand.addDaughter( pfCand2 , "trk2" );
+  AddFourMomenta addP4;
+  addP4.set( phiCand );
+
+  if ( phiCand.mass() < minPhiPreselectMass_ or phiCand.mass() > maxPhiPreselectMass_ )
+    return pat::CompositeCandidate();
+
+  phiCand.addUserFloat( "trk1_pt",  pfCand1.pt() );
+  phiCand.addUserFloat( "trk1_eta", pfCand1.eta() );
+  phiCand.addUserFloat( "trk1_phi", pfCand1.phi() );
+  phiCand.addUserFloat( "trk2_pt",  pfCand2.pt() );
+  phiCand.addUserFloat( "trk2_eta", pfCand2.eta() );
+  phiCand.addUserFloat( "trk2_phi", pfCand2.phi() );
+  phiCand.addUserFloat( "trk1_sip", trackImpactParameterSignificance(pfCand1) );
+  phiCand.addUserFloat( "trk2_sip", trackImpactParameterSignificance(pfCand2) );
+  phiCand.addUserInt( "trk1_mu_index", match_to_muon(pfCand1,*muonHandle_));
+  phiCand.addUserInt( "trk2_mu_index", match_to_muon(pfCand2,*muonHandle_));
+
+  auto ksVtxFit = fillInfo(phiCand, iEvent, pfCand1, pfCand2);
+	  
+  if ( not ksVtxFit.valid()  or 
+       ksVtxFit.vtxProb() < minVtxProb_ or
+       ksVtxFit.mass() < minPhiMass_ or  
+       ksVtxFit.mass() > maxPhiMass_ ) return pat::CompositeCandidate();
+
+  return phiCand;
+}
+
+pat::CompositeCandidate
+BmmV0Producer::getLambdaToPPi(const edm::Event& iEvent,
+			   const pat::PackedCandidate& protonCand,
+			   const pat::PackedCandidate& pion)
+{
+  pat::CompositeCandidate lambdaCand;
+  pat::PackedCandidate proton( protonCand );
+  proton.setMass( proton_mass_ );
+  lambdaCand.addDaughter( proton, "proton" );
+  lambdaCand.addDaughter( pion, "pion" );
+  AddFourMomenta addP4;
+  addP4.set( lambdaCand );
+
+  if ( lambdaCand.mass() < minLambdaPreselectMass_ or lambdaCand.mass() > maxLambdaPreselectMass_ )
+    return pat::CompositeCandidate();
+
+  lambdaCand.addUserFloat( "proton_pt",  proton.pt() );
+  lambdaCand.addUserFloat( "proton_eta", proton.eta() );
+  lambdaCand.addUserFloat( "proton_phi", proton.phi() );
+  lambdaCand.addUserFloat( "pion_pt",  pion.pt() );
+  lambdaCand.addUserFloat( "pion_eta", pion.eta() );
+  lambdaCand.addUserFloat( "pion_phi", pion.phi() );
+  lambdaCand.addUserFloat( "proton_sip", trackImpactParameterSignificance(proton) );
+  lambdaCand.addUserFloat( "pion_sip", trackImpactParameterSignificance(pion) );
+  lambdaCand.addUserInt( "proton_mu_index", match_to_muon(proton,*muonHandle_));
+  lambdaCand.addUserInt( "pion_mu_index", match_to_muon(pion,*muonHandle_));
+
+  auto ksVtxFit = fillInfo(lambdaCand, iEvent, proton, pion, "proton", "pion");
+	  
+  if ( not ksVtxFit.valid()  or 
+       ksVtxFit.vtxProb() < minVtxProb_ or
+       ksVtxFit.mass() < minLambdaMass_ or  
+       ksVtxFit.mass() > maxLambdaMass_ or
+       ksVtxFit.lxy > maxLxy_ or 
+       ksVtxFit.sigLxy < minSigLxy_
+       ) return pat::CompositeCandidate();
+
+  return lambdaCand;
+}
 
 KinematicFitResult 
 BmmV0Producer::vertexWithKinematicFitter(std::vector<const reco::Track*> trks,
@@ -717,10 +878,10 @@ namespace{
 
 }
 
-GenKsMatchInfo BmmV0Producer::getGenKsMatchInfo( const pat::PackedCandidate& track1,
-						 const pat::PackedCandidate& track2 )
+GenMatchInfo BmmV0Producer::getGenMatchInfo( const pat::PackedCandidate& track1,
+					     const pat::PackedCandidate& track2 )
 {
-  GenKsMatchInfo result;
+  GenMatchInfo result;
   std::vector<const reco::Candidate*> daughters;
   result.mc_trk1 = gen_match(*packedGenParticles_, track1.p4());
   if (result.mc_trk1)
