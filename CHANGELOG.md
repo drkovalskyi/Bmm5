@@ -2,6 +2,15 @@
 
 ## New developments
 
+## [NanoAODv6-V10] - 2020/11/27
+
+### Added
+	- Added D0ToKPi, LambdaToPPi and PhiToKK for muon fake studies
+	- Added track impact parameter for V0
+	
+### Modified
+	- MC matching for V0 is modified to inmprobe matching efficiency 
+
 ## [NanoAODv6-V09] - 2020/08/21
 
 ### Fixed
