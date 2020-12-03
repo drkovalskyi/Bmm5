@@ -565,10 +565,14 @@ void BmmV0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
 pat::CompositeCandidate
 BmmV0Producer::getKsToPiPi(const edm::Event& iEvent,
-			   const pat::PackedCandidate& pfCand1,
-			   const pat::PackedCandidate& pfCand2)
+			   const pat::PackedCandidate& ipfCand1,
+			   const pat::PackedCandidate& ipfCand2)
 {
   pat::CompositeCandidate ksCand;
+  pat::PackedCandidate pfCand1(ipfCand1);
+  pfCand1.setMass(pion_mass_);
+  pat::PackedCandidate pfCand2(ipfCand2);
+  pfCand2.setMass(pion_mass_);
   ksCand.addDaughter( pfCand1 , "trk1" );
   ksCand.addDaughter( pfCand2 , "trk2" );
   AddFourMomenta addP4;
@@ -602,12 +606,14 @@ BmmV0Producer::getKsToPiPi(const edm::Event& iEvent,
 
 pat::CompositeCandidate
 BmmV0Producer::getD0ToKPi(const edm::Event& iEvent,
-		       const pat::PackedCandidate& kaonCand,
-		       const pat::PackedCandidate& pion)
+		       const pat::PackedCandidate& ikaon,
+		       const pat::PackedCandidate& ipion)
 {
   pat::CompositeCandidate d0Cand;
-  pat::PackedCandidate kaon(kaonCand);
+  pat::PackedCandidate kaon(ikaon);
   kaon.setMass(kaon_mass_);
+  pat::PackedCandidate pion(ipion);
+  pion.setMass(pion_mass_);
   d0Cand.addDaughter( kaon , "kaon" );
   d0Cand.addDaughter( pion , "pion" );
   AddFourMomenta addP4;
@@ -680,12 +686,14 @@ BmmV0Producer::getPhiToKK(const edm::Event& iEvent,
 
 pat::CompositeCandidate
 BmmV0Producer::getLambdaToPPi(const edm::Event& iEvent,
-			   const pat::PackedCandidate& protonCand,
-			   const pat::PackedCandidate& pion)
+			   const pat::PackedCandidate& iproton,
+			   const pat::PackedCandidate& ipion)
 {
   pat::CompositeCandidate lambdaCand;
-  pat::PackedCandidate proton( protonCand );
+  pat::PackedCandidate proton( iproton );
   proton.setMass( proton_mass_ );
+  pat::PackedCandidate pion( ipion );
+  proton.setMass( pion_mass_ );
   lambdaCand.addDaughter( proton, "proton" );
   lambdaCand.addDaughter( pion, "pion" );
   AddFourMomenta addP4;
