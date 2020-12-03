@@ -64,9 +64,10 @@ struct KinematicFitResult{
   RefCountedKinematicParticle    refitMother;
   RefCountedKinematicTree        refitTree;
   std::vector<RefCountedKinematicParticle> refitDaughters;
-  float lxy, lxyErr, sigLxy, cosAlpha;
+  float lxy, lxyErr, sigLxy, cosAlpha, ip, ipSig;
   KinematicFitResult():treeIsValid(false),vertexIsValid(false),
-		       lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0), cosAlpha(-999.)
+		       lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0), cosAlpha(-999.),
+		       ip(-999.), ipSig(-999)
   {}
 
   bool valid() const {
@@ -105,6 +106,9 @@ struct KinematicFitResult{
     w[1] = refitMother->currentState().globalMomentum().y();
     cosAlpha = v*w/sqrt(v.Norm2Sqr()*w.Norm2Sqr());
 
+    // comput impact parameter
+    auto transientTrack = refitMother->refittedTransientTrack();
+    ipSig = transientTrack.stateAtBeamLine().transverseImpactParameter().significance();
   }
   
   float mass() const
@@ -383,6 +387,7 @@ namespace {
     cand.addUserFloat( name+"_lxy",         fit.lxy );
     cand.addUserFloat( name+"_sigLxy",      fit.sigLxy );
     cand.addUserFloat( name+"_cosAlphaXY",  fit.cosAlpha );
+    cand.addUserFloat( name+"_sipBS",       fit.ipSig );
     cand.addUserFloat( name+"_pt",          fit.p3().perp() );
     cand.addUserFloat( name+"_eta",         fit.p3().eta() );
     cand.addUserFloat( name+"_phi",         fit.p3().phi() );
