@@ -64,17 +64,18 @@ struct KinematicFitResult{
   RefCountedKinematicParticle    refitMother;
   RefCountedKinematicTree        refitTree;
   std::vector<RefCountedKinematicParticle> refitDaughters;
-  float lxy, lxyErr, sigLxy, cosAlpha, ip, ipSig;
+  float lxy, lxyErr, sigLxy, cosAlpha, ipSigBS, ipSigPV;
   KinematicFitResult():treeIsValid(false),vertexIsValid(false),
 		       lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0), cosAlpha(-999.),
-		       ip(-999.), ipSig(-999)
+		       ipSigBS(999.), ipSigPV(999.)
   {}
 
   bool valid() const {
     return treeIsValid and vertexIsValid;
   }
 
-  void postprocess(const reco::BeamSpot& beamSpot)
+  void postprocess(const reco::BeamSpot& beamSpot,
+		   const reco::VertexCollection& vertices)
   {
     if ( not valid() ) return;
     // displacement information
@@ -108,7 +109,15 @@ struct KinematicFitResult{
 
     // comput impact parameter
     auto transientTrack = refitMother->refittedTransientTrack();
-    ipSig = transientTrack.stateAtBeamLine().transverseImpactParameter().significance();
+    ipSigBS = transientTrack.stateAtBeamLine().transverseImpactParameter().significance();
+
+    ipSigPV = 999.;
+    for (const auto& vertex: vertices){
+      auto impactParameter3D = IPTools::absoluteImpactParameter3D(transientTrack, vertex);
+      if (impactParameter3D.first)
+	if (ipSigPV > impactParameter3D.second.significance())
+	  ipSigPV = impactParameter3D.second.significance();
+    }
   }
   
   float mass() const
@@ -262,6 +271,8 @@ private:
   const reco::BeamSpot* beamSpot_;
 
   edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
+  const reco::VertexCollection* primaryVertices_;
+
   edm::EDGetTokenT<std::vector<pat::Muon>> muonToken_;
   edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandToken_;
   edm::EDGetTokenT<std::vector<pat::PackedGenParticle> >   packedGenToken_;
@@ -271,7 +282,6 @@ private:
   edm::ESHandle<MagneticField> bFieldHandle_;
   edm::Handle<edm::View<pat::PackedCandidate>> pfCandHandle_;
   edm::Handle<std::vector<pat::Muon>> muonHandle_;
-    edm::Handle<reco::VertexCollection> pvHandle_;
 
   const AnalyticalImpactPointExtrapolator* impactPointExtrapolator_;
 
@@ -309,6 +319,8 @@ private:
 BmmV0Producer::BmmV0Producer(const edm::ParameterSet &iConfig):
 beamSpotToken_( consumes<reco::BeamSpot> ( iConfig.getParameter<edm::InputTag>( "beamSpot" ) ) ),
 beamSpot_(nullptr),
+vertexToken_( consumes<reco::VertexCollection> ( iConfig.getParameter<edm::InputTag>( "vertexCollection" ) ) ),
+primaryVertices_(nullptr),
 muonToken_( consumes<std::vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
 pfCandToken_( consumes<edm::View<pat::PackedCandidate>> ( iConfig.getParameter<edm::InputTag>( "PFCandCollection" ) ) ),
 packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( iConfig.getParameter<edm::InputTag>( "packedGenParticleCollection" ) ) ),
@@ -387,7 +399,8 @@ namespace {
     cand.addUserFloat( name+"_lxy",         fit.lxy );
     cand.addUserFloat( name+"_sigLxy",      fit.sigLxy );
     cand.addUserFloat( name+"_cosAlphaXY",  fit.cosAlpha );
-    cand.addUserFloat( name+"_sipBS",       fit.ipSig );
+    cand.addUserFloat( name+"_sipBS",       fit.ipSigBS );
+    cand.addUserFloat( name+"_sipPV",       fit.ipSigPV );
     cand.addUserFloat( name+"_pt",          fit.p3().perp() );
     cand.addUserFloat( name+"_eta",         fit.p3().eta() );
     cand.addUserFloat( name+"_phi",         fit.p3().phi() );
@@ -409,7 +422,7 @@ BmmV0Producer::fillInfo(pat::CompositeCandidate& v0Cand,
   masses.push_back(cand1.mass());
   masses.push_back(cand2.mass());
   auto vtxFit = vertexWithKinematicFitter(trks, masses);
-  vtxFit.postprocess(*beamSpot_);
+  vtxFit.postprocess(*beamSpot_, *primaryVertices_);
 
   // printf("vtxFit (x,y,z): (%7.3f,%7.3f,%7.3f)\n", 
   // 	 vtxFit.refitVertex->position().x(),
@@ -470,15 +483,16 @@ void BmmV0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     impactPointExtrapolator_ = &extrapolator;
 
     edm::Handle<reco::BeamSpot> beamSpotHandle;
-    
     iEvent.getByToken(beamSpotToken_, beamSpotHandle);
-    
     if ( ! beamSpotHandle.isValid() ) {
         edm::LogError("BmmV0Producer") << "No beam spot available from EventSetup" ;
     }
-    
     beamSpot_ = beamSpotHandle.product();
 
+    edm::Handle<reco::VertexCollection> pvHandle;
+    iEvent.getByToken(vertexToken_, pvHandle);
+    primaryVertices_ = pvHandle.product();
+    
     iEvent.getByToken(muonToken_, muonHandle_);
     iEvent.getByToken(pfCandToken_, pfCandHandle_);
     
