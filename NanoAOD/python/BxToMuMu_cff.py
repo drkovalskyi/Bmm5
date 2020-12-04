@@ -103,10 +103,16 @@ kinematic_pset = cms.PSet(
     kin_tauxy    = Var("userFloat('kin_tauxy')",       float, doc = "Kinematic fit: decay time wrt Primary Vertex in XY"),
     kin_tauxye   = Var("userFloat('kin_tauxye')",      float, doc = "Kinematic fit: decay time error wrt Primary Vertex in XY"),
     kin_pvip     = Var("userFloat('kin_pvip')",        float, doc = "Kinematic fit: impact parameter wrt Primary Vertex in 3D"),
-    kin_pvipErr  = Var("userFloat('kin_pvipErr')",  float, doc = "Kinematic fit: impact parameter uncertainty wrt Primary Vertex in 3D"),
+    kin_pvipSig  = Var("userFloat('kin_pvipSig')",     float, doc = "Kinematic fit: impact parameter significance wrt Primary Vertex in 3D"),
+    kin_pvipErr  = Var("userFloat('kin_pvipErr')",     float, doc = "Kinematic fit: impact parameter uncertainty wrt Primary Vertex in 3D"),
+    kin_pv2ip    = Var("userFloat('kin_pv2ip')",       float, doc = "Kinematic fit: impact parameter wrt Second best Primary Vertex in 3D"),
+    kin_pv2ipSig = Var("userFloat('kin_pv2ipSig')",    float, doc = "Kinematic fit: impact parameter significance wrt Second best Primary Vertex in 3D"),
+    kin_pv2ipErr = Var("userFloat('kin_pv2ipErr')",    float, doc = "Kinematic fit: impact parameter uncertainty wrt Second best Primary Vertex in 3D"),
     kin_pvlip    = Var("userFloat('kin_pvlip')",       float, doc = "Kinematic fit: longitudinal impact parameter wrt Primary Vertex"),
+    kin_pvlipSig = Var("userFloat('kin_pvlipSig')",    float, doc = "Kinematic fit: longitudinal impact parameter significance wrt Primary Vertex"),
     kin_pvlipErr = Var("userFloat('kin_pvlipErr')",    float, doc = "Kinematic fit: longitudinal impact parameter uncertainty wrt Primary Vertex"),
     kin_pv2lip   = Var("userFloat('kin_pv2lip')",       float, doc = "Kinematic fit: longitudinal impact parameter wrt Second best Primary Vertex"),
+    kin_pv2lipSig = Var("userFloat('kin_pv2lipSig')",    float, doc = "Kinematic fit: longitudinal impact parameter significance wrt Second best Primary Vertex"),
     kin_pv2lipErr = Var("userFloat('kin_pv2lipErr')",    float, doc = "Kinematic fit: longitudinal impact parameter uncertainty wrt Second best Primary Vertex"),
 )
 

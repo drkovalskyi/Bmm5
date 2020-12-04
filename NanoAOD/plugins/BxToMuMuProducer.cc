@@ -206,21 +206,22 @@ struct KalmanVertexFitResult{
 
 struct DisplacementInformationIn3D{
   double decayLength, decayLengthErr, decayLength2, decayLength2Err, 
-    distaceOfClosestApproach, distaceOfClosestApproachErr, 
-    distaceOfClosestApproach2, distaceOfClosestApproach2Err, 
-    longitudinalImpactParameter, longitudinalImpactParameterErr,
-    longitudinalImpactParameter2, longitudinalImpactParameter2Err,
-    cosAlpha,cosAlphaXY,decayTime,decayTimeError,decayTimeXY,decayTimeXYError;
+    distaceOfClosestApproach, distaceOfClosestApproachErr, distaceOfClosestApproachSig,
+    distaceOfClosestApproach2, distaceOfClosestApproach2Err, distaceOfClosestApproach2Sig,
+    longitudinalImpactParameter, longitudinalImpactParameterErr, longitudinalImpactParameterSig,
+    longitudinalImpactParameter2, longitudinalImpactParameter2Err,longitudinalImpactParameter2Sig,
+    cosAlpha, cosAlphaXY, decayTime, decayTimeError, decayTimeXY, decayTimeXYError;
   const reco::Vertex *pv,*pv2;
   int pvIndex,pv2Index;
-  DisplacementInformationIn3D():decayLength(-1.0),decayLengthErr(0.),decayLength2(-1.0),decayLength2Err(0.),
-				distaceOfClosestApproach(-1.0),distaceOfClosestApproachErr(0.0),
-				distaceOfClosestApproach2(-1.0),distaceOfClosestApproach2Err(0.0),
-				longitudinalImpactParameter2(0.0), longitudinalImpactParameter2Err(0.), 
-				cosAlpha(-999.),cosAlphaXY(-999.),decayTime(-999.),decayTimeError(-999.),
-				decayTimeXY(-999.),decayTimeXYError(-999.),
-				pv(0),pv2(0),
-				pvIndex(-1),pv2Index(-1)
+  DisplacementInformationIn3D():decayLength(-1.0), decayLengthErr(0.), decayLength2(-1.0), decayLength2Err(0.),
+				distaceOfClosestApproach(-1.0), distaceOfClosestApproachErr(0.0), distaceOfClosestApproachSig(0.0),
+				distaceOfClosestApproach2(-1.0), distaceOfClosestApproach2Err(0.0), distaceOfClosestApproach2Sig(0.0),
+				longitudinalImpactParameter(0.0), longitudinalImpactParameterErr(0.), longitudinalImpactParameterSig(0.),
+				longitudinalImpactParameter2(0.0), longitudinalImpactParameter2Err(0.), longitudinalImpactParameter2Sig(0.),
+				cosAlpha(-999.), cosAlphaXY(-999.), decayTime(-999.), decayTimeError(-999.),
+				decayTimeXY(-999.), decayTimeXYError(-999.),
+				pv(0), pv2(0),
+				pvIndex(-1), pv2Index(-1)
   {};
 };
 
@@ -673,10 +674,16 @@ namespace {
     cand.addUserFloat( name+"_pv_z",        displacement3d.pv?displacement3d.pv->position().z():0);
     cand.addUserFloat( name+"_pv_zErr",     displacement3d.pv?displacement3d.pv->zError():0);
     cand.addUserFloat( name+"_pvip",        displacement3d.distaceOfClosestApproach);
+    cand.addUserFloat( name+"_pvipSig",     displacement3d.distaceOfClosestApproachSig);
     cand.addUserFloat( name+"_pvipErr",     displacement3d.distaceOfClosestApproachErr);
+    cand.addUserFloat( name+"_pv2ip",       displacement3d.distaceOfClosestApproach2);
+    cand.addUserFloat( name+"_pv2ipSig",    displacement3d.distaceOfClosestApproach2Sig);
+    cand.addUserFloat( name+"_pv2ipErr",    displacement3d.distaceOfClosestApproach2Err);
     cand.addUserFloat( name+"_pvlip",       displacement3d.longitudinalImpactParameter);
+    cand.addUserFloat( name+"_pvlipSig",    displacement3d.longitudinalImpactParameterSig);
     cand.addUserFloat( name+"_pvlipErr",    displacement3d.longitudinalImpactParameterErr);
     cand.addUserFloat( name+"_pv2lip",      displacement3d.longitudinalImpactParameter2);
+    cand.addUserFloat( name+"_pv2lipSig",   displacement3d.longitudinalImpactParameter2Sig);
     cand.addUserFloat( name+"_pv2lipErr",   displacement3d.longitudinalImpactParameter2Err);
     cand.addUserInt(   name+"_pvIndex",     displacement3d.pvIndex);
 
@@ -2276,10 +2283,12 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
   result.pvIndex = bestVertexIndex;
   if (impactParameterZ.first) {
     result.longitudinalImpactParameter    = impactParameterZ.second.value();
+    result.longitudinalImpactParameterSig = impactParameterZ.second.significance();
     result.longitudinalImpactParameterErr = impactParameterZ.second.error();
   }
   if (impactParameter3D.first) {
     result.distaceOfClosestApproach       = impactParameter3D.second.value();
+    result.distaceOfClosestApproachSig    = impactParameter3D.second.value();
     result.distaceOfClosestApproachErr    = impactParameter3D.second.error();
   }
 
@@ -2299,10 +2308,12 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
     result.pv2Index = bestVertexIndex2;
     if (impactParameterZ2.first) {
       result.longitudinalImpactParameter2    = impactParameterZ2.second.value();
+      result.longitudinalImpactParameter2Sig = impactParameterZ2.second.significance();
       result.longitudinalImpactParameter2Err = impactParameterZ2.second.error();
     }
     if (impactParameter3D2.first) {
       result.distaceOfClosestApproach2       = impactParameter3D2.second.value();
+      result.distaceOfClosestApproach2Sig    = impactParameter3D2.second.value();
       result.distaceOfClosestApproach2Err    = impactParameter3D2.second.error();
     }
 
