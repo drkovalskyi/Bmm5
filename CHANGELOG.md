@@ -2,14 +2,23 @@
 
 ## New developments
 
+## [NanoAODv6-V11] - 2020/12/04
+
+### Added
+	- V0 impact parameter info
+	- extra impact parameter info for B candidates
+
+### Fixed
+	- enforce PF candidate mass hypothesis in V0 candidates
+
 ## [NanoAODv6-V10] - 2020/11/27
 
 ### Added
 	- Added D0ToKPi, LambdaToPPi and PhiToKK for muon fake studies
 	- Added track impact parameter for V0
-	
+
 ### Modified
-	- MC matching for V0 is modified to inmprobe matching efficiency 
+	- MC matching for V0 is modified to inmprobe matching efficiency
 
 ## [NanoAODv6-V09] - 2020/08/21
 
@@ -19,7 +28,7 @@
 ## [NanoAODv6-V08] - 2020/08/06
 
 ### Added
-	- Injected hadrons from relevant exclusive decays into good muon candidates to study muon fakes. This may break some old code since muon index for hadron is a negative number and cannot be used to reference a muon unless it was reconstructed as a muon 
+	- Injected hadrons from relevant exclusive decays into good muon candidates to study muon fakes. This may break some old code since muon index for hadron is a negative number and cannot be used to reference a muon unless it was reconstructed as a muon
 	- Added gen summary for all relevant exclusive backgrounds
 	- Added a few variables
 ### Modified

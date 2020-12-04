@@ -7,7 +7,7 @@ peformance of NanoAOD production in various configurations
 #### Average Time Per Event (sec)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| NanoAODv6-V10 |                    | 0.167   | 0.207         | 0.335              | 
+| NanoAODv6-V10 | 509                | 0.167   | 0.207         | 0.335              | 
 | NanoAODv6-V08 | 508                | 0.148   | 0.163         | 0.291              | 
 | NanoAODv6-V07 | 507                | 0.150   | 0.161         | 0.270              |
 | NanoAODv6-V05 | 505                | 0.148   | 0.159         | -                  |
@@ -15,7 +15,7 @@ peformance of NanoAOD production in various configurations
 #### Size per event (KiB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| NanoAODv6-V10 |                    | 3.56    | 4.12          | 4.16               | 
+| NanoAODv6-V10 | 509                | 3.56    | 4.12          | 4.16               | 
 | NanoAODv6-V08 | 508                | 3.48    | 4.02          | 4.03               | 
 | NanoAODv6-V07 | 507                | 3.48    | 3.98          | 3.99               |
 | NanoAODv6-V05 | 505                | 3.48    | 3.89          | -                  |
@@ -39,7 +39,7 @@ peformance of NanoAOD production in various configurations
 #### Size per event (KiB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| NanoAODv6-V10 | -                  | 4.03    | 5.13          | 5.18               | 
+| NanoAODv6-V10 | 509                  | 4.03    | 5.13          | 5.18               | 
 | NanoAODv6-V08 | 508                | 3.94    | 5.01          | 5.02               | 
 | NanoAODv6-V07 | 507                | 3.94    | 4.95          | 4.96               |
 | NanoAODv6-V05 | 505                | 3.94    | 4.85          | -                  |
