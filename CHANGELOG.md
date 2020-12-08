@@ -2,6 +2,11 @@
 
 ## New developments
 
+## [NanoAODv6-V12] - 2020/12/08
+
+### Fixed
+	- bug fix in Lambda reconstruction
+
 ## [NanoAODv6-V11] - 2020/12/04
 
 ### Added
