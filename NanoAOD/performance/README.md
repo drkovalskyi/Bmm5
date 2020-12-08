@@ -7,7 +7,7 @@ peformance of NanoAOD production in various configurations
 #### Average Time Per Event (sec)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| NanoAODv6-V11 | 510                | 0.170   | 0.202         | 0.326              | 
+| NanoAODv6-V12 | 510                | 0.170   | 0.202         | 0.326              | 
 | NanoAODv6-V10 | 509                | 0.167   | 0.207         | 0.335              | 
 | NanoAODv6-V08 | 508                | 0.148   | 0.163         | 0.291              | 
 | NanoAODv6-V07 | 507                | 0.150   | 0.161         | 0.270              |
@@ -16,7 +16,7 @@ peformance of NanoAOD production in various configurations
 #### Size per event (KiB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| NanoAODv6-V11 | 510                | 3.56    | 4.16          | 4.21               | 
+| NanoAODv6-V12 | 510                | 3.56    | 4.16          | 4.21               | 
 | NanoAODv6-V10 | 509                | 3.56    | 4.12          | 4.16               | 
 | NanoAODv6-V08 | 508                | 3.48    | 4.02          | 4.03               | 
 | NanoAODv6-V07 | 507                | 3.48    | 3.98          | 3.99               |
@@ -33,7 +33,7 @@ peformance of NanoAOD production in various configurations
 #### Average Time Per Event (sec)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| NanoAODv6-V11 | 510                | 0.186   | 0.266         | 0.379              | 
+| NanoAODv6-V12 | 510                | 0.186   | 0.266         | 0.379              | 
 | NanoAODv6-V10 | 509                | 0.155   | 0.285         | 0.386              | 
 | NanoAODv6-V08 | 508                | 0.128   | 0.208         | 0.298              | 
 | NanoAODv6-V07 | 507                | 0.126   | 0.193         | 0.311              |
@@ -42,7 +42,7 @@ peformance of NanoAOD production in various configurations
 #### Size per event (KiB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| NanoAODv6-V11 | 510                | 4.03    | 5.26          | 5.32               | 
+| NanoAODv6-V12 | 510                | 4.03    | 5.26          | 5.32               | 
 | NanoAODv6-V10 | 509                | 4.03    | 5.13          | 5.18               | 
 | NanoAODv6-V08 | 508                | 3.94    | 5.01          | 5.02               | 
 | NanoAODv6-V07 | 507                | 3.94    | 4.95          | 4.96               |
