@@ -712,7 +712,7 @@ BmmV0Producer::getLambdaToPPi(const edm::Event& iEvent,
   pat::PackedCandidate proton( iproton );
   proton.setMass( proton_mass_ );
   pat::PackedCandidate pion( ipion );
-  proton.setMass( pion_mass_ );
+  pion.setMass( pion_mass_ );
   lambdaCand.addDaughter( proton, "proton" );
   lambdaCand.addDaughter( pion, "pion" );
   AddFourMomenta addP4;
