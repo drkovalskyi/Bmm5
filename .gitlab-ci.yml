@@ -4,7 +4,7 @@ stages:
 cmssw_compile:
   stage: build
   only:
-    - master
+    - gitlab-ci
   tags:
     - cvmfs
   variables:
