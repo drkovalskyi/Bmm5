@@ -19,7 +19,11 @@ cmssw_compile:
     - cmsenv
     - git cms-init --upstream-only
     - git cms-addpkg PhysicsTools/NanoAOD
-    - git clone https://github.com/drkovalskyi/Bmm5.git --branch NanoAODv6-V12
+    - mkdir -p Bmm5
+    - mv ${BUILD_DIR}/GenFragments Bmm5
+    - mv ${BUILD_DIR}/MCProduction Bmm5
+    - mv ${BUILD_DIR}/MVA Bmm5
+    - mv ${BUILD_DIR}/NanoAOD Bmm5
     - scram setup Bmm5/NanoAOD/external-tools/rabit.xml
     - scram setup Bmm5/NanoAOD/external-tools/xgboost.xml
     - scram b
