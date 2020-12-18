@@ -1,0 +1,26 @@
+stages:
+  - build
+
+cmssw_compile:
+  stage: build
+  only:
+    - master
+  tags:
+    - cvmfs
+  variables:
+    CMS_PATH: /cvmfs/cms.cern.ch
+    CMSSW_RELEASE: CMSSW_10_2_18
+  script:
+    - set -ex
+    - shopt -s expand_aliases
+    - set +u && source ${CMS_PATH}/cmsset_default.sh; set -u
+    - cmsrel ${CMSSW_RELEASE}
+    - cd ${CMSSW_RELEASE}/src
+    - cmsenv
+    - git cms-init --upstream-only
+    - git cms-addpkg PhysicsTools/NanoAOD
+    - git clone https://github.com/drkovalskyi/Bmm5.git --branch NanoAODv6-V12
+    - scram setup Bmm5/NanoAOD/external-tools/rabit.xml
+    - scram setup Bmm5/NanoAOD/external-tools/xgboost.xml
+    - scram b
+
