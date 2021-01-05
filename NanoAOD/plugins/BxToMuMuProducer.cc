@@ -1301,7 +1301,6 @@ BxToMuMuProducer::injectHadronsThatMayFakeMuons(std::vector<MuonCand>& good_muon
 }
 
 void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-
     iSetup.get<IdealMagneticFieldRecord>().get(bFieldHandle_);
     iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder",theTTBuilder_);
 
@@ -1661,8 +1660,15 @@ BxToMuMuProducer::fitBToKJPsiMuMu( RefCountedKinematicParticle refitMuMu,
   float kaonMassErr(KaonMassErr_);
   BToKMuMuParticles.push_back(partFactory.particle(kaonTT,KaonMass_,chi,ndf,kaonMassErr));
 
-  RefCountedKinematicTree vertexFitTree = fitter.fit(BToKMuMuParticles);
   KinematicFitResult result; 
+  RefCountedKinematicTree vertexFitTree;
+  try {
+    vertexFitTree = fitter.fit(BToKMuMuParticles);
+  } catch (const std::exception& e) {
+    std::cout << "Exception: " << e.what() << std::endl;
+    std::cout << "Fit failed. Result is invalid." << std::endl;
+    return result;
+  }
 
   if ( !vertexFitTree->isValid()) return result;
 
@@ -1721,7 +1727,14 @@ BxToMuMuProducer::fitBToKJPsiMuMuNew( RefCountedKinematicTree jpsiTree,
   float kaonMassErr(KaonMassErr_);
   BToKMuMuParticles.push_back(partFactory.particle(kaonTT,KaonMass_,chi,ndf,kaonMassErr));
 
-  RefCountedKinematicTree vertexFitTree = fitter.fit(BToKMuMuParticles);
+  RefCountedKinematicTree vertexFitTree;
+  try {
+    vertexFitTree = fitter.fit(BToKMuMuParticles);
+  } catch (const std::exception& e) {
+    std::cout << "Exception: " << e.what() << std::endl;
+    std::cout << "Fit failed. Result is invalid." << std::endl;
+    return result;
+  }
 
   if ( !vertexFitTree->isValid()) return result;
 
