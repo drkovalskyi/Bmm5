@@ -2,6 +2,11 @@
 
 ## New developments
 
+## [NanoAODv6-V13] - 2021/01/05
+
+### Fixed
+	- catch std::exceptions during fitting and mark fit as invalid
+
 ## [NanoAODv6-V12] - 2020/12/08
 
 ### Fixed
