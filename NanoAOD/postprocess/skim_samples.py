@@ -11,6 +11,28 @@ import hashlib
 from functools import partial
 import shutil
 
+
+version = 510
+
+output_eos_dir = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD-skims/"
+# output_eos_dir = "/user/dmytro/NanoAOD-skims/"
+
+output_tmp_dir = "/tmp/dmytro/NanoAOD-skims/"
+# output_tmp_dir = "/user/dmytro/tmp/"
+
+nProcesses = 16
+
+force_recreation = False
+
+single_thread = False # debuging mode
+
+# Access mode for LFNs
+#
+# fuse - eos fuse mount
+# xrootd - direct access to eoscms
+# AAA - remote access via global redirector
+access_mode = "xrootd"
+
 skims = {
     'mm':{
         'cuts':[
@@ -35,23 +57,24 @@ skims = {
         'cuts':[
             "ks_kin_cosAlphaXY>0.98"
         ]
-    }
+    },
+    'phi':{
+        'cuts':[
+            "phi_kin_mass>0"
+        ]
+    },
+    'd0':{
+        'cuts':[
+            "d0_kin_mass>0"
+        ]
+    },
+    'lambda':{
+        'cuts':[
+            "lambda_kin_mass>0"
+        ]
+    },
+
 }
-
-version = 508
-
-output_eos_dir = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD-skims/"
-
-output_tmp_dir = "/tmp/dmytro/NanoAOD-skims/"
-
-nProcesses = 16
-
-force_recreation = False
-
-single_thread = False # debuging mode
-
-# access data by LFN via global redirector
-use_xrootd = False
 
 # Input can be provided for each samples in the following formats:
 # - 'file_with_lfns' - file name containing input logical file names
@@ -60,147 +83,148 @@ use_xrootd = False
 # - 'pfns'           - list of input physical file names
 samples = {
    # 'Charmonium+Run2016B_1':{
-   #     'file_with_pfns':'lists/Charmonium+Run2016B-17Jul2018_ver1-v1+MINIAOD.txt',
+   #     'file_with_lfns':'lists/Charmonium+Run2016B-17Jul2018_ver1-v1+MINIAOD.txt',
    #     'files_per_job':100,
    #     'skims':['mm']
    # },
    'Charmonium+Run2016B_2':{
-       'file_with_pfns':'lists/Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2016C':{
-       'file_with_pfns':'lists/Charmonium+Run2016C-17Jul2018-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2016C-17Jul2018-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2016D':{
-       'file_with_pfns':'lists/Charmonium+Run2016D-17Jul2018-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2016D-17Jul2018-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2016E':{
-       'file_with_pfns':'lists/Charmonium+Run2016E-17Jul2018-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2016E-17Jul2018-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2016F':{
-       'file_with_pfns':'lists/Charmonium+Run2016F-17Jul2018-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2016F-17Jul2018-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2016G':{
-       'file_with_pfns':'lists/Charmonium+Run2016G-17Jul2018-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2016G-17Jul2018-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2016H':{
-       'file_with_pfns':'lists/Charmonium+Run2016H-17Jul2018-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2016H-17Jul2018-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2017B':{
-       'file_with_pfns':'lists/Charmonium+Run2017B-31Mar2018-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2017B-31Mar2018-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2017C':{
-       'file_with_pfns':'lists/Charmonium+Run2017C-31Mar2018-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2017C-31Mar2018-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2017D':{
-      'file_with_pfns':'lists/Charmonium+Run2017D-31Mar2018-v1+MINIAOD.txt',
+      'file_with_lfns':'lists/Charmonium+Run2017D-31Mar2018-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2017E':{
-       'file_with_pfns':'lists/Charmonium+Run2017E-31Mar2018-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2017E-31Mar2018-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2017F':{
-       'file_with_pfns':'lists/Charmonium+Run2017F-31Mar2018-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2017F-31Mar2018-v1+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2018A':{
-       'file_with_pfns':'lists/Charmonium+Run2018A-17Sep2018-v1+MINIAOD.txt',
+       'file_with_lfns':'lists/Charmonium+Run2018A-17Sep2018-v1+MINIAOD.txt',
        'files_per_job':100,
        # 'skims':['mm', 'bkmm', 'ks']
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
    'Charmonium+Run2018B':{
-        'file_with_pfns':'lists/Charmonium+Run2018B-17Sep2018-v1+MINIAOD.txt',
+        'file_with_lfns':'lists/Charmonium+Run2018B-17Sep2018-v1+MINIAOD.txt',
         'files_per_job':100,
        # 'skims':['mm', 'bkmm', 'ks']
-       'skims':['mm']
+       'skims':['ks','d0','phi','lambda']
    },
     'Charmonium+Run2018C':{
-        'file_with_pfns':'lists/Charmonium+Run2018C-17Sep2018-v1+MINIAOD.txt',
+        'file_with_lfns':'lists/Charmonium+Run2018C-17Sep2018-v1+MINIAOD.txt',
         'files_per_job':100,
         # 'skims':['mm', 'bkmm', 'ks']
-        'skims':['mm']
+        'skims':['ks','d0','phi','lambda']
     },
     'Charmonium+Run2018D':{
-        'file_with_pfns':'lists/Charmonium+Run2018D-PromptReco-v2+MINIAOD.txt',
+        'file_with_lfns':'lists/Charmonium+Run2018D-PromptReco-v2+MINIAOD.txt',
         'files_per_job':100,
         # 'skims':['mm', 'bkmm', 'ks']
-         'skims':['mm']
+         'skims':['ks','d0','phi','lambda']
     },
     # 'BsToMuMu':{
-    #     'file_with_pfns':'lists/BsToMuMu_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.txt',
+    #     'file_with_lfns':'lists/BsToMuMu_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.txt',
     #     'match':True
     # },
     # 'BsToMuMu_BMuonFilter_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt',
+    #     'file_with_lfns':'lists/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt',
     #     'files_per_job':10,
-    #     'skims':['mm','ks']
+    #     'skims':['ks','d0','phi','lambda']
     # },
     # 'BsToMuMu_BMuonFilter_RunIIFall17MiniAODv2':{
-    #     'file_with_pfns':'lists/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM.txt',
+    #     'file_with_lfns':'lists/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM.txt',
     #     'files_per_job':10,
+    #     'skims':['ks','d0','phi','lambda']
     # },
     # 'QCD_HT100to200_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/QCD_HT100to200_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
+    #     'file_with_lfns':'lists/QCD_HT100to200_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
     # },
     # 'QCD_HT50to100_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/MVA/QCD_HT50to100_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
+    #     'file_with_lfns':'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/MVA/QCD_HT50to100_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
     # },
     # 'QCD_HT100to200_BGenFilter_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/MVA/QCD_HT100to200_BGenFilter_TuneCP5_13TeV-madgraph-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
+    #     'file_with_lfns':'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/MVA/QCD_HT100to200_BGenFilter_TuneCP5_13TeV-madgraph-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
     # },
     # 'QCD_HT200to300_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/MVA/QCD_HT200to300_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
+    #     'file_with_lfns':'/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/MVA/QCD_HT200to300_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
     # },
     # 'QCD_Pt-80to120_MuEnrichedPt5_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/QCD_Pt-80to120_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v2+MINIAODSIM.txt',
+    #     'file_with_lfns':'lists/QCD_Pt-80to120_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v2+MINIAODSIM.txt',
     # },
     # 'QCD_Pt-30to50_MuEnrichedPt5_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM.txt',
+    #     'file_with_lfns':'lists/QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM.txt',
     # },
     # 'QCD_Pt-50to80_MuEnrichedPt5_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM.txt',
+    #     'file_with_lfns':'lists/QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM.txt',
     # },
     # 'QCD_Pt-30to50_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/QCD_Pt_30to50_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
+    #     'file_with_lfns':'lists/QCD_Pt_30to50_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM.txt'
     # },
     # 'QCD_Pt-30toInf_BmmGenFilter':{
-    #     'file_with_pfns':'lists/CD_Pt-30toInf_BmmGenFilter-NanoAOD.txt',
+    #     'file_with_lfns':'lists/CD_Pt-30toInf_BmmGenFilter-NanoAOD.txt',
     #     'files_per_job':10,
     # }
     # 'BuToJpsiK_BMuonFilter_RunIIAutumn18MiniAOD':{
-    #     'file_with_pfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.txt',
+    #     'file_with_lfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.txt',
     #     'files_per_job':10,
     #     'skims':['bkmm','ks']
     # },
     # 'BuToJpsiK_BMuonFilter_RunIIFall17MiniAODv2':{
-    #     'file_with_pfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v3+MINIAODSIM.txt',
+    #     'file_with_lfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v3+MINIAODSIM.txt',
     #     'files_per_job':10,
     #     'skims':['bkmm','ks']
     # },
     # 'BuToJpsiK_BMuonFilter_RunIISummer16MiniAODv2':{
-    #     'file_with_pfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCUEP8M1_13TeV-pythia8-evtgen+RunIISummer16MiniAODv2-PUMoriond17_80X_mcRun2_asymptotic_2016_TrancheIV_v6_ext1-v1+MINIAODSIM.txt',
+    #     'file_with_lfns':'lists/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCUEP8M1_13TeV-pythia8-evtgen+RunIISummer16MiniAODv2-PUMoriond17_80X_mcRun2_asymptotic_2016_TrancheIV_v6_ext1-v1+MINIAODSIM.txt',
     #     'files_per_job':10,
     #     'skims':['bkmm','ks']
     # },
@@ -210,17 +234,18 @@ def getPFNs(lfns):
     """Get physical file name from the logical ones"""
     files = []
     for file in lfns:
-        if not input_is_LFNs:
-            files.append(file)
-        else:
-            if use_xrootd:
-                files.append("root://cms-xrd-global.cern.ch/%s"%file)
+        if access_mode == "AAA":
+            files.append("root://cms-xrd-global.cern.ch/%s"%file)
+        elif access_mode == "fuse":
+            fullpath = "/eos/cms/" + file
+            if os.path.exists(fullpath):
+                files.append(fullpath)
             else:
-                fullpath = "/eos/cms/" + file
-                if os.path.exists(fullpath):
-                    files.append(fullpath)
-                else:
-                    raise Exception("File not found: %s" % fullpath)
+                raise Exception("File not found: %s" % fullpath)
+        elif access_mode == "xrootd":
+            files.append("root://eoscms.cern.ch://eos/cms%s"%file)
+        else:
+            raise Exception("Unsupport access mode: %s" % access_mode)
     return files
 
 def chunks(input_list, n, m):
@@ -286,7 +311,7 @@ def get_output_dir(path, file, skim):
     match = re.search("\/([^\/]+)\/[^\/]+$",file)
     if match:
         subdir = match.group(1)
-    return "%s/%s/%s/%s" % (path, skim, version, subdir)
+    return "%s/%s/%s/%s" % (path, version, skim, subdir)
 
 
 def process_job(input_files, skim):
@@ -357,6 +382,7 @@ def parallel_process(input_files, files_per_job, skims):
     queue_depth = 10 # keep it small to avoid memory leaks
 
     for skim in skims:
+        print "Skim name: %s" % skim
         new_files = []
         skim_output_eos_dir = get_output_dir(output_eos_dir, input_files[0], skim)
 
@@ -439,7 +465,7 @@ for sample,info in samples.items():
             for pfn in f:
                 input_files.append(pfn.strip())
     elif 'file_with_lfns' in info:
-        with open(info['file_with_pfns']) as f:
+        with open(info['file_with_lfns']) as f:
             for lfn in f:
                 input_files.append(lfn.strip())
         input_files = getPFNs(input_files)
