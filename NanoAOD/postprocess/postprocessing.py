@@ -10,6 +10,7 @@ import shutil
 import postprocessing_cfg as cfg
 from pprint import pprint
 import hashlib
+import fcntl
 
 class Processor:
     """Base class for processors"""
@@ -127,42 +128,84 @@ class ResourceHandler:
     def name(self):
         pass
 
+    def get_running_jobs(self):
+        raise Exception("Not implemented")
+
+    def number_of_running_jobs(self):
+        return len(self.get_running_jobs())
+
 class SSHResourceHandler(ResourceHandler):
     """Resource handler for ssh-based job execution"""
     def __init__(self, site, max_number_of_jobs_running):
         self.site = site
         self.max_njobs = max_number_of_jobs_running
+        self.proc = subprocess.Popen("ssh -T -x %s 'bash -l'" % site,
+                                     shell=True,
+                                     stdin  = subprocess.PIPE,
+                                     stdout = subprocess.PIPE
+                                     )
+        # prepare working area
+        self._send_command_and_get_response("""
+        cd /afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/postprocess
+        eval `scramv1 runtime -sh`
+        """)
+        
+    def _non_block_read(self):
+        fd = self.proc.stdout.fileno()
+        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+        try:
+            return self.proc.stdout.read()
+        except:
+            return ""
 
+    def _send_command_and_get_response(self, command):
+        end_of_transmission = "end_of_transmission"
+
+        # send command with the end of transimission echo
+        self.proc.stdin.write(command)
+        self.proc.stdin.write("echo '%s'\n" % end_of_transmission)
+        self.proc.stdin.flush()
+
+        response = ""
+        while True:
+            line = self._non_block_read()
+            if line:
+                response += line
+                if re.search(end_of_transmission, line):
+                    break
+        # remove end_of_transmission_pattern
+        return response.rsplit("\n",2)[0]
+        
+        
+    def check_server_status(self):
+        # need to check if the server is responding properly within given amount of time
+        pass
+    
+        
     def submit_job(self, job_filename):
         path = cfg.workdir
         log = re.sub('\.job$', '\.log', job_filename)
-        command = "ssh %s '(cd %s; cmsenv; aklog; python remote_job_starter.py %s %s >& %s) >& /dev/null &'"
+        command = "nohup python remote_job_starter.py %s %s &> %s &\n" % (self._processor_name(job_filename),
+                                                                    job_filename, log)
         print "submitting %s" % job_filename
-        subprocess.call(command % (self.site, path, self._processor_name(job_filename),
-                                   job_filename, log),
-                        shell=True)
             
-        # print "Connecting to %s" % self.site
-        # process = subprocess.Popen("ssh -T %s" % self.site, shell=True,
-        #                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
-        # if process:
-        #     out, err = process.communicate("""
-        #     cd /afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/postprocess
-        #     cmsenv
-        #     aklog
-        #     tokens >& /tmp/dmytro/tokens.log
-        #     python submission_test.py %s %s >& /eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.log &
-        #     """ % (processor_name, job_filename))
-        #     print out
+        print self._send_command_and_get_response(command)
 
-    def number_of_running_jobs(self):
-        command = "ssh %s \"ps -Af | grep '[r]emote_job_starter.py'|wc -l\"" % self.site
-        code, response = commands.getstatusoutput(command)
-        if code not in [0, 256]:
-            # 256 is 1 from grep when it doesn't match
-            raise Exception("Exit code: %s for command:\n%s" % (code, command))
-        return int(response)
-        
+    def get_running_jobs(self):
+        jobs = []
+        response = self._send_command_and_get_response("ps -Af | grep '[r]emote_job_starter.py'\n")
+        for line in response.splitlines():
+            match = re.search('(\S+\.job)', line)
+            if match:
+                jobs.append(match.group(1))
+        return jobs
+
+    def wait_for_all_jobs_completion(self):
+        time.sleep(10)
+        while self.number_of_running_jobs()>0:
+            time.sleep(5)
+    
     def number_of_free_slots(self):
         n = self.max_njobs - self.number_of_running_jobs()
         if n<0: n=0
@@ -184,9 +227,15 @@ class LocalResourceHandler(ResourceHandler):
         subprocess.call(command % (self._processor_name(job_filename), job_filename, log),
                         shell=True)
         
-    def number_of_running_jobs(self):
-        return int(subprocess.check_output("ps -Af | grep '[r]emote_job_starter.py'|wc -l", shell=True))
-        
+    def get_running_jobs(self):
+        jobs = []
+        response = subprocess.check_output("ps -Af | grep '[r]emote_job_starter.py'|wc -l", shell=True)
+        for line in response.splitlines():
+            match = re.search('(\S+\.job)', line)
+            if match:
+                jobs.append(match.group(1))
+        return jobs
+
     def number_of_free_slots(self):
         n = self.max_njobs - self.number_of_running_jobs()
         if n<0: n=0
@@ -312,22 +361,31 @@ class JobCreator:
 
 class JobDispatcher:
     """Job scheduling"""
-    def __init__(self, lifetime=3600):
+    def __init__(self, lifetime=36000):
         self.lock = None
-        self.start = time.time()
+        self.end_time = time.time() + lifetime
         self.resources = []
         self.sleep = 60
         self.all_jobs = None
         self.jobs_by_status = None
+        self.running_jobs = dict()
 
+        print "Initializing the resources"
         # for name,info in cfg.resources.items():
         for resource in cfg.resources:
+            print "\t", resource
             # self.resources.append(eval(info['type'])(*info['args']))
             self.resources.append(eval(resource))
     
     def show_resource_availability(self):
         for resource in self.resources:
             print "%s - free slots: %u" % (resource.name(), resource.number_of_free_slots())
+
+    def update_running_jobs(self):
+        for resource in self.resources:
+            
+            print "%s - free slots: %u" % (resource.name(), resource.number_of_free_slots())
+
 
     def get_job_status(self, job):
         match = re.search("^(.*?)\.job$", job)
@@ -365,27 +423,87 @@ class JobDispatcher:
         for status in self.jobs_by_status:
             print "\t%s: %u" % (status, len(self.jobs_by_status[status]))
 
-    def process_jobs(self):
-        self.update_status_of_jobs()
-        if 'New' not in self.jobs_by_status or self.jobs_by_status['New'] == 0:
-            print "No new jobs to submit"
-            return
+    def number_of_running_jobs(self):
+        n_running = 0
         for resource in self.resources:
-            n_slots = resource.number_of_free_slots()
-            print "%s has %u free slots" % (resource.name(), n_slots)
-            for i in range(n_slots):
-                resource.submit_job(self.jobs_by_status['New'].pop())
+            n_running += resource.number_of_running_jobs()
+        return n_running
             
+    def process_jobs(self):
+        """Process available jobs"""
+
+        # submit jobs
+        print "Submitting new jobs"
+        while time.time() < self.end_time:
+            self.update_status_of_jobs()
+            if 'New' not in self.jobs_by_status or self.jobs_by_status['New'] == 0:
+                print "No new jobs to submit"
+                break
+            for resource in self.resources:
+                n_slots = resource.number_of_free_slots()
+                print "%s has %u free slots" % (resource.name(), n_slots)
+                for i in range(n_slots):
+                    if len(self.jobs_by_status['New']) > 0:
+                        resource.submit_job(self.jobs_by_status['New'].pop())
+                    else:
+                        break
+            time.sleep(60)
+
+        # finalize running jobs
+        print "Finalizing running jobs"
+        while True:
+            n_running = self.number_of_running_jobs()
+            print "Number of running jobs: %u" % n_running
+            if n_running == 0:
+                break
+            time.sleep(60)
             
-        
+    def list_failures(self):
+        self.update_status_of_jobs()
+        if 'Failed' in self.jobs_by_status:
+            print "\nFailed to start"
+            pprint(self.jobs_by_status['Failed'])
+        if self.number_of_running_jobs() == 0:
+            if 'Processing' in self.jobs_by_status:
+                print "\nFailed in processing"
+                pprint(self.jobs_by_status['Processing'])
+
+    def reset_failures(self):
+        self.update_status_of_jobs()
+
+        # find all jobs that need to be reset
+        jobs_to_reset = []
+        if 'Failed' in self.jobs_by_status:
+            jobs_to_reset.extend(self.jobs_by_status['Failed'])
+        if self.number_of_running_jobs() == 0:
+            if 'Processing' in self.jobs_by_status:
+                jobs_to_reset.extend(self.jobs_by_status['Processing'])
+
+        # back up existing output
+        for job in jobs_to_reset:
+            match = re.search("^(.*?)\.job$", job)
+            if match:
+                fname = match.group(1)
+                output = fname + ".root"
+                lock = fname + ".lock"
+                log = fname + ".log"
+                if os.path.exists(output):
+                    shutil.move(output, output + ".failed")
+                if os.path.exists(lock):
+                    shutil.move(lock, lock + ".failed")
+                if os.path.exists(log):
+                    shutil.move(log, log + ".failed")
+
+                        
 if __name__ == "__main__":
     # p = Skimmer("/eos/cms/store/group/phys_bphys/bmm/bmm5/tmp/NanoAOD-skims/510/ks/EGamma+Run2018B-17Sep2018-v1+MINIAOD/02d352594241e74ddcdbfeb18e2be0d0.job")
     # print p.__dict__
     # p.process()
 
     # vocms001 = SSHResourceHandler('vocms001.cern.ch', 16)
-    # vocms001.submit_job("Skimmer","/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job")
-    # time.sleep(10)
+    # print vocms001.number_of_free_slots()
+    # vocms001.submit_job("/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job")
+    # vocms001.wait_for_all_jobs_completion()
     # print vocms001.number_of_free_slots()
 
     # lh = LocalResourceHandler(16)
@@ -399,6 +517,8 @@ if __name__ == "__main__":
 
     jd = JobDispatcher()
     jd.show_resource_availability()
-    jd.load_existing_jobs()
-    jd.update_status_of_jobs()
+    # jd.load_existing_jobs()
+    # jd.list_failures()
+    # jd.reset_failures()
+    # jd.update_status_of_jobs()
     # jd.process_jobs()
