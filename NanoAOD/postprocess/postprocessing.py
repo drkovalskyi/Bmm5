@@ -13,7 +13,7 @@ import hashlib
 import fcntl
 import sys
 
-class Processor:
+class Processor(object):
     """Base class for processors"""
     def __init__(self, job_filename, take_ownership=False):
         """Set up job"""
@@ -122,13 +122,21 @@ class Skimmer(Processor):
         for f in skimmed_files:
             os.remove(f)
 
-class ResourceHandler:
+class ResourceHandler(object):
     """Base class for resource handlers"""
+    def __init__(self):
+        self.active_jobs = set() # keep track of submitted jobs by the handler
+        
     def _processor_name(self, job):
         job_info = json.load(open(job))
         return job_info['processor']
         
-    def submit_job(self, job_filename):
+    def submit_job(self, job):
+        """Submit and keep track of a job"""
+        self.active_jobs.add(job)
+        self._submit_job(job)
+
+    def _submit_job(self, job):
         raise Exception("Not implemented")
 
     def number_of_free_slots(self):
@@ -138,10 +146,25 @@ class ResourceHandler:
         pass
 
     def get_running_jobs(self):
+        jobs = self._get_running_jobs()
+        self.active_jobs = self.active_jobs.intersection(set(jobs))
+        return jobs
+    
+    def _get_running_jobs(self):
         raise Exception("Not implemented")
 
-    def number_of_running_jobs(self):
-        return len(self.get_running_jobs())
+    def number_of_running_jobs(self, owned=True):
+        """Get number of running jobs. Can be restricted to only owned jobs"""
+        jobs = self.get_running_jobs()
+        if not owned:
+            return len(jobs)
+        else:
+            return len(self.active_jobs)
+
+    def number_of_free_slots(self):
+        n = self.max_njobs - self.number_of_running_jobs()
+        if n<0: n=0
+        return n
 
     def kill_all_jobs(self):
         raise Exception("Not implemented")
@@ -150,6 +173,7 @@ class ResourceHandler:
 class SSHResourceHandler(ResourceHandler):
     """Resource handler for ssh-based job execution"""
     def __init__(self, site, max_number_of_jobs_running):
+        super(SSHResourceHandler, self).__init__()
         self.site = site
         self.max_njobs = max_number_of_jobs_running
         self.proc = subprocess.Popen("ssh -T -x %s 'bash -l'" % site,
@@ -195,34 +219,28 @@ class SSHResourceHandler(ResourceHandler):
         # need to check if the server is responding properly within given amount of time
         pass
             
-    def submit_job(self, job_filename):
-        path = cfg.workdir
-        log = re.sub('\.job$', '\.log', job_filename)
-        command = "nice python remote_job_starter.py %s %s &> %s &\n" % (self._processor_name(job_filename),
-                                                                         job_filename, log)
-        print "submitting %s" % job_filename
+    def _submit_job(self, job):
+        log = re.sub('\.job$', '\.log', job)
+        command = "nice python job_starter.py %s %s &> %s &\n" % (self._processor_name(job),
+                                                                         job, log)
+        print "submitting %s" % job
             
         print self._send_command_and_get_response(command),
 
-    def get_running_jobs(self):
+    def _get_running_jobs(self):
         jobs = []
-        response = self._send_command_and_get_response("ps -Af | grep '[r]emote_job_starter.py'")
+        response = self._send_command_and_get_response("ps -Af | grep '[j]ob_starter.py'")
         for line in response.splitlines():
             match = re.search('(\S+\.job)', line)
             if match:
                 jobs.append(match.group(1))
         return jobs
 
-    def wait_for(self, job):
+    def wait_for_jobs_to_finish(self):
         time.sleep(10)
-        while job in self.get_running_jobs():
+        while self.number_of_running_jobs(owned=True) > 0:
             time.sleep(5)
     
-    def number_of_free_slots(self):
-        n = self.max_njobs - self.number_of_running_jobs()
-        if n<0: n=0
-        return n
-
     def name(self):
         return self.site
 
@@ -230,37 +248,32 @@ class SSHResourceHandler(ResourceHandler):
         print "Killing jobs at %s" % self.name()
         response = self._send_command_and_get_response("ps -Af")
         for line in response.splitlines():
-            match = re.search('^\S+\s+(\S+).*?remote_job_starter.py', line)
+            match = re.search('^\S+\s+(\S+).*?job_starter.py', line)
             if match:
                 self._send_command_and_get_response("kill %s" % match.group(1))
 
 class LocalResourceHandler(ResourceHandler):
     """Resource handler for local job execution"""
     def __init__(self, max_number_of_jobs_running):
+        super(LocalResourceHandler, self).__init__()
         self.max_njobs = max_number_of_jobs_running
 
-    def submit_job(self, job_filename):
-        path = cfg.workdir
-        log = re.sub('\.job$', '\.log', job_filename)
-        command = "nice python remote_job_starter.py %s %s >& %s &"
-        print "submitting %s" % job_filename
-        subprocess.call(command % (self._processor_name(job_filename), job_filename, log),
+    def _submit_job(self, job):
+        log = re.sub('\.job$', '\.log', job)
+        command = "nice python job_starter.py %s %s >& %s &"
+        print "submitting %s" % job
+        subprocess.call(command % (self._processor_name(job), job, log),
                         shell=True)
         
-    def get_running_jobs(self):
+    def _get_running_jobs(self):
         jobs = []
         response = subprocess.check_output("ps -Af", shell=True, env={})
         for line in response.splitlines():
-            if not re.search('remote_job_starter.py', line): continue
-            match = re.search('remote_job_starter.py.*?(\S+\.job)', line)
+            if not re.search('job_starter.py', line): continue
+            match = re.search('job_starter.py.*?(\S+\.job)', line)
             if match:
                 jobs.append(match.group(1))
         return jobs
-
-    def number_of_free_slots(self):
-        n = self.max_njobs - self.number_of_running_jobs()
-        if n<0: n=0
-        return n
 
     def name(self):
         return "localhost"
@@ -269,7 +282,7 @@ class LocalResourceHandler(ResourceHandler):
         print "Killing jobs at %s" % self.name()
         response = subprocess.check_output("ps -Af", shell=True)
         for line in response.splitlines():
-            match = re.search('^\S+\s+(\S+).*?remote_job_starter.py', line)
+            match = re.search('^\S+\s+(\S+).*?job_starter.py', line)
             if match:
                 subprocess.call("kill %s" % match.group(1), shell=True)
                 
@@ -284,7 +297,7 @@ def filename(input_files):
     """Generate unique file name based on the hash of input file names"""
     return hashlib.md5(",".join(input_files)).hexdigest()
 
-class JobCreator:
+class JobCreator(object):
     """Create jobs according to the specifications in the config file"""
     def __init__(self):
         self.all_inputs_by_datasets = dict()
@@ -388,9 +401,10 @@ class JobCreator:
                     njobs += 1
                 print "    Number of new jobs created %u" % njobs
 
-class JobDispatcher:
+class JobDispatcher(object):
     """Job scheduling"""
     def __init__(self, lifetime=36000):
+        """Initialization"""
         self.lock = None
         self.end_time = time.time() + lifetime
         self._resources = None
@@ -402,25 +416,26 @@ class JobDispatcher:
         self._load_existing_jobs()
 
     def _init_resources(self):
+        """On demand initialization of resource handlers"""
         self._resources = []
         print "Initializing the resources"
-        # for name,info in cfg.resources.items():
         for resource in cfg.resources:
             print "\t", resource
-            # self._resources.append(eval(info['type'])(*info['args']))
             self._resources.append(eval(resource))
 
     def resources(self):
-        """Access to the resources"""
+        """Resource accessor. Will trigger initialization if necessary"""
         if self._resources == None:
             self._init_resources()
         return self._resources
 
     def show_resource_availability(self):
+        """Current statust of resources"""
         for resource in self.resources():
             print "%s - free slots: %u" % (resource.name(), resource.number_of_free_slots())
 
     def update_running_jobs(self):
+        """Collection information about running jobs from resource handlers"""
         self.running_jobs = []            
         if self._resources == None:
             return
@@ -428,6 +443,7 @@ class JobDispatcher:
             self.running_jobs.extend(resource.get_running_jobs())
 
     def get_job_status(self, job):
+        """Determine job status based on existance of associated files and running information"""
         match = re.search("^(.*?)\.job$", job)
         if match:
             fname = match.group(1)
@@ -458,6 +474,7 @@ class JobDispatcher:
         print "Found %u jobs" % len(self.all_jobs)
 
     def update_status_of_jobs(self):
+        """Classify jobs by status and store in corresponding lists"""
         self.jobs_by_status = {}
         self.update_running_jobs()
         for job in self.all_jobs:
@@ -470,6 +487,7 @@ class JobDispatcher:
             print "\t%s: %u" % (status, len(self.jobs_by_status[status]))
 
     def number_of_running_jobs(self):
+        """Get total number of running jobs on all resources"""
         n_running = 0
         for resource in self.resources():
             n_running += resource.number_of_running_jobs()
@@ -502,13 +520,13 @@ class JobDispatcher:
         # finalize running jobs
         print "Finalizing running jobs"
         while True:
-            n_running = self.number_of_running_jobs()
+            n_running = self.number_of_running_jobs(owned=True)
             print "Number of running jobs: %u" % n_running
             if n_running == 0:
                 break
             time.sleep(60)
             
-    def show_failures(self):
+    def show_failures(self, detailed=False):
         self.update_status_of_jobs()
         failures = {}
 
@@ -528,6 +546,8 @@ class JobDispatcher:
                         failure_type = 'Locked without output'
                     elif os.path.exists(log):
                         failure_type = 'Only log'
+                        if detailed:
+                            subprocess.call("tail %s" % log, shell=True)
 
                     if failure_type:
                         if failure_type not in failures:
@@ -572,25 +592,25 @@ if __name__ == "__main__":
     # print p.__dict__
     # p.process()
 
-    # test_job = "/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job"
-    # vocms001 = SSHResourceHandler('lxplus733.cern.ch', 16)
-    # vocms001.submit_job(test_job)
-    # vocms001.wait_for(test_job)
+    test_job = "/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job"
+    vocms001 = SSHResourceHandler('vocms0500.cern.ch', 16)
+    vocms001.submit_job(test_job)
+    vocms001.wait_for_jobs_to_finish()
 
     # lh = LocalResourceHandler(16)
     # lh.submit_job("/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job")
     # print lh.get_running_jobs()
     # print lh.number_of_free_slots()
 
-    jc = JobCreator()
-    jc.find_all_inputs()
-    jc.load_existing_jobs()
-    jc.create_new_jobs()
+    # jc = JobCreator()
+    # jc.find_all_inputs()
+    # jc.load_existing_jobs()
+    # jc.create_new_jobs()
     
-    jd = JobDispatcher()
+    # jd = JobDispatcher()
     # jd.show_resource_availability()
-    # jd.show_failures()
+    # jd.show_failures(True)
     # jd.reset_failures()
     # jd.update_status_of_jobs()
-    jd.process_jobs()
+    # jd.process_jobs()
     # jd.kill_all_jobs()
