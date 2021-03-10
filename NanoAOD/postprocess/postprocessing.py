@@ -11,6 +11,7 @@ import postprocessing_cfg as cfg
 from pprint import pprint
 import hashlib
 import fcntl
+import sys
 
 class Processor:
     """Base class for processors"""
@@ -19,6 +20,8 @@ class Processor:
         # Load job information
         self.job_info = json.load(open(job_filename))
 
+        print "processing %s at %s " % (job_filename, platform.node())
+        
         # Get directory and job names
         match = re.search("^(.*?)\/([^\/]+)\.job$", job_filename)
         if match:
@@ -69,8 +72,11 @@ class Processor:
             raise Exception("The job is locked. Ownership information:\n" + str(info))
 
         # FIXME: should use xrootd for the transfer to EOS
-        shutil.move(self.job_output_tmp, self.job_ouput)
-        os.rmdir(self.tmp_dir)
+        sys.stdout.flush()
+        # shutil.move(self.job_output_tmp, self.job_ouput)
+        subprocess.call("mv -v %s %s" % (self.job_output_tmp, self.job_ouput), shell=True)
+        # os.rmdir(self.tmp_dir)
+        subprocess.call("rm -v -d %s " % self.tmp_dir, shell=True)
 
     def _process(self):
         """Abstract interface to implement specific processing actions in derived classes"""
@@ -100,6 +106,7 @@ class Skimmer(Processor):
                                   cut=self.job_info['cut'],
                                   compression="LZMA:9",                
                                   postfix=postfix)
+        sys.stdout.flush()
         processor.run()
 
         # merge skimed data
@@ -107,8 +114,10 @@ class Skimmer(Processor):
         for f in input_files:
             skimmed_files.append(os.path.join(self.tmp_dir,
                                               os.path.basename(f).replace(".root","%s.root" % postfix)))
+        sys.stdout.flush()
+        # FIXME: check the logic
         if len(skimmed_files) > 1:
-            subprocess.call("haddnano.py %s %s" % (self.job_output_tmp, " ".join(skimmed_files)),shell=True)
+            subprocess.call("haddnano.py %s %s" % (self.job_output_tmp, " ".join(skimmed_files)), shell=True)
         # clean up
         for f in skimmed_files:
             os.remove(f)
@@ -134,6 +143,10 @@ class ResourceHandler:
     def number_of_running_jobs(self):
         return len(self.get_running_jobs())
 
+    def kill_all_jobs(self):
+        raise Exception("Not implemented")
+
+    
 class SSHResourceHandler(ResourceHandler):
     """Resource handler for ssh-based job execution"""
     def __init__(self, site, max_number_of_jobs_running):
@@ -158,12 +171,12 @@ class SSHResourceHandler(ResourceHandler):
             return self.proc.stdout.read()
         except:
             return ""
-
+        
     def _send_command_and_get_response(self, command):
         end_of_transmission = "end_of_transmission"
 
         # send command with the end of transimission echo
-        self.proc.stdin.write(command)
+        self.proc.stdin.write(command + "\n")
         self.proc.stdin.write("echo '%s'\n" % end_of_transmission)
         self.proc.stdin.flush()
 
@@ -175,35 +188,34 @@ class SSHResourceHandler(ResourceHandler):
                 if re.search(end_of_transmission, line):
                     break
         # remove end_of_transmission_pattern
-        return response.rsplit("\n",2)[0]
-        
+        response = re.sub("%s.*$" % end_of_transmission, "", response) 
+        return response.rstrip()
         
     def check_server_status(self):
         # need to check if the server is responding properly within given amount of time
         pass
-    
-        
+            
     def submit_job(self, job_filename):
         path = cfg.workdir
         log = re.sub('\.job$', '\.log', job_filename)
-        command = "nohup python remote_job_starter.py %s %s &> %s &\n" % (self._processor_name(job_filename),
-                                                                    job_filename, log)
+        command = "nice python remote_job_starter.py %s %s &> %s &\n" % (self._processor_name(job_filename),
+                                                                         job_filename, log)
         print "submitting %s" % job_filename
             
-        print self._send_command_and_get_response(command)
+        print self._send_command_and_get_response(command),
 
     def get_running_jobs(self):
         jobs = []
-        response = self._send_command_and_get_response("ps -Af | grep '[r]emote_job_starter.py'\n")
+        response = self._send_command_and_get_response("ps -Af | grep '[r]emote_job_starter.py'")
         for line in response.splitlines():
             match = re.search('(\S+\.job)', line)
             if match:
                 jobs.append(match.group(1))
         return jobs
 
-    def wait_for_all_jobs_completion(self):
+    def wait_for(self, job):
         time.sleep(10)
-        while self.number_of_running_jobs()>0:
+        while job in self.get_running_jobs():
             time.sleep(5)
     
     def number_of_free_slots(self):
@@ -214,6 +226,14 @@ class SSHResourceHandler(ResourceHandler):
     def name(self):
         return self.site
 
+    def kill_all_jobs(self):
+        print "Killing jobs at %s" % self.name()
+        response = self._send_command_and_get_response("ps -Af")
+        for line in response.splitlines():
+            match = re.search('^\S+\s+(\S+).*?remote_job_starter.py', line)
+            if match:
+                self._send_command_and_get_response("kill %s" % match.group(1))
+
 class LocalResourceHandler(ResourceHandler):
     """Resource handler for local job execution"""
     def __init__(self, max_number_of_jobs_running):
@@ -222,16 +242,17 @@ class LocalResourceHandler(ResourceHandler):
     def submit_job(self, job_filename):
         path = cfg.workdir
         log = re.sub('\.job$', '\.log', job_filename)
-        command = "python remote_job_starter.py %s %s >& %s &"
+        command = "nice python remote_job_starter.py %s %s >& %s &"
         print "submitting %s" % job_filename
         subprocess.call(command % (self._processor_name(job_filename), job_filename, log),
                         shell=True)
         
     def get_running_jobs(self):
         jobs = []
-        response = subprocess.check_output("ps -Af | grep '[r]emote_job_starter.py'|wc -l", shell=True)
+        response = subprocess.check_output("ps -Af", shell=True, env={})
         for line in response.splitlines():
-            match = re.search('(\S+\.job)', line)
+            if not re.search('remote_job_starter.py', line): continue
+            match = re.search('remote_job_starter.py.*?(\S+\.job)', line)
             if match:
                 jobs.append(match.group(1))
         return jobs
@@ -244,6 +265,14 @@ class LocalResourceHandler(ResourceHandler):
     def name(self):
         return "localhost"
 
+    def kill_all_jobs(self):
+        print "Killing jobs at %s" % self.name()
+        response = subprocess.check_output("ps -Af", shell=True)
+        for line in response.splitlines():
+            match = re.search('^\S+\s+(\S+).*?remote_job_starter.py', line)
+            if match:
+                subprocess.call("kill %s" % match.group(1), shell=True)
+                
 def chunks(input_list, n):
     result = []
     n_elements = len(input_list)
@@ -364,28 +393,39 @@ class JobDispatcher:
     def __init__(self, lifetime=36000):
         self.lock = None
         self.end_time = time.time() + lifetime
-        self.resources = []
+        self._resources = None
         self.sleep = 60
         self.all_jobs = None
         self.jobs_by_status = None
-        self.running_jobs = dict()
+        self.running_jobs = []
 
+        self._load_existing_jobs()
+
+    def _init_resources(self):
+        self._resources = []
         print "Initializing the resources"
         # for name,info in cfg.resources.items():
         for resource in cfg.resources:
             print "\t", resource
-            # self.resources.append(eval(info['type'])(*info['args']))
-            self.resources.append(eval(resource))
-    
+            # self._resources.append(eval(info['type'])(*info['args']))
+            self._resources.append(eval(resource))
+
+    def resources(self):
+        """Access to the resources"""
+        if self._resources == None:
+            self._init_resources()
+        return self._resources
+
     def show_resource_availability(self):
-        for resource in self.resources:
+        for resource in self.resources():
             print "%s - free slots: %u" % (resource.name(), resource.number_of_free_slots())
 
     def update_running_jobs(self):
-        for resource in self.resources:
-            
-            print "%s - free slots: %u" % (resource.name(), resource.number_of_free_slots())
-
+        self.running_jobs = []            
+        if self._resources == None:
+            return
+        for resource in self.resources():
+            self.running_jobs.extend(resource.get_running_jobs())
 
     def get_job_status(self, job):
         match = re.search("^(.*?)\.job$", job)
@@ -395,18 +435,23 @@ class JobDispatcher:
             lock = fname + ".lock"
             log = fname + ".log"
             if os.path.exists(lock):
-                # FIXME: this is may also be a failure
-                return "Processing"
+                if job not in self.running_jobs:
+                    return "Failed"
+                else:
+                    return "Running"
             elif os.path.exists(output):
                 return "Done"
             elif os.path.exists(log):
-                return "Failed"
+                if job not in self.running_jobs:
+                    return "Failed"
+                else:
+                    return "Running"
             else: 
                 return "New"
         else:
             raise Exception("Incorrect job name:\n%s" % job)
             
-    def load_existing_jobs(self):
+    def _load_existing_jobs(self):
         """Find existings jobs and store their input"""
         command = 'find -L %s -type f -name "*job" -path "*/%u/*"' % (cfg.output_location, cfg.version)
         self.all_jobs = subprocess.check_output(command, shell=True).splitlines()
@@ -414,6 +459,7 @@ class JobDispatcher:
 
     def update_status_of_jobs(self):
         self.jobs_by_status = {}
+        self.update_running_jobs()
         for job in self.all_jobs:
             status = self.get_job_status(job)
             if status not in self.jobs_by_status:
@@ -425,7 +471,7 @@ class JobDispatcher:
 
     def number_of_running_jobs(self):
         n_running = 0
-        for resource in self.resources:
+        for resource in self.resources():
             n_running += resource.number_of_running_jobs()
         return n_running
             
@@ -437,9 +483,13 @@ class JobDispatcher:
         while time.time() < self.end_time:
             self.update_status_of_jobs()
             if 'New' not in self.jobs_by_status or self.jobs_by_status['New'] == 0:
-                print "No new jobs to submit"
-                break
-            for resource in self.resources:
+                print "No new jobs to submit. Reloading to check if new jobs where injected"
+                self._load_existing_jobs()                
+                self.update_status_of_jobs()
+                if 'New' not in self.jobs_by_status or self.jobs_by_status['New'] == 0:
+                    print "No new jobs is found."
+                    break
+            for resource in self.resources():
                 n_slots = resource.number_of_free_slots()
                 print "%s has %u free slots" % (resource.name(), n_slots)
                 for i in range(n_slots):
@@ -458,15 +508,35 @@ class JobDispatcher:
                 break
             time.sleep(60)
             
-    def list_failures(self):
+    def show_failures(self):
         self.update_status_of_jobs()
+        failures = {}
+
         if 'Failed' in self.jobs_by_status:
-            print "\nFailed to start"
-            pprint(self.jobs_by_status['Failed'])
-        if self.number_of_running_jobs() == 0:
-            if 'Processing' in self.jobs_by_status:
-                print "\nFailed in processing"
-                pprint(self.jobs_by_status['Processing'])
+            for job in self.jobs_by_status['Failed']:
+                match = re.search("^(.*?)\.job$", job)
+                if match:
+                    fname = match.group(1)
+                    output = fname + ".root"
+                    lock = fname + ".lock"
+                    log = fname + ".log"
+
+                    failure_type = None
+                    if os.path.exists(output):
+                        failure_type = 'Output is available'
+                    elif os.path.exists(lock):
+                        failure_type = 'Locked without output'
+                    elif os.path.exists(log):
+                        failure_type = 'Only log'
+
+                    if failure_type:
+                        if failure_type not in failures:
+                            failures[failure_type] = []
+                        failures[failure_type].append(job)
+
+        for failure_type, jobs in failures.items():
+            print "Failure type: %s" % failure_type
+            print "\tNumber of jobs: %u" % len(jobs)
 
     def reset_failures(self):
         self.update_status_of_jobs()
@@ -475,9 +545,6 @@ class JobDispatcher:
         jobs_to_reset = []
         if 'Failed' in self.jobs_by_status:
             jobs_to_reset.extend(self.jobs_by_status['Failed'])
-        if self.number_of_running_jobs() == 0:
-            if 'Processing' in self.jobs_by_status:
-                jobs_to_reset.extend(self.jobs_by_status['Processing'])
 
         # back up existing output
         for job in jobs_to_reset:
@@ -487,38 +554,43 @@ class JobDispatcher:
                 output = fname + ".root"
                 lock = fname + ".lock"
                 log = fname + ".log"
-                if os.path.exists(output):
-                    shutil.move(output, output + ".failed")
-                if os.path.exists(lock):
-                    shutil.move(lock, lock + ".failed")
-                if os.path.exists(log):
-                    shutil.move(log, log + ".failed")
+    
+                for f in [output, lock, log]:
+                    # remove previous backups
+                    if os.path.exists(f + ".failed"):
+                        os.remove(f + ".failed")
+                    # backup latest failure
+                    if os.path.exists(f):
+                        shutil.move(f, f + ".failed")
 
-                        
+    def kill_all_jobs(self):
+        for resource in self.resources():
+            resource.kill_all_jobs()
+                
 if __name__ == "__main__":
     # p = Skimmer("/eos/cms/store/group/phys_bphys/bmm/bmm5/tmp/NanoAOD-skims/510/ks/EGamma+Run2018B-17Sep2018-v1+MINIAOD/02d352594241e74ddcdbfeb18e2be0d0.job")
     # print p.__dict__
     # p.process()
 
-    # vocms001 = SSHResourceHandler('vocms001.cern.ch', 16)
-    # print vocms001.number_of_free_slots()
-    # vocms001.submit_job("/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job")
-    # vocms001.wait_for_all_jobs_completion()
-    # print vocms001.number_of_free_slots()
+    # test_job = "/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job"
+    # vocms001 = SSHResourceHandler('lxplus733.cern.ch', 16)
+    # vocms001.submit_job(test_job)
+    # vocms001.wait_for(test_job)
 
     # lh = LocalResourceHandler(16)
     # lh.submit_job("/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job")
+    # print lh.get_running_jobs()
     # print lh.number_of_free_slots()
 
-    # jc = JobCreator()
-    # jc.find_all_inputs()
-    # jc.load_existing_jobs()
-    # jc.create_new_jobs()
-
+    jc = JobCreator()
+    jc.find_all_inputs()
+    jc.load_existing_jobs()
+    jc.create_new_jobs()
+    
     jd = JobDispatcher()
-    jd.show_resource_availability()
-    # jd.load_existing_jobs()
-    # jd.list_failures()
+    # jd.show_resource_availability()
+    # jd.show_failures()
     # jd.reset_failures()
     # jd.update_status_of_jobs()
-    # jd.process_jobs()
+    jd.process_jobs()
+    # jd.kill_all_jobs()
