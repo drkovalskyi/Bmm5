@@ -508,7 +508,7 @@ private:
 		     std::vector<const pat::PackedCandidate*>());
 
   void 
-  fillBtoJpsiKInfo(pat::CompositeCandidate& bCand,
+  fillBtoMuMuKInfo(pat::CompositeCandidate& bCand,
 		   const edm::Event& iEvent,
 		   const KinematicFitResult& kinematicMuMuVertexFit,
 		   const pat::Muon& muon1,
@@ -1019,7 +1019,7 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
   return kinematicMuMuVertexFit;
 }
 
-void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
+void BxToMuMuProducer::fillBtoMuMuKInfo(pat::CompositeCandidate& btokmmCand,
 					const edm::Event& iEvent,
 					const KinematicFitResult& kinematicMuMuVertexFit,
 					const pat::Muon& muon1,
@@ -1066,10 +1066,14 @@ void BxToMuMuProducer::fillBtoJpsiKInfo(pat::CompositeCandidate& btokmmCand,
   // auto bToKJPsiMuMuWithMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, kaon, true);
   // bToKJPsiMuMuWithMassConstraint.postprocess(beamSpot);
   // addFitInfo(btokmmCand, bToKJPsiMuMuWithMassConstraint, "jpsimc");
-  
-  auto bToKJPsiMuMu_MassConstraint = fitBToKJPsiMuMuNew(kinematicMuMuVertexFit.refitTree, kaon, true);
-  bToKJPsiMuMu_MassConstraint.postprocess(*beamSpot_);
-  auto bToKJPsiMuMu_MassConstraint_displacement = compute3dDisplacement(bToKJPsiMuMu_MassConstraint, *pvHandle_.product(),true);
+
+  KinematicFitResult bToKJPsiMuMu_MassConstraint;
+  DisplacementInformationIn3D bToKJPsiMuMu_MassConstraint_displacement;
+  if (fabs(kinematicMuMuVertexFit.mass()-3.1) < 0.2) {
+    bToKJPsiMuMu_MassConstraint = fitBToKJPsiMuMuNew(kinematicMuMuVertexFit.refitTree, kaon, true);
+    bToKJPsiMuMu_MassConstraint.postprocess(*beamSpot_);
+    bToKJPsiMuMu_MassConstraint_displacement = compute3dDisplacement(bToKJPsiMuMu_MassConstraint, *pvHandle_.product(),true);
+  }
   addFitInfo(btokmmCand, bToKJPsiMuMu_MassConstraint, "jpsimc", bToKJPsiMuMu_MassConstraint_displacement,-1,-1,1);
   
   // broken pointing constraint
@@ -1416,30 +1420,31 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 							     kaonCand1.bestTrack());
 	    double mu2_kaon_doca = distanceOfClosestApproach(muon2.innerTrack().get(),
 							     kaonCand1.bestTrack());
-	    // BtoJpsiK
-	    bool goodBtoJpsiK = true;
-	    if (fabs(kinematicMuMuVertexFit.mass()-3.1)>0.2) goodBtoJpsiK = false;
-	    if (abs(kaonCand1.pdgId())!=211) goodBtoJpsiK = false; //Charged hadrons
-	    if (kaonCand1.pt()<ptMinKaon_ || abs(kaonCand1.eta())>etaMaxKaon_) goodBtoJpsiK = false;
-	    if (maxTwoTrackDOCA_>0 and mu1_kaon_doca> maxTwoTrackDOCA_) goodBtoJpsiK = false;	      
-	    if (maxTwoTrackDOCA_>0 and mu2_kaon_doca> maxTwoTrackDOCA_) goodBtoJpsiK = false;	      
+	    // BtoMuMuK
+	    bool goodBtoMuMuK = true;
+	    if (kinematicMuMuVertexFit.mass() < 2.9) goodBtoMuMuK = false;
+	    if (abs(kaonCand1.pdgId()) != 211) goodBtoMuMuK = false; //Charged hadrons
+	    if (kaonCand1.pt() < ptMinKaon_ || abs(kaonCand1.eta()) > etaMaxKaon_)
+	      goodBtoMuMuK = false;
+	    if (maxTwoTrackDOCA_ > 0 and mu1_kaon_doca > maxTwoTrackDOCA_) goodBtoMuMuK = false;
+	    if (maxTwoTrackDOCA_ > 0 and mu2_kaon_doca > maxTwoTrackDOCA_) goodBtoMuMuK = false;
 
 	    // BToJpsiKK
-	    bool goodBtoJpsiKK = goodBtoJpsiK;
-
-	    double kmm_mass = (muon1.p4()+muon2.p4()+kaonCand1.p4()).mass();
-	    if ( kmm_mass<minBKmmMass_ || kmm_mass>maxBKmmMass_ ) goodBtoJpsiK = false;
-
+	    bool goodBtoJpsiKK = goodBtoMuMuK;
+	    if (fabs(kinematicMuMuVertexFit.mass()-3.1) < 0.2) goodBtoJpsiKK = false;
+	  
+	    double kmm_mass = (muon1.p4() + muon2.p4() + kaonCand1.p4()).mass();
+	    if (kmm_mass < minBKmmMass_ || kmm_mass > maxBKmmMass_) goodBtoMuMuK = false;
 	    
-	    if (goodBtoJpsiK){
-	      // fill BtoJpsiK candidate info
+	    if (goodBtoMuMuK){
+	      // fill BtoMuMuK candidate info
 	    
 	      pat::CompositeCandidate btokmmCand;
 	      btokmmCand.addUserInt("mm_index", imm);
 	      btokmmCand.addUserFloat("kaon_mu1_doca", mu1_kaon_doca);
 	      btokmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon_doca);
-	      
-	      fillBtoJpsiKInfo(btokmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
+
+	      fillBtoMuMuKInfo(btokmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
 	      fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
 
 	      btokmm->push_back(btokmmCand);
@@ -1484,7 +1489,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 		  pat::CompositeCandidate btokkmmCand;
 		  btokkmmCand.addUserInt("mm_index", imm);
 		  int ikmm = -1;
-		  if (goodBtoJpsiK) ikmm = btokmm->size()-1;
+		  if (goodBtoMuMuK) ikmm = btokmm->size()-1;
 		  btokkmmCand.addUserInt("kmm_index", ikmm);
 		  btokkmmCand.addUserFloat("kaon_mu1_doca", mu1_kaon2_doca);
 		  btokkmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon2_doca);
