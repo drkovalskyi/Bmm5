@@ -13,6 +13,9 @@ import hashlib
 import fcntl
 import sys
 
+debug = False
+tmp_prefix = "tmpPPNA"
+
 class Processor(object):
     """Base class for processors"""
     def __init__(self, job_filename, take_ownership=False):
@@ -38,7 +41,7 @@ class Processor(object):
         self._update_lock(take_ownership)
 
         # Create a temporary directory
-        self.tmp_dir = tempfile.mkdtemp()
+        self.tmp_dir = tempfile.mkdtemp(prefix=tmp_prefix)
         self.job_output_tmp = "%s/%s.root" % (self.tmp_dir, self.job_name)
 
     def _update_lock(self, take_ownership=False):
@@ -169,7 +172,10 @@ class ResourceHandler(object):
     def kill_all_jobs(self):
         raise Exception("Not implemented")
 
-    
+    def clean_up(self):
+        """Remove temporary directories for failed jobs"""
+        raise Exception("Not implemented")
+
 class SSHResourceHandler(ResourceHandler):
     """Resource handler for ssh-based job execution"""
     def __init__(self, site, max_number_of_jobs_running):
@@ -197,6 +203,8 @@ class SSHResourceHandler(ResourceHandler):
             return ""
         
     def _send_command_and_get_response(self, command):
+        if debug:
+            print "%s %s " % (self.name(), command)
         end_of_transmission = "end_of_transmission"
 
         # send command with the end of transimission echo
@@ -252,6 +260,10 @@ class SSHResourceHandler(ResourceHandler):
             if match:
                 self._send_command_and_get_response("kill %s" % match.group(1))
 
+    def clean_up(self):
+        command = "find %s -path '*%s*' -exec rm -rfv {} \;" % (tempfile.gettempdir(), tmp_prefix)
+        self._send_command_and_get_response(command)
+
 class LocalResourceHandler(ResourceHandler):
     """Resource handler for local job execution"""
     def __init__(self, max_number_of_jobs_running):
@@ -286,6 +298,10 @@ class LocalResourceHandler(ResourceHandler):
             if match:
                 subprocess.call("kill %s" % match.group(1), shell=True)
                 
+    def clean_up(self):
+        command = "find %s -path '*%s*' -exec rm -rfv {} \;" % (tempfile.gettempdir(), tmp_prefix)
+        subprocess.call(command, shell=True)
+
 def chunks(input_list, n):
     result = []
     n_elements = len(input_list)
@@ -302,7 +318,7 @@ class JobCreator(object):
     def __init__(self):
         self.all_inputs_by_datasets = dict()
         self.files_in_use_by_task_and_dataset = dict()
-        
+
     def load_existing_jobs(self):
         """Find existings jobs and store their input"""
         command = 'find -L %s -type f -name "*job" -path "*/%u/*"' % (cfg.output_location, cfg.version)
@@ -423,6 +439,19 @@ class JobDispatcher(object):
             print "\t", resource
             self._resources.append(eval(resource))
 
+    def _job_info(self, job):
+        match = re.search("^(.*?)\.job$", job)
+        info = dict()
+        if match:
+            fname = match.group(1)
+            info['output'] = fname + ".root"
+            info['lock'] = fname + ".lock"
+            info['log'] = fname + ".log"
+            info['summary'] = fname + ".summary"
+        else:
+            raise Exception("Incorrect job name:\n%s" % job)
+        return info
+            
     def resources(self):
         """Resource accessor. Will trigger initialization if necessary"""
         if self._resources == None:
@@ -444,31 +473,25 @@ class JobDispatcher(object):
 
     def get_job_status(self, job):
         """Determine job status based on existance of associated files and running information"""
-        match = re.search("^(.*?)\.job$", job)
-        if match:
-            fname = match.group(1)
-            output = fname + ".root"
-            lock = fname + ".lock"
-            log = fname + ".log"
-            if os.path.exists(lock):
-                if job not in self.running_jobs:
-                    return "Failed"
-                else:
-                    return "Running"
-            elif os.path.exists(output):
-                return "Done"
-            elif os.path.exists(log):
-                if job not in self.running_jobs:
-                    return "Failed"
-                else:
-                    return "Running"
-            else: 
-                return "New"
-        else:
-            raise Exception("Incorrect job name:\n%s" % job)
+        job_info = self._job_info(job)
+        if os.path.exists(job_info['lock']):
+            if job not in self.running_jobs:
+                return "Failed"
+            else:
+                return "Running"
+        elif os.path.exists(job_info['output']):
+            return "Done"
+        elif os.path.exists(job_info['log']):
+            if job not in self.running_jobs:
+                return "Failed"
+            else:
+                return "Running"
+        else: 
+            return "New"
             
     def _load_existing_jobs(self):
         """Find existings jobs and store their input"""
+        print "Loading existing jobs..."
         command = 'find -L %s -type f -name "*job" -path "*/%u/*"' % (cfg.output_location, cfg.version)
         self.all_jobs = subprocess.check_output(command, shell=True).splitlines()
         print "Found %u jobs" % len(self.all_jobs)
@@ -486,11 +509,11 @@ class JobDispatcher(object):
         for status in self.jobs_by_status:
             print "\t%s: %u" % (status, len(self.jobs_by_status[status]))
 
-    def number_of_running_jobs(self):
+    def number_of_running_jobs(self, owned=False):
         """Get total number of running jobs on all resources"""
         n_running = 0
         for resource in self.resources():
-            n_running += resource.number_of_running_jobs()
+            n_running += resource.number_of_running_jobs(owned)
         return n_running
             
     def process_jobs(self):
@@ -532,27 +555,22 @@ class JobDispatcher(object):
 
         if 'Failed' in self.jobs_by_status:
             for job in self.jobs_by_status['Failed']:
-                match = re.search("^(.*?)\.job$", job)
-                if match:
-                    fname = match.group(1)
-                    output = fname + ".root"
-                    lock = fname + ".lock"
-                    log = fname + ".log"
+                job_info = self._job_info(job)
 
-                    failure_type = None
-                    if os.path.exists(output):
-                        failure_type = 'Output is available'
-                    elif os.path.exists(lock):
-                        failure_type = 'Locked without output'
-                    elif os.path.exists(log):
-                        failure_type = 'Only log'
-                        if detailed:
-                            subprocess.call("tail %s" % log, shell=True)
+                failure_type = None
+                if os.path.exists(job_info['output']):
+                    failure_type = 'Output is available'
+                elif os.path.exists(job_info['lock']):
+                    failure_type = 'Locked without output'
+                elif os.path.exists(job_info['log']):
+                    failure_type = 'Only log'
+                    if detailed:
+                        subprocess.call("tail %s" % job_info['log'], shell=True)
 
-                    if failure_type:
-                        if failure_type not in failures:
-                            failures[failure_type] = []
-                        failures[failure_type].append(job)
+                if failure_type:
+                    if failure_type not in failures:
+                        failures[failure_type] = []
+                    failures[failure_type].append(job)
 
         for failure_type, jobs in failures.items():
             print "Failure type: %s" % failure_type
@@ -568,34 +586,90 @@ class JobDispatcher(object):
 
         # back up existing output
         for job in jobs_to_reset:
-            match = re.search("^(.*?)\.job$", job)
-            if match:
-                fname = match.group(1)
-                output = fname + ".root"
-                lock = fname + ".lock"
-                log = fname + ".log"
+            job_info = self._job_info(job)
     
-                for f in [output, lock, log]:
-                    # remove previous backups
-                    if os.path.exists(f + ".failed"):
-                        os.remove(f + ".failed")
-                    # backup latest failure
-                    if os.path.exists(f):
-                        shutil.move(f, f + ".failed")
+            for f in [job_info['output'], job_info['lock'], job_info['log']]:
+                # remove previous backups
+                if os.path.exists(f + ".failed"):
+                    os.remove(f + ".failed")
+                # backup latest failure
+                if os.path.exists(f):
+                    shutil.move(f, f + ".failed")
 
     def kill_all_jobs(self):
         for resource in self.resources():
             resource.kill_all_jobs()
+
+    def clean_up(self):
+        for resource in self.resources():
+            resource.clean_up()
+
+    def get_job_summary(self, job, reanalyze=False):
+        """Analyze job log and produce summary"""
+        job_info = self._job_info(job)
+        if (reanalyze or not os.path.exists(job_info['summary'])):
+            n_selected = 0
+            n_processed = 0
+            rate = None
+            # Skimmer specific analysis for now
+            result = subprocess.check_output("grep -E 'Selected|Hz' %s" % job_info['log'],
+                                             shell=True)
+            for line in result.splitlines():
+                match = re.search("^Selected\s+(\d+)[\s\/]+(\d+)\s+entries", line)
+                if match:
+                    n_selected += int(match.group(1))
+                    n_processed += int(match.group(2))
+                match = re.search("^([\d\.]+)\s+Hz", line)
+                if match:
+                    rate = float(match.group(1))
+            report = {
+                'n_selected':n_selected, 'n_processed':n_processed, 'rate':rate
+            }
+            json.dump(report, open(job_info['summary'], 'w'))
+            return report
+        else:
+            report = json.load(open(job_info['summary']))
+            return report
                 
+    def job_report(self):
+        """Extract job progress and efficiency information and publish it"""
+        self.update_status_of_jobs()
+
+        report = dict()
+        if 'Done' in self.jobs_by_status:
+            for job in self.jobs_by_status['Done']:
+                match = re.search("([^\/]+)\/(\d+)\/([^\/]+)\/([^\/]+)", job)
+                if match:
+                    task_type = match.group(1)
+                    if task_type not in report:
+                        report[task_type] = dict()
+                    version = match.group(2)
+                    if version not in report[task_type]:
+                        report[task_type][version] = dict()
+                    task_name = match.group(3)
+                    if task_name not in report[task_type][version]:
+                        report[task_type][version][task_name] = dict()
+                    dataset = match.group(4)
+                    if dataset not in report[task_type][version][task_name]:
+                        report[task_type][version][task_name][dataset] = []
+                    try:
+                        report[task_type][version][task_name][dataset].append(self.get_job_summary(job))
+                    except:
+                        pass
+
+        pprint(report)
+                    
+                        
+            
 if __name__ == "__main__":
     # p = Skimmer("/eos/cms/store/group/phys_bphys/bmm/bmm5/tmp/NanoAOD-skims/510/ks/EGamma+Run2018B-17Sep2018-v1+MINIAOD/02d352594241e74ddcdbfeb18e2be0d0.job")
     # print p.__dict__
     # p.process()
 
-    test_job = "/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job"
-    vocms001 = SSHResourceHandler('vocms0500.cern.ch', 16)
-    vocms001.submit_job(test_job)
-    vocms001.wait_for_jobs_to_finish()
+    # test_job = "/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job"
+    # vocms001 = SSHResourceHandler('vocms0314.cern.ch', 16)
+    # vocms001.submit_job(test_job)
+    # vocms001.wait_for_jobs_to_finish()
 
     # lh = LocalResourceHandler(16)
     # lh.submit_job("/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job")
@@ -607,10 +681,13 @@ if __name__ == "__main__":
     # jc.load_existing_jobs()
     # jc.create_new_jobs()
     
-    # jd = JobDispatcher()
+    jd = JobDispatcher()
     # jd.show_resource_availability()
     # jd.show_failures(True)
+    # jd.show_failures()
     # jd.reset_failures()
+    # jd.clean_up()
     # jd.update_status_of_jobs()
     # jd.process_jobs()
     # jd.kill_all_jobs()
+    jd.job_report()
