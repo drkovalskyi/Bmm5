@@ -274,13 +274,13 @@ private:
   const reco::VertexCollection* primaryVertices_;
 
   edm::EDGetTokenT<std::vector<pat::Muon>> muonToken_;
-  edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandToken_;
+  edm::EDGetTokenT<std::vector<pat::PackedCandidate>> pfCandToken_;
   edm::EDGetTokenT<std::vector<pat::PackedGenParticle> >   packedGenToken_;
   const std::vector<pat::PackedGenParticle>* packedGenParticles_;
 
   edm::ESHandle<TransientTrackBuilder> theTTBuilder_;
   edm::ESHandle<MagneticField> bFieldHandle_;
-  edm::Handle<edm::View<pat::PackedCandidate>> pfCandHandle_;
+  edm::Handle<std::vector<pat::PackedCandidate> > pfCandHandle_;
   edm::Handle<std::vector<pat::Muon>> muonHandle_;
 
   const AnalyticalImpactPointExtrapolator* impactPointExtrapolator_;
@@ -300,6 +300,10 @@ private:
   double maxPhiPreselectMass_;
   double minPhiMass_;
   double maxPhiMass_;
+  double minDsPreselectMass_;
+  double maxDsPreselectMass_;
+  double minDsMass_;
+  double maxDsMass_;
   double minD0PreselectMass_;
   double maxD0PreselectMass_;
   double minD0Mass_;
@@ -322,7 +326,7 @@ beamSpot_(nullptr),
 vertexToken_( consumes<reco::VertexCollection> ( iConfig.getParameter<edm::InputTag>( "vertexCollection" ) ) ),
 primaryVertices_(nullptr),
 muonToken_( consumes<std::vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
-pfCandToken_( consumes<edm::View<pat::PackedCandidate>> ( iConfig.getParameter<edm::InputTag>( "PFCandCollection" ) ) ),
+pfCandToken_( consumes<std::vector<pat::PackedCandidate>> ( iConfig.getParameter<edm::InputTag>( "PFCandCollection" ) ) ),
 packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( iConfig.getParameter<edm::InputTag>( "packedGenParticleCollection" ) ) ),
 packedGenParticles_(nullptr),
 impactPointExtrapolator_(0),
@@ -339,6 +343,10 @@ minPhiPreselectMass_(     iConfig.getParameter<double>( "minPhiPreselectMass" ) 
 maxPhiPreselectMass_(     iConfig.getParameter<double>( "maxPhiPreselectMass" ) ),
 minPhiMass_(     iConfig.getParameter<double>( "minPhiMass" ) ),
 maxPhiMass_(     iConfig.getParameter<double>( "maxPhiMass" ) ),
+minDsPreselectMass_(     iConfig.getParameter<double>( "minDsPreselectMass" ) ),
+maxDsPreselectMass_(     iConfig.getParameter<double>( "maxDsPreselectMass" ) ),
+minDsMass_(     iConfig.getParameter<double>( "minDsMass" ) ),
+maxDsMass_(     iConfig.getParameter<double>( "maxDsMass" ) ),
 minD0PreselectMass_(     iConfig.getParameter<double>( "minD0PreselectMass" ) ),
 maxD0PreselectMass_(     iConfig.getParameter<double>( "maxD0PreselectMass" ) ),
 minD0Mass_(     iConfig.getParameter<double>( "minD0Mass" ) ),
@@ -517,10 +525,10 @@ void BmmV0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
     if ( nPFCands > 1 ){
       for ( unsigned int i = 0; i < nPFCands-1; ++i ) {
-	pat::PackedCandidate pfCand1( (*pfCandHandle_)[i] );
+	const pat::PackedCandidate& pfCand1( (*pfCandHandle_)[i] );
 	if ( not isGoodTrack(pfCand1) ) continue;
 	for ( unsigned int j = i+1; j < nPFCands; ++j ) {
-	  pat::PackedCandidate pfCand2( (*pfCandHandle_)[j] );
+	  const pat::PackedCandidate& pfCand2( (*pfCandHandle_)[j] );
 	  if ( pfCand1.charge()*pfCand2.charge() >= 0 ) continue;
 	  if ( not isGoodTrack(pfCand2) ) continue;
 	  if ( not isGoodPair(pfCand1,pfCand2) ) continue;
@@ -700,6 +708,57 @@ BmmV0Producer::getPhiToKK(const edm::Event& iEvent,
        ksVtxFit.mass() < minPhiMass_ or  
        ksVtxFit.mass() > maxPhiMass_ ) return pat::CompositeCandidate();
 
+  // Look for DsToPhiPi
+  // Keep the best candidate by vertex probability if there are multiple
+  KinematicFitResult dsVtx;
+  const pat::PackedCandidate* ds_pion(nullptr);
+  for (const pat::PackedCandidate& ipion: *pfCandHandle_){
+    if (&ipion == &ipfCand1 or &ipion == &ipfCand2) continue;
+    if (not isGoodTrack(ipion) ) continue;
+    if (not isGoodPion(ipion) ) continue;
+    pat::CompositeCandidate dsCand;
+    pat::PackedCandidate pion(ipion);
+    pion.setMass(pion_mass_);
+    dsCand.addDaughter( pfCand1 , "trk1" );
+    dsCand.addDaughter( pfCand2 , "trk2" );
+    dsCand.addDaughter( pion , "pion" );
+    addP4.set( dsCand );
+    if ( dsCand.mass() < minDsPreselectMass_ or
+	 dsCand.mass() > maxDsPreselectMass_ ) continue;
+
+    // fit 3-body vertex
+    std::vector<const reco::Track*> trks;
+    std::vector<float> masses;
+    trks.push_back(pfCand1.bestTrack());
+    trks.push_back(pfCand2.bestTrack());
+    trks.push_back(pion.bestTrack());
+    masses.push_back(pfCand1.mass());
+    masses.push_back(pfCand2.mass());
+    masses.push_back(pion.mass());
+
+    auto vtxFit = vertexWithKinematicFitter(trks, masses);
+    vtxFit.postprocess(*beamSpot_, *primaryVertices_);
+
+    if ( vtxFit.valid()  and vtxFit.vtxProb() > minVtxProb_ and
+	 vtxFit.mass() > minDsMass_ and vtxFit.mass() < maxDsMass_ )
+      {
+	if (not dsVtx.valid() or vtxFit.vtxProb() > dsVtx.vtxProb()){
+	  dsVtx = vtxFit;
+	  ds_pion = &ipion;
+	}
+      }
+  }
+  if (ds_pion){
+    phiCand.addUserFloat( "ds_pion_pt", ds_pion->pt() );
+    phiCand.addUserFloat( "ds_pion_eta", ds_pion->eta() );
+    phiCand.addUserFloat( "ds_pion_phi", ds_pion->phi() );
+  } else {
+    phiCand.addUserFloat( "ds_pion_pt", -1.0 );
+    phiCand.addUserFloat( "ds_pion_eta", 0.0 );
+    phiCand.addUserFloat( "ds_pion_phi", 0.0 );
+  }
+  addFitInfo(phiCand, dsVtx, "ds");
+    
   return phiCand;
 }
 

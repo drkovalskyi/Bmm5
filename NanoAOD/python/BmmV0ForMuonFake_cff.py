@@ -37,6 +37,10 @@ V0ForMuonFake = cms.EDProducer(
     maxPhiMass  = cms.double(1.04),
     minPhiPreselectMass = cms.double(0.9),
     maxPhiPreselectMass = cms.double(1.1),
+    minDsMass  = cms.double(1.95),
+    maxDsMass  = cms.double(1.99),
+    minDsPreselectMass = cms.double(1.9),
+    maxDsPreselectMass = cms.double(2.1),
     minD0Mass  = cms.double(1.8),
     maxD0Mass  = cms.double(1.9),
     minD0PreselectMass = cms.double(1.6),
@@ -186,7 +190,7 @@ D0ForMuonFakeMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer",
     variables = D0ForMuonFakeVariablesMC
 )
 
-# PhiToKK
+# PhiToKK and DsToPhiPi
 
 PhiForMuonFakeVariables = cms.PSet(
     mass         = Var("mass",                         float, doc = "Unfit invariant mass"),
@@ -214,6 +218,21 @@ PhiForMuonFakeVariables = cms.PSet(
     kin_cosAlphaXY = Var("userFloat('kin_cosAlphaXY')",    float, doc = "Kinematic fit: cosine of pointing angle in XY wrt BS"),
     kin_sipBS    = Var("userFloat('kin_sipBS')",       float, doc = "Kinematic fit: impact parameter significance of the candidate trajectory in XY wrt BS"),
     kin_sipPV    = Var("userFloat('kin_sipPV')",       float, doc = "Kinematic fit: impact parameter significance of the candidate trajectory in 3D wrt PV"),
+    ds_pion_pt   = Var("userFloat('ds_pion_pt')",      float, doc = "DsToPhiPi: pion pt"),
+    ds_pion_eta  = Var("userFloat('ds_pion_eta')",     float, doc = "DsToPhiPi: pion eta"),
+    ds_pion_phi  = Var("userFloat('ds_pion_phi')",     float, doc = "DsToPhiPi: pion phi"),
+    ds_mass      = Var("userFloat('ds_mass')",         float, doc = "DsToPhiPi: 3-body mass with vertex constraint"),
+    ds_vtx_prob  = Var("userFloat('ds_vtx_prob')",     float, doc = "DsToPhiPi: vertex probability"),
+    ds_vtx_chi2dof = Var("userFloat('ds_vtx_chi2dof')", float, doc = "DsToPhiPi: vertex normalized Chi^2"),
+    ds_pt        = Var("userFloat('ds_pt')",           float, doc = "DsToPhiPi: vertex refitted pt"),
+    ds_eta       = Var("userFloat('ds_eta')",          float, doc = "DsToPhiPi: vertex refitted eta"),
+    ds_phi       = Var("userFloat('ds_phi')",          float, doc = "DsToPhiPi: vertex refitted phi"),
+    ds_massErr   = Var("userFloat('ds_massErr')",      float, doc = "DsToPhiPi: vertex refitted mass error"),
+    ds_lxy       = Var("userFloat('ds_lxy')",          float, doc = "DsToPhiPi: vertex displacement in XY plane wrt Beam Spot"),
+    ds_slxy      = Var("userFloat('ds_sigLxy')",       float, doc = "DsToPhiPi: vertex displacement significance in XY plane wrt Beam Spot"),
+    ds_cosAlphaXY = Var("userFloat('ds_cosAlphaXY')",    float, doc = "DsToPhiPi: cosine of pointing angle in XY wrt BS"),
+    ds_sipBS     = Var("userFloat('ds_sipBS')",        float, doc = "DsToPhiPi: impact parameter significance of the candidate trajectory in XY wrt BS"),
+    ds_sipPV     = Var("userFloat('ds_sipPV')",        float, doc = "DsToPhiPi: impact parameter significance of the candidate trajectory in 3D wrt PV"),
 )
 
 PhiForMuonFakeVariablesMC = merge_psets(
@@ -238,7 +257,7 @@ PhiForMuonFakeTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer",
     doc=cms.string("Phi Variables"),
     singleton=cms.bool(False),
     extension=cms.bool(False),
-    variables = KsForMuonFakeVariables
+    variables = PhiForMuonFakeVariables
 )
 
 PhiForMuonFakeMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
@@ -248,7 +267,7 @@ PhiForMuonFakeMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer"
     doc=cms.string("Phi Variables"),
     singleton=cms.bool(False),
     extension=cms.bool(False),
-    variables = KsForMuonFakeVariablesMC
+    variables = PhiForMuonFakeVariablesMC
 )
 
 # LambdaToPPi
