@@ -58,6 +58,7 @@ namespace {
   const float pionMass_    = 0.139570;
   const float pionMassErr_ = 3.5e-7;
   const float JPsiMass_    = 3.0969;
+  const float Psi2SMass_   = 3.6861;
   const float JPsiMassErr_ = 92.9e-6;
 };
 
@@ -435,9 +436,10 @@ private:
 		   bool applyJpsiMassConstraint);
 
   KinematicFitResult
-  fitBToKJPsiMuMuNew( RefCountedKinematicTree jpsi,
-		      const pat::PackedCandidate& kaon,
-		      bool applyJpsiMassConstraint);
+  fitBToMuMuKNew( RefCountedKinematicTree jpsi,
+		  const pat::PackedCandidate& kaon,
+		  float mass_constraint=-1.0);
+
   KinematicFitResult
   fitBToKKMuMu( RefCountedKinematicTree jpsi,
 		const pat::PackedCandidate& kaon1,
@@ -1067,14 +1069,26 @@ void BxToMuMuProducer::fillBtoMuMuKInfo(pat::CompositeCandidate& btokmmCand,
   // bToKJPsiMuMuWithMassConstraint.postprocess(beamSpot);
   // addFitInfo(btokmmCand, bToKJPsiMuMuWithMassConstraint, "jpsimc");
 
+  // JpsiK
+  
   KinematicFitResult bToKJPsiMuMu_MassConstraint;
   DisplacementInformationIn3D bToKJPsiMuMu_MassConstraint_displacement;
   if (fabs(kinematicMuMuVertexFit.mass()-3.1) < 0.2) {
-    bToKJPsiMuMu_MassConstraint = fitBToKJPsiMuMuNew(kinematicMuMuVertexFit.refitTree, kaon, true);
+    bToKJPsiMuMu_MassConstraint = fitBToMuMuKNew(kinematicMuMuVertexFit.refitTree, kaon, JPsiMass_);
     bToKJPsiMuMu_MassConstraint.postprocess(*beamSpot_);
     bToKJPsiMuMu_MassConstraint_displacement = compute3dDisplacement(bToKJPsiMuMu_MassConstraint, *pvHandle_.product(),true);
   }
   addFitInfo(btokmmCand, bToKJPsiMuMu_MassConstraint, "jpsimc", bToKJPsiMuMu_MassConstraint_displacement,-1,-1,1);
+
+  // Psi(2S)K
+  KinematicFitResult bToKPsi2SMuMu_MassConstraint;
+  DisplacementInformationIn3D bToKPsi2SMuMu_MassConstraint_displacement;
+  if (fabs(kinematicMuMuVertexFit.mass()-3.7) < 0.2) {
+    bToKPsi2SMuMu_MassConstraint = fitBToMuMuKNew(kinematicMuMuVertexFit.refitTree, kaon, Psi2SMass_);
+    bToKPsi2SMuMu_MassConstraint.postprocess(*beamSpot_);
+    bToKPsi2SMuMu_MassConstraint_displacement = compute3dDisplacement(bToKPsi2SMuMu_MassConstraint, *pvHandle_.product(),true);
+  }
+  addFitInfo(btokmmCand, bToKPsi2SMuMu_MassConstraint, "psimc", bToKPsi2SMuMu_MassConstraint_displacement,-1,-1,1);
   
   // broken pointing constraint
   // auto bToKJPsiMuMu_MC_PC = refitWithPointingConstraint(bToKJPsiMuMu_MC.refitTree, primaryVertex);
@@ -1700,22 +1714,22 @@ BxToMuMuProducer::fitBToKJPsiMuMu( RefCountedKinematicParticle refitMuMu,
 }
 
 KinematicFitResult
-BxToMuMuProducer::fitBToKJPsiMuMuNew( RefCountedKinematicTree jpsiTree,
-				      const pat::PackedCandidate& kaon,
-				      bool applyJpsiMassConstraint)
+BxToMuMuProducer::fitBToMuMuKNew( RefCountedKinematicTree tree,
+				  const pat::PackedCandidate& kaon,
+				  float mass_constraint)
 {
   KinematicFitResult result; 
-  if ( !jpsiTree->isValid()) return result;
+  if ( !tree->isValid()) return result;
 
-  KinematicConstraint* jpsi_mc(0);
-  if (applyJpsiMassConstraint){
-    ParticleMass jpsi = JPsiMass_;
-    // jpsi mass constraint fit
+  KinematicConstraint* mc(0);
+  if (mass_constraint > 0){
+    ParticleMass mass = mass_constraint;
+    // mass constraint fit
     KinematicParticleFitter csFitter;
-    float jp_m_sigma = JPsiMassErr_;
+    float mass_sigma = JPsiMassErr_;
     // FIXME: memory leak
-    jpsi_mc = new MassKinematicConstraint(jpsi, jp_m_sigma);
-    jpsiTree = csFitter.fit(jpsi_mc, jpsiTree);
+    mc = new MassKinematicConstraint(mass, mass_sigma);
+    tree = csFitter.fit(mc, tree);
   }
 
   const reco::TransientTrack kaonTT = theTTBuilder_->build(kaon.bestTrack());
@@ -1727,8 +1741,8 @@ BxToMuMuProducer::fitBToKJPsiMuMuNew( RefCountedKinematicTree jpsiTree,
   double chi = 0.;
   double ndf = 0.;
 
-  jpsiTree->movePointerToTheTop();
-  BToKMuMuParticles.push_back(jpsiTree->currentParticle());
+  tree->movePointerToTheTop();
+  BToKMuMuParticles.push_back(tree->currentParticle());
   float kaonMassErr(KaonMassErr_);
   BToKMuMuParticles.push_back(partFactory.particle(kaonTT,KaonMass_,chi,ndf,kaonMassErr));
 
