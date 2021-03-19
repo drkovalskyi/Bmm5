@@ -4,7 +4,8 @@
 # Usage example:
 #  python job_starter.py [Processor] [Job file]
 #
-from postprocessing import *
+from FlatNtupleForBmmMva import FlatNtupleForBmmMva
+from Skimmer import Skimmer
 import sys
 
 if len(sys.argv)==3:

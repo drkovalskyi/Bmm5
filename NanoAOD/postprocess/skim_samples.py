@@ -87,90 +87,110 @@ samples = {
    #     'files_per_job':100,
    #     'skims':['mm']
    # },
-   'Charmonium+Run2016B_2':{
-       'file_with_lfns':'lists/Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD.txt',
+   'EGamma+Run2018A':{
+       'file_with_lfns':'lists/EGamma+Run2018A-17Sep2018-v2+MINIAOD.txt',
        'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
+       'skims':['ks','phi','lambda']
    },
-   'Charmonium+Run2016C':{
-       'file_with_lfns':'lists/Charmonium+Run2016C-17Jul2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2016D':{
-       'file_with_lfns':'lists/Charmonium+Run2016D-17Jul2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2016E':{
-       'file_with_lfns':'lists/Charmonium+Run2016E-17Jul2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2016F':{
-       'file_with_lfns':'lists/Charmonium+Run2016F-17Jul2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2016G':{
-       'file_with_lfns':'lists/Charmonium+Run2016G-17Jul2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2016H':{
-       'file_with_lfns':'lists/Charmonium+Run2016H-17Jul2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2017B':{
-       'file_with_lfns':'lists/Charmonium+Run2017B-31Mar2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2017C':{
-       'file_with_lfns':'lists/Charmonium+Run2017C-31Mar2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2017D':{
-      'file_with_lfns':'lists/Charmonium+Run2017D-31Mar2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2017E':{
-       'file_with_lfns':'lists/Charmonium+Run2017E-31Mar2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2017F':{
-       'file_with_lfns':'lists/Charmonium+Run2017F-31Mar2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2018A':{
-       'file_with_lfns':'lists/Charmonium+Run2018A-17Sep2018-v1+MINIAOD.txt',
-       'files_per_job':100,
-       # 'skims':['mm', 'bkmm', 'ks']
-       'skims':['ks','d0','phi','lambda']
-   },
-   'Charmonium+Run2018B':{
-        'file_with_lfns':'lists/Charmonium+Run2018B-17Sep2018-v1+MINIAOD.txt',
-        'files_per_job':100,
-       # 'skims':['mm', 'bkmm', 'ks']
-       'skims':['ks','d0','phi','lambda']
-   },
-    'Charmonium+Run2018C':{
-        'file_with_lfns':'lists/Charmonium+Run2018C-17Sep2018-v1+MINIAOD.txt',
-        'files_per_job':100,
-        # 'skims':['mm', 'bkmm', 'ks']
-        'skims':['ks','d0','phi','lambda']
-    },
-    'Charmonium+Run2018D':{
-        'file_with_lfns':'lists/Charmonium+Run2018D-PromptReco-v2+MINIAOD.txt',
-        'files_per_job':100,
-        # 'skims':['mm', 'bkmm', 'ks']
-         'skims':['ks','d0','phi','lambda']
-    },
+   # 'EGamma+Run2018B':{
+   #     'file_with_lfns':'lists/EGamma+Run2018B-17Sep2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','phi','lambda']
+   # },
+   # 'EGamma+Run2018C':{
+   #     'file_with_lfns':'lists/EGamma+Run2018C-17Sep2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','phi','lambda']
+   # },
+   # 'EGamma+Run2018D':{
+   #     'file_with_lfns':'lists/EGamma+Run2018D-22Jan2019-v2+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','phi','lambda']
+   # },
+   # 'Charmonium+Run2016B_2':{
+   #     'file_with_lfns':'lists/Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2016C':{
+   #     'file_with_lfns':'lists/Charmonium+Run2016C-17Jul2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2016D':{
+   #     'file_with_lfns':'lists/Charmonium+Run2016D-17Jul2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2016E':{
+   #     'file_with_lfns':'lists/Charmonium+Run2016E-17Jul2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2016F':{
+   #     'file_with_lfns':'lists/Charmonium+Run2016F-17Jul2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2016G':{
+   #     'file_with_lfns':'lists/Charmonium+Run2016G-17Jul2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2016H':{
+   #     'file_with_lfns':'lists/Charmonium+Run2016H-17Jul2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2017B':{
+   #     'file_with_lfns':'lists/Charmonium+Run2017B-31Mar2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2017C':{
+   #     'file_with_lfns':'lists/Charmonium+Run2017C-31Mar2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2017D':{
+   #    'file_with_lfns':'lists/Charmonium+Run2017D-31Mar2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2017E':{
+   #     'file_with_lfns':'lists/Charmonium+Run2017E-31Mar2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2017F':{
+   #     'file_with_lfns':'lists/Charmonium+Run2017F-31Mar2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2018A':{
+   #     'file_with_lfns':'lists/Charmonium+Run2018A-17Sep2018-v1+MINIAOD.txt',
+   #     'files_per_job':100,
+   #     # 'skims':['mm', 'bkmm', 'ks']
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   # 'Charmonium+Run2018B':{
+   #      'file_with_lfns':'lists/Charmonium+Run2018B-17Sep2018-v1+MINIAOD.txt',
+   #      'files_per_job':100,
+   #     # 'skims':['mm', 'bkmm', 'ks']
+   #     'skims':['ks','d0','phi','lambda']
+   # },
+   #  'Charmonium+Run2018C':{
+   #      'file_with_lfns':'lists/Charmonium+Run2018C-17Sep2018-v1+MINIAOD.txt',
+   #      'files_per_job':100,
+   #      # 'skims':['mm', 'bkmm', 'ks']
+   #      'skims':['ks','d0','phi','lambda']
+   #  },
+   #  'Charmonium+Run2018D':{
+   #      'file_with_lfns':'lists/Charmonium+Run2018D-PromptReco-v2+MINIAOD.txt',
+   #      'files_per_job':100,
+   #      # 'skims':['mm', 'bkmm', 'ks']
+   #       'skims':['ks','d0','phi','lambda']
+   #  },
     # 'BsToMuMu':{
     #     'file_with_lfns':'lists/BsToMuMu_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM.txt',
     #     'match':True
