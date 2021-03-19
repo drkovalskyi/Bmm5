@@ -1,6 +1,6 @@
-<tool name="rabit" version="0.80">
+<tool name="rabit" version="0.82">
   <client>
-    <environment name="INCLUDE" default="/cvmfs/cms.cern.ch/$SCRAM_ARCH/external/py2-xgboost/0.80-ikaegh/lib/python2.7/site-packages/xgboost/rabit/include/"/>
+    <environment name="INCLUDE" default="/cvmfs/cms.cern.ch/$SCRAM_ARCH/external/py2-xgboost/0.82-nmpfii7/lib/python2.7/site-packages/xgboost/rabit/include/"/>
   </client>
   <runtime name="ROOT_INCLUDE_PATH" value="$INCLUDE" type="path"/>
   <runtime name="PATH" value="$INCLUDE" type="path"/>  

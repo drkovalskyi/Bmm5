@@ -50,7 +50,7 @@ MuonWithSoftMvaProducer::MuonWithSoftMvaProducer(const edm::ParameterSet& iConfi
   muonToken_ = consumes<std::vector<pat::Muon>>(iConfig.getParameter<edm::InputTag>("input"));
 
   edm::FileInPath softMvaTrainingFile = iConfig.getParameter<edm::FileInPath>("softMvaTrainingFile");
-  softMuonMvaEstimator_ = std::make_unique<pat::SoftMuonMvaEstimator>(softMvaTrainingFile.fullPath());
+  softMuonMvaEstimator_ = std::make_unique<pat::SoftMuonMvaEstimator>(softMvaTrainingFile);
 
   produces<std::vector<pat::Muon>>();
 }
