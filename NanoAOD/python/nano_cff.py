@@ -22,3 +22,11 @@ def nanoAOD_customizeV0ForMuonFake(process):
     process.nanoSequenceMC = cms.Sequence(process.slimmedMuons + process.nanoSequenceMC + process.V0ForMuonFakeMcSequence + process.V0ForMuonFakeMcTables)
     process.muonTable.variables.softMva = Var("softMvaValue()",float,doc="soft MVA ID score",precision=6)
     return process
+
+def nanoAOD_customizeBmmMuonId(process):
+    process.load('Bmm5.NanoAOD.BmmMuonId_cff')
+    # Data 
+    process.nanoSequence   = cms.Sequence(process.nanoSequence + process.BmmMuonIdSequence + process.BmmMuonIdTables)
+    # MC
+    process.nanoSequenceMC = cms.Sequence(process.nanoSequenceMC + process.BmmMuonIdMcSequence + process.BmmMuonIdMcTables)
+    return process
