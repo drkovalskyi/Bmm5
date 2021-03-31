@@ -12,31 +12,7 @@
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
 #include "DataFormats/PatCandidates/interface/CompositeCandidate.h"
-#include "DataFormats/BeamSpot/interface/BeamSpot.h"
-#include "DataFormats/VertexReco/interface/Vertex.h"
 
-#include "TrackingTools/Records/interface/TransientTrackRecord.h"
-#include "TrackingTools/TransientTrack/interface/TransientTrack.h"
-#include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
-#include "MagneticField/Engine/interface/MagneticField.h"
-#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
-#include "RecoVertex/KinematicFitPrimitives/interface/TransientTrackKinematicParticle.h"
-#include "RecoVertex/KinematicFitPrimitives/interface/KinematicParticleFactoryFromTransientTrack.h"
-#include "RecoVertex/KinematicFit/interface/KinematicParticleVertexFitter.h"
-#include "RecoVertex/KinematicFit/interface/KinematicParticleFitter.h"
-#include "RecoVertex/KinematicFit/interface/MassKinematicConstraint.h"
-#include "RecoVertex/KinematicFit/interface/PointingKinematicConstraint.h"
-#include "RecoVertex/KinematicFit/interface/KinematicConstrainedVertexFitter.h"
-#include "RecoVertex/KalmanVertexFit/interface/KalmanVertexFitter.h"
-#include "TrackingTools/PatternTools/interface/TwoTrackMinimumDistance.h"
-#include "TrackingTools/IPTools/interface/IPTools.h"
-#include "TrackingTools/GeomPropagators/interface/AnalyticalImpactPointExtrapolator.h"
-#include "TMVA/Reader.h"
-
-#include "CommonTools/CandUtils/interface/AddFourMomenta.h"
-
-#include "CommonTools/Statistics/interface/ChiSquaredProbability.h"
-#include "DataFormats/Math/interface/Vector3D.h"
 #include <TLorentzVector.h>
 #include <TVector.h>
 #include <TMatrix.h>
@@ -47,7 +23,7 @@
 //
 
 typedef reco::Candidate::LorentzVector LorentzVector;
-
+typedef std::pair<const reco::MuonChamberMatch*, const reco::MuonSegmentMatch*> MatchPair;
 using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -68,7 +44,8 @@ private:
   virtual void produce(edm::Event&, const edm::EventSetup&);
   // GenMatchInfo getGenMatchInfo( const pat::PackedCandidate& track1,
   // const pat::PackedCandidate& track2);
-
+  void fillMatchInfo(pat::CompositeCandidate& cand, const pat::Muon& muon);
+  
   // ----------member data ---------------------------
     
   edm::EDGetTokenT<std::vector<pat::Muon>> muonToken_;
@@ -107,11 +84,121 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
       pat::CompositeCandidate mu_cand;
       mu_cand.addUserFloat("trkKink", muon.combinedQuality().trkKink);
       mu_cand.addUserFloat("glbTrackProbability", muon.combinedQuality().glbTrackProbability);
+      fillMatchInfo(mu_cand, muon);
+      
+      if (isMC_){
+	mu_cand.addUserInt("simType", muon.simType());
+	mu_cand.addUserInt("simExtType", muon.simExtType());
+	mu_cand.addUserInt("simPdgId", muon.simPdgId());
+	mu_cand.addUserInt("simMotherPdgId", muon.simMotherPdgId());
+	mu_cand.addUserFloat("simProdRho", muon.simProdRho());
+	mu_cand.addUserFloat("simProdZ", muon.simProdZ());
+      }
       muons->push_back(mu_cand);
     }
     
     iEvent.put(std::move(muons), "muons");
 }
+
+
+const MatchPair&
+getBetterMatch(const MatchPair& match1, const MatchPair& match2){
+
+  // Prefer DT over CSC simply because it's closer to IP
+  // and will have less multiple scattering (at least for
+  // RB1 vs ME1/3 case). RB1 & ME1/2 overlap is tiny
+  if (match2.first->detector() == MuonSubdetId::DT and
+      match1.first->detector() != MuonSubdetId::DT)
+    return match2;
+
+  // For the rest compare local x match. We expect that
+  // segments belong to the muon, so the difference in
+  // local x is a reflection on how well we can measure it
+  if ( abs(match1.first->x - match1.second->x) >
+       abs(match2.first->x - match2.second->x) )
+    return match2;
+    
+  return match1;
+}
+
+float dX(const MatchPair& match){
+  if (match.first and match.second->hasPhi())
+    return (match.first->x - match.second->x);
+  else
+    return 9999.;
+}
+
+float pullX(const MatchPair& match){
+  if (match.first and match.second->hasPhi())
+    return dX(match) /
+      sqrt(std::pow(match.first->xErr, 2) + std::pow(match.second->xErr, 2));
+  else
+    return 9999.;
+}
+
+float dY(const MatchPair& match){
+  if (match.first and match.second->hasZed())
+    return (match.first->y - match.second->y);
+  else
+    return 9999.;
+}
+
+float pullY(const MatchPair& match){
+  if (match.first and match.second->hasZed())
+    return dY(match) /
+      sqrt(std::pow(match.first->yErr, 2) + std::pow(match.second->yErr, 2));
+  else
+    return 9999.;
+}
+
+void fillMatchInfoForStation(string prefix,
+			     pat::CompositeCandidate& cand,
+			     const MatchPair& match){
+  cand.addUserFloat(prefix + "_dX",    dX(match));
+  cand.addUserFloat(prefix + "_pullX", pullX(match));
+  cand.addUserFloat(prefix + "_dY",    dY(match));
+  cand.addUserFloat(prefix + "_pullY", pullY(match));
+}
+			     
+
+void BmmMuonIdProducer::fillMatchInfo(pat::CompositeCandidate& cand,
+				      const pat::Muon& muon){
+  // Initiate containter for results
+  const int n_stations = 2;
+  std::vector<MatchPair> matches;
+  for (unsigned int i=0; i < n_stations; ++i)
+    matches.push_back(std::pair(nullptr, nullptr));
+
+  // Find best matches
+  for (auto& chamberMatch : muon.matches()){
+    unsigned int station = chamberMatch.station() - 1;
+    if (station >= n_stations) continue;
+
+    // Find best segment match.
+    // We could consider all segments, but we will restrict to segments
+    // that match to this candidate better than to other muon candidates
+    for (auto& segmentMatch : chamberMatch.segmentMatches){
+      if ( not segmentMatch.isMask(reco::MuonSegmentMatch::BestInStationByDR) ||
+	   not segmentMatch.isMask(reco::MuonSegmentMatch::BelongsToTrackByDR) )
+	continue;
+
+      // Multiple segment matches are possible in different
+      // chambers that are either overlapping or belong to
+      // different detectors. We need to select one.
+      auto match_pair = MatchPair(&chamberMatch, &segmentMatch);
+      
+      if (matches[station].first)
+	matches[station] = getBetterMatch(matches[station], match_pair);
+      else
+	matches[station] = match_pair;
+    }
+  }
+
+  // Fill matching information
+  fillMatchInfoForStation("match1", cand, matches[0]);
+  fillMatchInfoForStation("match2", cand, matches[1]);
+}
+
 
 DEFINE_FWK_MODULE(BmmMuonIdProducer);
 
