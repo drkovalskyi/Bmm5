@@ -84,6 +84,30 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
       pat::CompositeCandidate mu_cand;
       mu_cand.addUserFloat("trkKink", muon.combinedQuality().trkKink);
       mu_cand.addUserFloat("glbTrackProbability", muon.combinedQuality().glbTrackProbability);
+      mu_cand.addUserFloat("chi2LocalPosition", muon.combinedQuality().chi2LocalPosition);
+      if (muon.isGlobalMuon())
+	mu_cand.addUserFloat("glbNormChi2", muon.globalTrack()->normalizedChi2());
+      else
+	mu_cand.addUserFloat("glbNormChi2", 9999.);
+
+      if (muon.isTrackerMuon() or muon.isGlobalMuon()){
+	mu_cand.addUserFloat("trkValidFrac",  muon.innerTrack()->validFraction());
+	mu_cand.addUserInt("trkLayers",       muon.innerTrack()->hitPattern().trackerLayersWithMeasurement());
+	mu_cand.addUserInt("nPixels",         muon.innerTrack()->hitPattern().numberOfValidPixelHits());
+	mu_cand.addUserInt("nValidHits",      muon.innerTrack()->hitPattern().numberOfValidTrackerHits());
+	mu_cand.addUserInt("nLostHitsInner",  muon.innerTrack()->hitPattern().numberOfLostTrackerHits(reco::HitPattern::MISSING_INNER_HITS));
+	mu_cand.addUserInt("nLostHitsInside", muon.innerTrack()->hitPattern().numberOfLostTrackerHits(reco::HitPattern::TRACK_HITS));
+	mu_cand.addUserInt("nLostHitsOutter", muon.innerTrack()->hitPattern().numberOfLostTrackerHits(reco::HitPattern::MISSING_OUTER_HITS));
+      } else {
+	mu_cand.addUserFloat("trkValidFrac",  0);
+	mu_cand.addUserInt("trkLayers",       0);
+	mu_cand.addUserInt("nPixels",         0);
+	mu_cand.addUserInt("nValidHits",      0);
+	mu_cand.addUserInt("nLostHitsInner",  0);
+	mu_cand.addUserInt("nLostHitsInside", 0);
+	mu_cand.addUserInt("nLostHitsOutter", 0);
+      }
+	
       fillMatchInfo(mu_cand, muon);
       
       if (isMC_){

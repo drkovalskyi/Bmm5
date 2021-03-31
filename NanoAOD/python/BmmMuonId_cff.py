@@ -30,20 +30,32 @@ BmmMuonId = cms.EDProducer("BmmMuonIdProducer",
 BmmMuonIdMc = BmmMuonId.clone( isMC = cms.bool(True) ) 
 
 BmmMuonIdVariables = cms.PSet(
-    trkKink             = Var("userFloat('trkKink')",         float, doc = "Inner track kink chi2"),
-    glbTrackProbability = Var("userFloat('trkKink')",         float, doc = "Log probability of the global fit"),
-    match1_dX           = Var("userFloat('match1_dX')",       float, doc = "Station 1 local segment-track dX"),
-    match1_pullX        = Var("userFloat('match1_pullX')",    float, doc = "Station 1 local segment-track dX/dErr"),
-    match1_pullDxDz     = Var("userFloat('match1_pullDxDz')", float, doc = "Station 1 local segment-track direction matching in x"),
-    match1_dY           = Var("userFloat('match1_dY')",       float, doc = "Station 1 local segment-track dY"),
-    match1_pullY        = Var("userFloat('match1_pullY')",    float, doc = "Station 1 local segment-track dY/dErr"),
-    match1_pullDyDz     = Var("userFloat('match1_pullDyDz')", float, doc = "Station 1 local segment-track direction matching in y"),
-    match2_dX           = Var("userFloat('match2_dX')",       float, doc = "Station 2 local segment-track dX"),
-    match2_pullX        = Var("userFloat('match2_pullX')",    float, doc = "Station 2 local segment-track dX/dErr"),
-    match2_pullDxDz     = Var("userFloat('match2_pullDxDz')", float, doc = "Station 2 local segment-track direction matching in x"),
-    match2_dY           = Var("userFloat('match2_dY')",       float, doc = "Station 2 local segment-track dY"),
-    match2_pullY        = Var("userFloat('match2_pullY')",    float, doc = "Station 2 local segment-track dY/dErr"),
-    match2_pullDyDz     = Var("userFloat('match2_pullDyDz')", float, doc = "Station 2 local segment-track direction matching in y"),
+    trkKink             = Var("userFloat('trkKink')",             float, doc = "Inner track kink chi2"),
+    glbTrackProbability = Var("userFloat('glbTrackProbability')", float, doc = "Log probability of the global fit"),
+    chi2LocalPosition   = Var("userFloat('chi2LocalPosition')",   float, doc = "chi2 for STA-TK matching by local position"),
+    glbNormChi2         = Var("userFloat('glbNormChi2')",         float, doc = "Normalized chi2 of the global fit"),
+    trkValidFrac        = Var("userFloat('trkValidFrac')",        float, doc = "Fraction of valid hits for inner track"),
+    
+    match1_dX           = Var("userFloat('match1_dX')",           float, doc = "Station 1 local segment-track dX"),
+    match1_pullX        = Var("userFloat('match1_pullX')",        float, doc = "Station 1 local segment-track dX/dErr"),
+    match1_pullDxDz     = Var("userFloat('match1_pullDxDz')",     float, doc = "Station 1 local segment-track direction matching in x"),
+    match1_dY           = Var("userFloat('match1_dY')",           float, doc = "Station 1 local segment-track dY"),
+    match1_pullY        = Var("userFloat('match1_pullY')",        float, doc = "Station 1 local segment-track dY/dErr"),
+    match1_pullDyDz     = Var("userFloat('match1_pullDyDz')",     float, doc = "Station 1 local segment-track direction matching in y"),
+    match2_dX           = Var("userFloat('match2_dX')",           float, doc = "Station 2 local segment-track dX"),
+    match2_pullX        = Var("userFloat('match2_pullX')",        float, doc = "Station 2 local segment-track dX/dErr"),
+    match2_pullDxDz     = Var("userFloat('match2_pullDxDz')",     float, doc = "Station 2 local segment-track direction matching in x"),
+    match2_dY           = Var("userFloat('match2_dY')",           float, doc = "Station 2 local segment-track dY"),
+    match2_pullY        = Var("userFloat('match2_pullY')",        float, doc = "Station 2 local segment-track dY/dErr"),
+    match2_pullDyDz     = Var("userFloat('match2_pullDyDz')",     float, doc = "Station 2 local segment-track direction matching in y"),
+
+    trkLayers           = Var("userInt('trkLayers')",               int, doc = "Number of layers with measurement for inner track"),
+    nPixels             = Var("userInt('nPixels')",                 int, doc = "Number of valid pixel hits"),
+    nValidHits          = Var("userInt('nValidHits')",              int, doc = "Number of valid hits"),
+    nLostHitsInner      = Var("userInt('nLostHitsInner')",          int, doc = "Number of lost hits before the track"),
+    nLostHitsInside     = Var("userInt('nLostHitsInside')",         int, doc = "Number of lost hits on the track"),
+    nLostHitsOutter     = Var("userInt('nLostHitsOutter')",         int, doc = "Number of lost hits after the track"),
+    
 )
 
 BmmMuonIdMcVariables = merge_psets(
