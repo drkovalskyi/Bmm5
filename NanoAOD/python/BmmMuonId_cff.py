@@ -49,13 +49,19 @@ BmmMuonIdVariables = cms.PSet(
     match2_pullY        = Var("userFloat('match2_pullY')",        float, doc = "Station 2 local segment-track dY/dErr"),
     match2_pullDyDz     = Var("userFloat('match2_pullDyDz')",     float, doc = "Station 2 local segment-track direction matching in y"),
 
-    trkLayers           = Var("userInt('trkLayers')",               int, doc = "Number of layers with measurement for inner track"),
     nPixels             = Var("userInt('nPixels')",                 int, doc = "Number of valid pixel hits"),
     nValidHits          = Var("userInt('nValidHits')",              int, doc = "Number of valid hits"),
-    nLostHitsInner      = Var("userInt('nLostHitsInner')",          int, doc = "Number of lost hits before the track"),
-    nLostHitsInside     = Var("userInt('nLostHitsInside')",         int, doc = "Number of lost hits on the track"),
-    nLostHitsOutter     = Var("userInt('nLostHitsOutter')",         int, doc = "Number of lost hits after the track"),
+    nLostHitsInner      = Var("userInt('nLostHitsInner')",          int, doc = "Number of lost hits before tracker track"),
+    nLostHitsOn         = Var("userInt('nLostHitsOn')",             int, doc = "Number of lost hits on tracker track"),
+    nLostHitsOuter      = Var("userInt('nLostHitsOuter')",          int, doc = "Number of lost hits after tracker track"),
     
+    trkLayers           = Var("userInt('trkLayers')",               int, doc = "Number of layers with measurements in tracker track"),
+    trkLostLayersInner  = Var("userInt('trkLostLayersInner')",      int, doc = "Number of lost layers befor tracker track"),
+    trkLostLayersOn     = Var("userInt('trkLostLayersOn')",         int, doc = "Number of lost layers on tracker track"),
+    trkLostLayersOuter  = Var("userInt('trkLostLayersOuter')",      int, doc = "Number of lost layers after tracker track"),
+
+    highPurity          = Var("userInt('highPurity')",              int, doc = "High purity inner track"),
+
 )
 
 BmmMuonIdMcVariables = merge_psets(

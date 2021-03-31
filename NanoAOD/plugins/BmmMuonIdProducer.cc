@@ -92,20 +92,36 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 
       if (muon.isTrackerMuon() or muon.isGlobalMuon()){
 	mu_cand.addUserFloat("trkValidFrac",  muon.innerTrack()->validFraction());
-	mu_cand.addUserInt("trkLayers",       muon.innerTrack()->hitPattern().trackerLayersWithMeasurement());
+	
 	mu_cand.addUserInt("nPixels",         muon.innerTrack()->hitPattern().numberOfValidPixelHits());
 	mu_cand.addUserInt("nValidHits",      muon.innerTrack()->hitPattern().numberOfValidTrackerHits());
 	mu_cand.addUserInt("nLostHitsInner",  muon.innerTrack()->hitPattern().numberOfLostTrackerHits(reco::HitPattern::MISSING_INNER_HITS));
-	mu_cand.addUserInt("nLostHitsInside", muon.innerTrack()->hitPattern().numberOfLostTrackerHits(reco::HitPattern::TRACK_HITS));
-	mu_cand.addUserInt("nLostHitsOutter", muon.innerTrack()->hitPattern().numberOfLostTrackerHits(reco::HitPattern::MISSING_OUTER_HITS));
+	mu_cand.addUserInt("nLostHitsOn",     muon.innerTrack()->hitPattern().numberOfLostTrackerHits(reco::HitPattern::TRACK_HITS));
+	mu_cand.addUserInt("nLostHitsOuter",  muon.innerTrack()->hitPattern().numberOfLostTrackerHits(reco::HitPattern::MISSING_OUTER_HITS));
+	
+	mu_cand.addUserInt("trkLayers",           muon.innerTrack()->hitPattern().trackerLayersWithMeasurement());
+	mu_cand.addUserInt("trkLostLayersInner",  muon.innerTrack()->hitPattern().trackerLayersWithoutMeasurement(reco::HitPattern::MISSING_INNER_HITS));
+	mu_cand.addUserInt("trkLostLayersOn",     muon.innerTrack()->hitPattern().trackerLayersWithoutMeasurement(reco::HitPattern::TRACK_HITS));
+	mu_cand.addUserInt("trkLostLayersOuter",  muon.innerTrack()->hitPattern().trackerLayersWithoutMeasurement(reco::HitPattern::MISSING_OUTER_HITS));
+
+	mu_cand.addUserInt("highPurity",   muon.innerTrack()->quality(reco::Track::highPurity));
+
       } else {
 	mu_cand.addUserFloat("trkValidFrac",  0);
-	mu_cand.addUserInt("trkLayers",       0);
+	
 	mu_cand.addUserInt("nPixels",         0);
 	mu_cand.addUserInt("nValidHits",      0);
 	mu_cand.addUserInt("nLostHitsInner",  0);
-	mu_cand.addUserInt("nLostHitsInside", 0);
+	mu_cand.addUserInt("nLostHitsOn",     0);
 	mu_cand.addUserInt("nLostHitsOutter", 0);
+	
+	mu_cand.addUserInt("trkLayers",           0);
+	mu_cand.addUserInt("trkLostLayersInner",  0);
+	mu_cand.addUserInt("trkLostLayersOn",     0);
+	mu_cand.addUserInt("trkLostLayersOuter",  0);
+
+	mu_cand.addUserInt("highPurity",   0);
+
       }
 	
       fillMatchInfo(mu_cand, muon);
