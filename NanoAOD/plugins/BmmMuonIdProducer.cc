@@ -136,6 +136,14 @@ float pullX(const MatchPair& match){
     return 9999.;
 }
 
+float pullDxDz(const MatchPair& match){
+  if (match.first and match.second->hasPhi())
+    return (match.first->dXdZ - match.second->dXdZ) /
+           sqrt(std::pow(match.first->dXdZErr, 2) + std::pow(match.second->dXdZErr, 2));
+  else
+    return 9999.;
+}
+
 float dY(const MatchPair& match){
   if (match.first and match.second->hasZed())
     return (match.first->y - match.second->y);
@@ -151,15 +159,24 @@ float pullY(const MatchPair& match){
     return 9999.;
 }
 
+float pullDyDz(const MatchPair& match){
+  if (match.first and match.second->hasZed())
+    return (match.first->dYdZ - match.second->dYdZ) /
+           sqrt(std::pow(match.first->dYdZErr, 2) + std::pow(match.second->dYdZErr, 2));
+  else
+    return 9999.;
+}
+
 void fillMatchInfoForStation(string prefix,
 			     pat::CompositeCandidate& cand,
 			     const MatchPair& match){
-  cand.addUserFloat(prefix + "_dX",    dX(match));
-  cand.addUserFloat(prefix + "_pullX", pullX(match));
-  cand.addUserFloat(prefix + "_dY",    dY(match));
-  cand.addUserFloat(prefix + "_pullY", pullY(match));
+  cand.addUserFloat(prefix + "_dX",       dX(match));
+  cand.addUserFloat(prefix + "_pullX",    pullX(match));
+  cand.addUserFloat(prefix + "_pullDxDz", pullDxDz(match));
+  cand.addUserFloat(prefix + "_dY",       dY(match));
+  cand.addUserFloat(prefix + "_pullY",    pullY(match));
+  cand.addUserFloat(prefix + "_pullDyDz", pullDyDz(match));
 }
-			     
 
 void BmmMuonIdProducer::fillMatchInfo(pat::CompositeCandidate& cand,
 				      const pat::Muon& muon){

@@ -30,16 +30,20 @@ BmmMuonId = cms.EDProducer("BmmMuonIdProducer",
 BmmMuonIdMc = BmmMuonId.clone( isMC = cms.bool(True) ) 
 
 BmmMuonIdVariables = cms.PSet(
-    trkKink             = Var("userFloat('trkKink')",      float, doc = "Inner track kink chi2"),
-    glbTrackProbability = Var("userFloat('trkKink')",      float, doc = "Log probability of the global fit"),
-    match1_dX           = Var("userFloat('match1_dX')",    float, doc = "Station 1 local segment-track dX"),
-    match1_pullX        = Var("userFloat('match1_pullX')", float, doc = "Station 1 local segment-track dX/dErr"),
-    match1_dY           = Var("userFloat('match1_dY')",    float, doc = "Station 1 local segment-track dY"),
-    match1_pullY        = Var("userFloat('match1_pullY')", float, doc = "Station 1 local segment-track dY/dErr"),
-    match2_dX           = Var("userFloat('match2_dX')",    float, doc = "Station 2 local segment-track dX"),
-    match2_pullX        = Var("userFloat('match2_pullX')", float, doc = "Station 2 local segment-track dX/dErr"),
-    match2_dY           = Var("userFloat('match2_dY')",    float, doc = "Station 2 local segment-track dY"),
-    match2_pullY        = Var("userFloat('match2_pullY')", float, doc = "Station 2 local segment-track dY/dErr"),
+    trkKink             = Var("userFloat('trkKink')",         float, doc = "Inner track kink chi2"),
+    glbTrackProbability = Var("userFloat('trkKink')",         float, doc = "Log probability of the global fit"),
+    match1_dX           = Var("userFloat('match1_dX')",       float, doc = "Station 1 local segment-track dX"),
+    match1_pullX        = Var("userFloat('match1_pullX')",    float, doc = "Station 1 local segment-track dX/dErr"),
+    match1_pullDxDz     = Var("userFloat('match1_pullDxDz')", float, doc = "Station 1 local segment-track direction matching in x"),
+    match1_dY           = Var("userFloat('match1_dY')",       float, doc = "Station 1 local segment-track dY"),
+    match1_pullY        = Var("userFloat('match1_pullY')",    float, doc = "Station 1 local segment-track dY/dErr"),
+    match1_pullDyDz     = Var("userFloat('match1_pullDyDz')", float, doc = "Station 1 local segment-track direction matching in y"),
+    match2_dX           = Var("userFloat('match2_dX')",       float, doc = "Station 2 local segment-track dX"),
+    match2_pullX        = Var("userFloat('match2_pullX')",    float, doc = "Station 2 local segment-track dX/dErr"),
+    match2_pullDxDz     = Var("userFloat('match2_pullDxDz')", float, doc = "Station 2 local segment-track direction matching in x"),
+    match2_dY           = Var("userFloat('match2_dY')",       float, doc = "Station 2 local segment-track dY"),
+    match2_pullY        = Var("userFloat('match2_pullY')",    float, doc = "Station 2 local segment-track dY/dErr"),
+    match2_pullDyDz     = Var("userFloat('match2_pullDyDz')", float, doc = "Station 2 local segment-track direction matching in y"),
 )
 
 BmmMuonIdMcVariables = merge_psets(
