@@ -8,6 +8,7 @@ if len(sys.argv) != 2:
 
 nanoaod_block = dict()
 total_time = None
+loop_time = None
 block_time = dict()
 nevents = None
 with open(sys.argv[1]) as logfile:
@@ -20,6 +21,10 @@ with open(sys.argv[1]) as logfile:
         match = re.search('TimeReport> Time report complete in\s+(\S+)', line)
         if match:
             total_time = float(match.group(1))
+            continue
+        match = re.search('Total loop:\s+(\S+)', line)
+        if match:
+            loop_time = float(match.group(1))
             continue
         match = re.search('^TimeReport\s*\-+\s*(\S.*?)\s*\-\-', line)
         if match:
@@ -36,21 +41,30 @@ with open(sys.argv[1]) as logfile:
             block_time[timereport_block] += float(match.group(1))
             
 print("Total time: %0.1f sec" % total_time)
-print("Average time per event: %0.3f sec\n" % (total_time/nevents))
+print("Total event loop time: %0.1f sec" % loop_time)
+if loop_time/total_time < 0.90:
+    print("WARNING: overhead is %0.0f%% of total time" % (100.*(1-loop_time/total_time)))
+    print("Consider running more events for more reliable results")
+
+print("Time per event (total time): %0.3f sec" % (total_time/nevents))
+print("Time per event (event loop time): %0.3f sec\n" % (loop_time/nevents))
 
 nanoaod_block_time_per_event = 0
 for module, time in nanoaod_block.items():
     nanoaod_block_time_per_event += time
-print("NanoAOD step time per event: %0.3f sec" % nanoaod_block_time_per_event)
+print("nanoAOD_step path time per event: %0.3f sec" % nanoaod_block_time_per_event)
 
-bmm_modules = ['BxToMuMu', 'BxToMuMuMc', 'BxToMuMuGen', 'BxToMuMuDiMuonMcTable', 'BxToMuMuBToKmumuMcTable',
-               'BxToMuMuBToKKmumuMcTable', 'BxToMuMuGenTable', 'BxToMuMuGenSummaryTable', 
-               'BxToMuMuDiMuonTable', 'BxToMuMuBToKmumuTable', 'BxToMuMuBToKKmumuTable', 
-               'V0ForMuonFakeMC', 'V0ForMuonFake']
+bmm_module_patterns = ['BxToMuMu', 'ForMuonFake']
 
 print("Bmm modules:")
 for module in sorted(nanoaod_block, key=nanoaod_block.get, reverse=True):
-    if module not in bmm_modules: continue
+    report_module = False
+    for pattern in bmm_module_patterns:
+        if re.search(pattern, module):
+            report_module = True
+            break
+    if not report_module:
+        continue
     time = nanoaod_block[module]
     print("\t%-60s\t%0.4f (%4.1f%%)" % (module, time, 100.*time/nanoaod_block_time_per_event))
 
@@ -62,7 +76,7 @@ for module in sorted(nanoaod_block, key=nanoaod_block.get, reverse=True):
         print("\t%-60s\t%0.4f (%4.1f%%)" % (module, time, 100.*time/nanoaod_block_time_per_event))
         show_top -= 1
 
-print("Block time:")
-for block in sorted(block_time, key=block_time.get, reverse=True):
-    time = block_time[block]
-    print("\t%-30s\t%0.4f (%4.1f%%)" % (block, time, 100.*time/total_time*nevents))
+# print("Block time:")
+# for block in sorted(block_time, key=block_time.get, reverse=True):
+#    time = block_time[block]
+#    print("\t%-30s\t%0.4f (%4.1f%%)" % (block, time, 100.*time/total_time*nevents))
