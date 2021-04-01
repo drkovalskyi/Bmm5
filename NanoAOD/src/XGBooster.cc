@@ -7,6 +7,7 @@ XGBooster::XGBooster(std::string model_file)
   assert(status==0 && "Failed to create XGBooster");
   status = XGBoosterLoadModel(booster_, model_file.c_str());
   assert(status==0 && "Failed to load XGBoost model");
+  XGBoosterSetParam(booster_, "nthread", "1");
 };
 
 void XGBooster::addFeature(std::string name){
@@ -19,7 +20,7 @@ void XGBooster::set(std::string name, float value){
 }
 
 float XGBooster::predict()
-{    
+{
   DMatrixHandle dvalues;
   XGDMatrixCreateFromMat(&features_[0], 1, features_.size(), 0., &dvalues);
     
