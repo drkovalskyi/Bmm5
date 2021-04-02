@@ -752,10 +752,12 @@ BmmV0Producer::getPhiToKK(const edm::Event& iEvent,
     phiCand.addUserFloat( "ds_pion_pt", ds_pion->pt() );
     phiCand.addUserFloat( "ds_pion_eta", ds_pion->eta() );
     phiCand.addUserFloat( "ds_pion_phi", ds_pion->phi() );
+    phiCand.addUserInt(   "ds_pion_mu_index", match_to_muon(*ds_pion, *muonHandle_));
   } else {
     phiCand.addUserFloat( "ds_pion_pt", -1.0 );
     phiCand.addUserFloat( "ds_pion_eta", 0.0 );
     phiCand.addUserFloat( "ds_pion_phi", 0.0 );
+    phiCand.addUserInt(   "ds_pion_mu_index", -1);
   }
   addFitInfo(phiCand, dsVtx, "ds");
     
