@@ -11,9 +11,16 @@ total_time = None
 loop_time = None
 block_time = dict()
 nevents = None
+max_rss = None
 with open(sys.argv[1]) as logfile:
     timereport_block = None
     for line in logfile:
+        match = re.search('^MemoryCheck.*?RSS\s+(\S+)', line)
+        if match:
+            rss = float(match.group(1))
+            if not max_rss or max_rss < rss:
+                max_rss = rss
+            continue
         match = re.search('TrigReport Events total = (\d+)', line)
         if match:
             nevents = int(match.group(1))
@@ -40,6 +47,7 @@ with open(sys.argv[1]) as logfile:
                 block_time[timereport_block] = 0
             block_time[timereport_block] += float(match.group(1))
             
+print("Max RSS: %f" % max_rss)
 print("Total time: %0.1f sec" % total_time)
 print("Total event loop time: %0.1f sec" % loop_time)
 if loop_time/total_time < 0.90:
@@ -54,7 +62,7 @@ for module, time in nanoaod_block.items():
     nanoaod_block_time_per_event += time
 print("nanoAOD_step path time per event: %0.3f sec" % nanoaod_block_time_per_event)
 
-bmm_module_patterns = ['BxToMuMu', 'ForMuonFake']
+bmm_module_patterns = ['BxToMuMu', 'ForMuonFake', 'BmmMuonId']
 
 print("Bmm modules:")
 for module in sorted(nanoaod_block, key=nanoaod_block.get, reverse=True):
