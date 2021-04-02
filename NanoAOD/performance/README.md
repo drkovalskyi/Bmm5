@@ -9,33 +9,33 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### Time per event for the event loop (sec)
 | Tag           | Production Version | NanoAOD path | Bmm module | V0 module | MuonId module |
 | ------------- | ------------------ | ------------ | ---------- | --------- | ------------- |
-|               |                    |     0.070    |    0.040   |    0.025  |    0.000      |
+| NanoAODv6-V14 |      511           |     0.070    |    0.040   |    0.025  |    0.000      |
 
 #### Size per event (KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-|               |                    |   1.1   |     1.6       |       1.7          |
+| NanoAODv6-V14 |      511           |   1.1   |     1.6       |       1.7          |
 
 #### Memory Usage (RSS KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 | NanoAOD + Bmm + V0 + Id |
 | ------------- | ------------------ | ------- | ------------- | ------------------ | ----------------------- |
-|               |                    |   1630  |     1812      |      1903          |         1893            |
+| NanoAODv6-V14 |      511           |   1630  |     1812      |      1903          |         1893            |
 
 ### Data: Charmonium Run2018D
 #### Time per event for the event loop (sec)
 | Tag           | Production Version | NanoAOD path | Bmm module | V0 module | MuonId module |
 | ------------- | ------------------ | ------------ | ---------- | --------- | ------------- |
-|               |                    |     0.073    |    0.062   |    0.025  |    0.000      |
+| NanoAODv6-V14 |      511           |     0.073    |    0.062   |    0.025  |    0.000      |
 
 #### Size per event (KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-|               |                    |   1.0   |     2.0       |       2.1          |
+| NanoAODv6-V14 |      511           |   1.0   |     2.0       |       2.1          |
 
 #### Memory Usage (RSS KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 | NanoAOD + Bmm + V0 + Id |
 | ------------- | ------------------ | ------- | ------------- | ------------------ | ----------------------- |
-|               |                    |   1665  |     1697      |      1761          |         1799            |
+| NanoAODv6-V14 |      511           |   1665  |     1697      |      1761          |         1799            |
 
 
 ## Testing procedure
