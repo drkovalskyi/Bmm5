@@ -2,6 +2,17 @@
 
 ## New developments
 
+## [NanoAODv6-V14] - 2021/04/02
+
+### Fixed
+	- use only a single thread in XGBooster
+
+### Added
+	- muon id inputs for new MVA id
+	- DsToPhiPiToKKPi control samples
+	- expanded JpsiK to mmK including Psi(2S)K
+	- better postprocessing
+
 ## [NanoAODv6-V13] - 2021/01/05
 
 ### Fixed
