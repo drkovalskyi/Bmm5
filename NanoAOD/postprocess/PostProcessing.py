@@ -165,7 +165,10 @@ class ResourceHandler(object):
             return len(self.active_jobs)
 
     def number_of_free_slots(self):
-        n = self.max_njobs - self.number_of_running_jobs()
+        # report number of free slots for the resource taking
+        # into account all jobs running at the resource, not
+        # only owned jobs.
+        n = self.max_njobs - self.number_of_running_jobs(False)
         if n<0: n=0
         return n
 
