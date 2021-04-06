@@ -22,18 +22,25 @@ class Skimmer(Processor):
         sys.stdout.flush()
         processor.run()
 
+        sys.stdout.flush()
+
         # merge skimed data
         skimmed_files = []
         for f in input_files:
             skimmed_files.append(os.path.join(self.tmp_dir,
                                               os.path.basename(f).replace(".root","%s.root" % postfix)))
-        sys.stdout.flush()
-        # FIXME: check the logic
         if len(skimmed_files) > 1:
             subprocess.call("haddnano.py %s %s" % (self.job_output_tmp, " ".join(skimmed_files)), shell=True)
-        # clean up
-        for f in skimmed_files:
-            os.remove(f)
+            # clean up
+            for f in skimmed_files:
+                os.remove(f)
+        else:
+            if len(skimmed_files) == 0:
+                raise Exception("There should be more than one skimmed file")
+            subprocess.call("mv -v %s %s" % (skimmed_files[0], self.job_output_tmp), shell=True)
+
+        sys.stdout.flush()
+
 
 def unit_test():
     p = Skimmer("/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job")
