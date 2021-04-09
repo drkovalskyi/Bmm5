@@ -12,6 +12,9 @@ import hashlib
 import fcntl
 import sys
 
+from Bmm5.MVA.mtree import MTree
+from ROOT import TFile, TTree
+
 class Processor(object):
     """Base class for processors"""
     def __init__(self, job_filename, take_ownership=False):
@@ -91,6 +94,113 @@ class Processor(object):
         self._process()
         self._finalize()
         self._release_lock()
+
+
+class FlatNtupleBase(Processor):
+    """Flat ROOT ntuple producer for Bmm5 analysis"""
+
+    def _validate_inputs(self):
+        """Task specific input validation"""
+        raise Exception("Not implemented")
+
+
+    def _process(self):
+        """Process input files, merge output and report performance"""
+        self._validate_inputs()
+
+        # process files
+        results = []
+        t0 = time.clock()
+        n_events = 0
+        for f in self.job_info['input']:
+            result, n = self.process_file(f)
+            n_events += n
+            results.append(result)
+        print n//(time.clock()-t0), "Hz"
+
+        print "Merging output."
+        # merge results
+        good_files = []
+        for rfile in results:
+            if rfile: good_files.append(rfile)
+        command = "hadd -f %s %s" % (self.job_output_tmp, " ".join(good_files))
+        status = subprocess.call(command, shell=True)
+
+        if status==0:
+            print "Merged output."
+            for file in good_files:
+                os.remove(file)
+        else:
+            raise Exception("Merge failed")
+
+    def _process_events(self):
+        raise Exception("Not implemented")
+
+    def process_file(self, input_file):
+        """Initialize input and output trees and initiate the event loop"""
+        print "Processing file: %s" % input_file
+        match = re.search("([^\/]+)\.root$", input_file)
+        if match:
+            output_filename = "%s/%s_processed.root" % (self.tmp_dir, match.group(1))
+        else:
+            raise Exception("Unexpected input ROOT file name:\n%s" % input_file)
+
+        statisitics = dict()
+
+        fout = TFile(output_filename, 'recreate')
+        self.tree = MTree(self.job_info['tree_name'], '')
+        self._configure_output_tree()
+
+        fin = TFile(input_file)
+        self.input_tree = fin.Get("Events")
+        nevents = self.input_tree.GetEntries()
+
+        self._process_events()
+
+        nout = self.tree.tree.GetEntries()
+        print 'Selected %d / %d entries from %s (%.2f%%)' % (nout, nevents, input_file, 100.*nout/nevents if nevents else 0)
+        fout.Write()
+        fout.Close()
+        return output_filename, nevents
+
+    def get_cut(self):
+        """Parse cut for keywords and added placeholders for tree and index"""
+
+        # load branch info
+        branches = dict()
+
+        for br in self.input_tree.GetListOfBranches():
+            name = br.GetName()
+            leaf = br.GetLeaf(name)
+            if leaf.GetLeafCount():
+                branches[name] = leaf.GetLeafCount().GetName()
+            else:
+                branches[name] = ""
+
+        # process cut
+
+        cut = self.job_info['cut']
+
+        cut_list = re.split('([^\w\_]+)', cut)
+
+        parsed_cut = ""
+        for i in range(len(cut_list)):
+            if not re.search('^[\w\_]+$', cut_list[i]) or cut_list[i] not in branches:
+                parsed_cut += cut_list[i]
+            else:
+                # processing a keyword
+
+                # make an index formater for vectors
+                index = branches[cut_list[i]]
+                if index != "":
+                    index = "[{" + index + "}]"
+
+                if i < len(cut_list)-1 and re.search('^\[', cut_list[i+1]):
+                    parsed_cut += "{tree}." + cut_list[i]
+                else:
+                    parsed_cut += "{tree}." + cut_list[i] + index
+        return parsed_cut
+
 
 class ResourceHandler(object):
     """Base class for resource handlers"""
