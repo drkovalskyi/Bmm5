@@ -2,6 +2,12 @@
 
 ## New developments
 
+## [NanoAODv6-V15] - 2021/04/10
+
+### Fixed
+	- Fixed bug in JpsiKK code
+	- Increase DsToPhiPi mass windows
+
 ## [NanoAODv6-V14] - 2021/04/02
 
 ### Fixed
