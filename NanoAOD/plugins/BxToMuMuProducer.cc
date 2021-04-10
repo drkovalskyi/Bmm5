@@ -1445,7 +1445,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 
 	    // BToJpsiKK
 	    bool goodBtoJpsiKK = goodBtoMuMuK;
-	    if (fabs(kinematicMuMuVertexFit.mass()-3.1) < 0.2) goodBtoJpsiKK = false;
+	    if (fabs(kinematicMuMuVertexFit.mass()-3.1) > 0.2) goodBtoJpsiKK = false;
 	  
 	    double kmm_mass = (muon1.p4() + muon2.p4() + kaonCand1.p4()).mass();
 	    if (kmm_mass < minBKmmMass_ || kmm_mass > maxBKmmMass_) goodBtoMuMuK = false;
