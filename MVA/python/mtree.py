@@ -41,7 +41,7 @@ class MTree:
         self.variables[branch_name][0] = value
 
     def __getitem__(self, branch_name):
-        return self, branch_name
+        return self.variables[branch_name][0]
 
     def reset(self, branch_list=None, regexp=None):
         """Initialize variables to their default values.
