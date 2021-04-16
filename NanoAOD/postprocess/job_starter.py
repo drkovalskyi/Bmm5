@@ -4,7 +4,9 @@
 # Usage example:
 #  python job_starter.py [Processor] [Job file]
 #
-from FlatNtupleForBmmMva import FlatNtupleForBmmMva
+from FlatNtupleForBmmMva  import FlatNtupleForBmmMva
+from FlatNtupleForMLFit   import FlatNtupleForMLFit
+from FlatNtupleForMuonMVA import FlatNtupleForMuonMVA
 from Skimmer import Skimmer
 import sys
 
