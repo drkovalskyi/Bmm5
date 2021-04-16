@@ -21,6 +21,7 @@ class Processor(object):
         """Set up job"""
         self.job_filename = job_filename
         self.take_ownership = take_ownership
+        self.limit = -1
         
         # Load job information
         self.job_info = json.load(open(job_filename))
