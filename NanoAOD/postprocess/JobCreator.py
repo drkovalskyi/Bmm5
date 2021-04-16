@@ -58,7 +58,7 @@ class JobCreator(object):
         """Generate unique file name based on the hash of input file names"""
         return hashlib.md5(",".join(input_files)).hexdigest()
 
-    def create_new_jobs(self):
+    def create_new_jobs(self, make_small_jobs=False):
         """Find new files and create jobs"""
         for task in cfg.tasks:
             task_id = "%s-%s" % (task['type'], task['name'])
@@ -82,6 +82,8 @@ class JobCreator(object):
                 n = task['files_per_job']
                 njobs = 0
                 for i in range(0, n_elements, n):
+                    if not make_small_jobs and i + n >= n_elements:
+                        break
                     # get input
                     inputs = new_inputs[i : i + n]
                     inputs.sort()
@@ -117,4 +119,4 @@ if __name__ == "__main__":
     jc = JobCreator()
     jc.find_all_inputs()
     jc.load_existing_jobs()
-    jc.create_new_jobs()
+    jc.create_new_jobs(True)
