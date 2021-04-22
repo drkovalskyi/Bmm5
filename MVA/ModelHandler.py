@@ -30,7 +30,9 @@ class ModelHandler(object):
         self.bst = None
         self.train_matrix = None
         self.test_matrix = None
-
+        self.train_data = None
+        self.test_data = None
+        
     def get_true_classification(self, data):
         """Make a column representing the true classification of events.
 
@@ -49,7 +51,8 @@ class ModelHandler(object):
         tree = f[self.tree_name]
         return tree.arrays(tree.keys())
 
-    def merge_data(self, datasets):
+    @staticmethod
+    def merge_data(datasets):
         """Merge multiple datasets into one dataset."""
         dataset = dict()
         if len(datasets) < 1:
@@ -85,7 +88,8 @@ class ModelHandler(object):
             x_data.append(data[feature])
         return np.column_stack(x_data)
 
-    def select_events(self, data, condition):
+    @staticmethod
+    def select_events(data, condition):
         """Select events"""
         selected_data = dict()
         indices = np.where(condition)[0]
@@ -106,12 +110,14 @@ class ModelHandler(object):
         (1-1/4)=75% of available data with modulus not equal to index is
         used in the training data set.
         """
-        train_data = self.select_events(self.data, self.data[self.event_branch_name] % n != index)
-        test_data  = self.select_events(self.data, self.data[self.event_branch_name] % n == index)
-        self.y_train = self.get_true_classification(train_data)
-        self.y_test  = self.get_true_classification(test_data)
-        self.x_train = self.get_feature_data(train_data)
-        self.x_test  = self.get_feature_data(test_data)
+        self.train_data = self.select_events(self.data,
+                                             self.data[self.event_branch_name] % n != index)
+        self.test_data  = self.select_events(self.data,
+                                             self.data[self.event_branch_name] % n == index)
+        self.y_train = self.get_true_classification(self.train_data)
+        self.y_test  = self.get_true_classification(self.test_data)
+        self.x_train = self.get_feature_data(self.train_data)
+        self.x_test  = self.get_feature_data(self.test_data)
 
 
     def get_parameters(self):
