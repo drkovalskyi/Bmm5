@@ -4,6 +4,7 @@ import os, re, sys, time, subprocess, math, json
 import multiprocessing
 from datetime import datetime
 import hashlib
+from ROOT import Math
 
 class FlatNtupleForMuonMVA(FlatNtupleBase):
     """Flat ROOT ntuple producer for Bmm5 Muon MVA"""
@@ -17,8 +18,44 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
                 raise Exception("Missing input '%s'" % parameter)
 
     def _get_jpsis(self):
-        """Get clean jpsi to be used as a control region"""
+        """Get clean jpsi from jpsik events to be used as a control region"""
 
+        candidates = []
+        # for tag in range(self.event.nMuon):
+        #     if self.event.Muon_pt[tag] < 4.0: continue
+        #     if not self.event.Muon_isTracker[tag]: continue
+        #     if not self.event.Muon_isGlobal[tag]: continue
+        #     if not self.event.Muon_softMvaId[tag]: continue
+        #     for probe in range(self.event.nMuon):
+        #         if self.event.Muon_pt[probe] < 4.0: continue
+        #         if tag == probe: continue
+        #         if self.event.Muon_charge[tag] == self.event.Muon_charge[probe]:
+        #             continue
+        #         if not self.event.Muon_isTracker[probe]: continue
+        #         if not self.event.Muon_isGlobal[probe]: continue
+        #         p_tag   = Math.PtEtaPhiMVector(self.event.Muon_pt[tag],
+        #                                        self.event.Muon_eta[tag],
+        #                                        self.event.Muon_phi[tag],
+        #                                        self.event.Muon_mass[tag])
+        #         p_probe = Math.PtEtaPhiMVector(self.event.Muon_pt[probe],
+        #                                        self.event.Muon_eta[probe],
+        #                                        self.event.Muon_phi[probe],
+        #                                        self.event.Muon_mass[probe])
+        #         mass = (p_tag + p_probe).M()
+        #         if abs(mass-3.1) > 0.1: continue
+        #         candidates.append((probe, mass))
+
+        for index in range(self.event.nbkmm):
+            if self.event.bkmm_jpsimc_sl3d[index] > 4 and \
+               self.event.bkmm_jpsimc_vtx_chi2dof[index] < 5 and \
+               abs(self.event.bkmm_nomc_mass[index] - 5.29) < 0.05 and \
+               abs(self.event.mm_kin_mass[self.event.bkmm_mm_index[index]] - 3.1) < 0.1:
+                candidates.append((self.event.mm_mu1_index[self.event.bkmm_mm_index[index]],
+                                   self.event.mm_kin_mass[self.event.bkmm_mm_index[index]]))
+                candidates.append((self.event.mm_mu2_index[self.event.bkmm_mm_index[index]],
+                                   self.event.mm_kin_mass[self.event.bkmm_mm_index[index]]))
+        
+        return candidates
             
     def _process_events(self):
         """Event loop"""
@@ -36,25 +73,45 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
                 if not self.event.Muon_isGlobal[i]: continue
 
                 keep_muon = False
+                # We should use only muons from known sources, because 
+                # otherwise we can mix signal and background muons from pileup
+                # We won't keep muons that we cannot identified, because
+                # they can be of any type like it is
 
                 data = dict()
+
                 # MC specific requirements
+
+                # Sim-based matching
                 if hasattr(self.event, 'MuonId_simPdgId'):
-                    if abs(self.event.MuonId_simPdgId[i]) == 13 and \
-                       abs(self.event.MuonId_simMotherPdgId[i]) in [211, 321, 443, 531]:
-                        keep_muon = True
+                    if abs(self.event.MuonId_simPdgId[i]) == 13:
                         data['sim_pdgId']  = self.event.MuonId_simPdgId[i]
                         data['sim_mpdgId'] = self.event.MuonId_simMotherPdgId[i]
-                        if abs(self.event.MuonId_simMotherPdgId[i]) in [211, 321]:
+                        if self.event.MuonId_simType[i] == 2:
+                            keep_muon = True
                             data['sim_type'] = 1
-                        elif abs(self.event.MuonId_simMotherPdgId[i]) in [531]:
+                        if self.event.MuonId_simType[i] == 3:
+                            keep_muon = True
                             data['sim_type'] = 2
-                        elif abs(self.event.MuonId_simMotherPdgId[i]) in [443]:
-                            data['sim_type'] = 3
-                            
-                # Add Jpsi muons
+                            if abs(self.event.MuonId_simMotherPdgId[i]) in [443]:
+                                data['sim_type'] = 3
 
-                
+                # Gen-based matching
+                if not keep_muon and hasattr(self.event, 'Muon_genPartFlav'):
+                    genPartFlav = ord(self.event.Muon_genPartFlav[i])
+                    if genPartFlav == 3:
+                        keep_muon = True
+                        data['sim_type'] = 1
+                    elif genPartFlav in [4, 5]:
+                        keep_muon = True
+                        data['sim_type'] = 2
+                        
+                # Add Jpsi muons
+                for iprobe, mass in jpsi_candidates:
+                    if i == iprobe:
+                        data['jpsi_mass'] = mass
+                        keep_muon = True
+                        
                 if keep_muon:
                     self._fill_tree(i, data)
 
@@ -110,6 +167,15 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
         self.tree.addBranch('sim_type',             'UInt_t', 0, "1 - decay in flight, 2 - heavy flavor decays, 3 - jpsi")
         self.tree.addBranch('sim_pdgId',             'Int_t', 0, "PDG id of SIM match")
         self.tree.addBranch('sim_mpdgId',            'Int_t', 0, "PDG id of SIM mother")
+        self.tree.addBranch('jpsi_mass',           'Float_t', 0, "Jpsi mass for efficiency estimation")
+        
+        self.tree.addBranch('HLT_DoubleMu4_3_Jpsi',           'UInt_t', 0)
+        self.tree.addBranch('HLT_DoubleMu4_Jpsi_Displaced',   'UInt_t', 0)
+        self.tree.addBranch('HLT_DoubleMu4_Jpsi_NoVertexing', 'UInt_t', 0)
+        self.tree.addBranch('HLT_DoubleMu4_3_Jpsi_Displaced', 'UInt_t', 0)
+        self.tree.addBranch('HLT_Dimuon6_Jpsi_NoVertexing',   'UInt_t', 0)
+        self.tree.addBranch('trigger',                        'UInt_t', 0, "OR of all relevant HLT Jpsi triggers")
+
 
     def _fill_tree(self, i, data):
         self.tree.reset()
@@ -168,6 +234,26 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
 
         self.tree['highPurity']          = self.event.MuonId_highPurity[i]
 
+        # Trigger info
+        trigger = 0
+        if hasattr(self.event, 'HLT_DoubleMu4_3_Jpsi'):
+            self.tree['HLT_DoubleMu4_3_Jpsi'] = self.event.HLT_DoubleMu4_3_Jpsi
+            trigger |= self.event.HLT_DoubleMu4_3_Jpsi
+        if hasattr(self.event, 'HLT_DoubleMu4_Jpsi_Displaced'):
+            self.tree['HLT_DoubleMu4_Jpsi_Displaced'] = self.event.HLT_DoubleMu4_Jpsi_Displaced
+            trigger |= self.event.HLT_DoubleMu4_Jpsi_Displaced
+        if hasattr(self.event, 'HLT_DoubleMu4_Jpsi_NoVertexing'):
+            self.tree['HLT_DoubleMu4_Jpsi_NoVertexing'] = self.event.HLT_DoubleMu4_Jpsi_NoVertexing
+            trigger |= self.event.HLT_DoubleMu4_Jpsi_NoVertexing
+        if hasattr(self.event, 'HLT_DoubleMu4_3_Jpsi_Displaced'):
+            self.tree['HLT_DoubleMu4_3_Jpsi_Displaced'] = self.event.HLT_DoubleMu4_3_Jpsi_Displaced
+            trigger |= self.event.HLT_DoubleMu4_3_Jpsi_Displaced
+        if hasattr(self.event, 'HLT_Dimuon6_Jpsi_NoVertexing'):
+            self.tree['HLT_Dimuon6_Jpsi_NoVertexing'] = self.event.HLT_Dimuon6_Jpsi_NoVertexing
+            trigger |= self.event.HLT_Dimuon6_Jpsi_NoVertexing
+
+        self.tree['trigger'] = trigger
+            
         for key, value in data.items():
             self.tree[key] = value
 
@@ -177,7 +263,8 @@ if __name__ == "__main__":
 
     job = {
         "input": [
-            "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/BsToMuMu_bmm_fakes_and_ids.root"
+            "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/Charmonium+Run2018D-PromptReco-v2+MINIAOD/98841806-7910-3B4F-8818-832B7FFDC87B.root"
+            # "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/BsToMuMu_bmm_fakes_and_ids.root"
         ],
         "tree_name" : "muons",
       }  
@@ -186,6 +273,6 @@ if __name__ == "__main__":
     json.dump(job, open(file_name, "w"))
 
     p = FlatNtupleForMuonMVA(file_name)
-    p.limit = 1000
+    # p.limit = 1000
         
     p.process()
