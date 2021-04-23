@@ -1,83 +1,34 @@
-from PostProcessingBase import Processor
+from PostProcessingBase import FlatNtupleBase
 
-import os, re, sys, time, subprocess, math
+import os, re, sys, time, subprocess, math, json
 from Bmm5.MVA.mtree import MTree
 import multiprocessing
 from datetime import datetime
 import hashlib
 from ROOT import TFile, TTree
 
-class FlatNtupleForBmmMva(Processor):
+class FlatNtupleForBmmMva(FlatNtupleBase):
     """Produce flat ROOT ntuples for Bmm5 MVA training"""
-    def _process(self):
+
+    def _validate_inputs(self):
+        """Task specific input validation"""
         # check for missing information
         for parameter in ['input', 'signal_only', 'tree_name', 'blind']:
             if parameter not in self.job_info:
                 raise Exception("Missing input '%s'" % parameter)
 
-        # process files
-        results = []
-        t0 = time.clock()
-        n_events = 0
-        for f in self.job_info['input']:
-            result, n = self.process_file(f)
-            n_events += n
-            results.append(result)
-        print n//(time.clock()-t0), "Hz"
-        
-        print "Merging output."
-        # merge results
-        good_files = []
-        for rfile in results:
-            if rfile: good_files.append(rfile)
-        command = "hadd -f %s %s" % (self.job_output_tmp, " ".join(good_files))
-        status = subprocess.call(command, shell=True)
+    def _process_events(self):
+        """Event loop"""
 
-        if status==0:
-            print "Merged output."
-            for file in good_files:
-                os.remove(file)
-        else:
-            raise Exception("Merge failed")
+        for event_index, event in enumerate(self.input_tree):
+            if self.limit > 0 and event_index >= self.limit: break
 
-    def process_file(self, input_file):
-        print "Processing file: %s" % input_file
-        match = re.search("([^\/]+)\.root$", input_file)
-        if match:
-            output_filename = "%s/%s_processed.root" % (self.tmp_dir, match.group(1))
-        else:
-            raise Exception("Unexpected input ROOT file name:\n%s" % input_file)
-        
-        statisitics = dict()
-
-        fout = TFile(output_filename, 'recreate')
-        self.tree = MTree(self.job_info['tree_name'], '')
-        self._configure_output_tree()
-
-        fin = TFile(input_file)
-        input_tree = fin.Get("Events")
-        nevents = 0
-
-        for event in input_tree:
-            # if event.eventAuxiliary().event()!=69338226: continue
-            # print "Event: %d \tLumi: %d \tRun: %d"% (event.event,
-            #                                          event.luminosityBlock,
-            #                                          event.run)
-            nevents += 1
             self.event = event
             candidates = self._select_candidates()
             # _analyze_selection(info,statisitics)
             for cand in self._good_candidates(candidates):
                 if self.job_info['signal_only'] and self.event.mm_gen_pdgId[cand]==0: continue
                 self._fill_tree(cand)
-
-        nout = self.tree.tree.GetEntries()
-        print 'Selected %d / %d entries from %s (%.2f%%)' % (nout, nevents, input_file, 100.*nout/nevents if nevents else 0)
-        fout.Write()
-        fout.Close()
-        # if collect_statistics:
-        #    print statisitics
-        return output_filename, nevents
 
     def _select_candidates(self):
         candidates = []
@@ -234,99 +185,22 @@ class FlatNtupleForBmmMva(Processor):
         if not self.event.Muon_softId[index]: return False
         return True
 
-
-    ##
-## User Input
-##
-blind_signal_region = True
-keep_right_sideband = True
-keep_left_sideband = True
-tree_name = "mva"
-force_recreation = False
-n_events_limit = None 
-# n_events_limit = 5000
-collect_statistics = True
-
-def _get_time():
-    return datetime.now().strftime("%H:%M:%S")
-
-def _formated_print(data):
-    print "[%d-%s] %s" % (multiprocessing.current_process().pid,
-                          _get_time(),data)
-    sys.stdout.flush()
-
-def _is_good_file(f):
-    tf = TFile.Open(f)
-    if not tf: return False
-    if tf.IsZombie() or tf.TestBit(TFile.kRecovered): return False
-    if not tf.Get(tree_name): return False
-    return True
-
-def output_is_already_available(filename):
-    if os.path.exists(filename):
-        good = _is_good_file(filename)
-        message = "Output file %s already exists." % filename
-        if force_recreation:
-            os.remove(filename)
-        elif good:
-            print message, " It appears to be good. Skip it. If you want to recreate it, please remove the existing file" 
-            return True
-        else:
-            print message," File is corrupted. Will recreate."
-            os.remove(filename)
-    return False
-
-
-# def _select_candidates(event):
-#     good_candidates = []
-#     if not event.nmm>0: return good_candidates
-#     for i in range(event.nmm):
-#         if not _good_muon(event,event.mm_mu1_index[i]): continue
-#         if not _good_muon(event,event.mm_mu2_index[i]): continue
-#         if not event.mm_kin_valid[i]: continue
-#         if not event.mm_kin_sl3d[i]>4: continue
-#         if abs(event.mm_kin_mass[i]-5.4)>0.5: continue
-#         if event.mm_kin_vtx_chi2dof[i]>5: continue 
-#         if blind_signal_region and abs(event.mm_kin_mass[i]-5.3)<0.2: continue
-#         good_candidates.append(i)
-#     return good_candidates
-
-
-# def _analyze_selection(candidates,statistics):
-#     if not collect_statistics: return
-#     max_selections = 0
-#     best_cand = None
-#     for i in range(len(candidates)):
-#         n = 0
-#         for (name,passed) in candidates[i]:
-#             if passed:
-#                 n+=1
-#             else:
-#                 break
-#         if n > max_selections:
-#             best_cand = i
-#             max_selections = n
-#     if best_cand!=None:
-#         for (selection_name,passed) in candidates[best_cand]:
-#             if passed:
-#                 if not selection_name in statistics:
-#                     statistics[selection_name] = 1
-#                 else:
-#                     statistics[selection_name] += 1
-#             else:
-#                 break
-
-
 def unit_test():
-    p = FlatNtupleForBmmMva("/eos/cms/store/group/phys_muon/dmytro/tmp/mva_ntuple_test/ffcb48b1f605ca5a5f2614b94830e806.job")
-    # print p.__dict__
-    p.process()
+    path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/"
+    job = {
+        "input": [
+            path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root"
+            ],
+        "signal_only": True,
+        "tree_name": "mva",
+        "blind": False,
+    }
 
-    # check single file processing
-    # p.job_output_tmp = '/tmp/'
-    # p.job_info['tree_name'] = 'mva'
-    # p.job_info['signal_only'] = 'True'
-    # p.process_file('root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/510/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root')
+    file_name = "/tmp/dmytro/test.job"
+    json.dump(job, open(file_name, "w"))
+
+    p = FlatNtupleForBmmMva(file_name)
+    p.process()
 
 if __name__ == "__main__":
     unit_test()
