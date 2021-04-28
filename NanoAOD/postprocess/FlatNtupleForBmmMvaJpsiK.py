@@ -13,7 +13,7 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
     def _validate_inputs(self):
         """Task specific input validation"""
         # check for missing information
-        for parameter in ['input', 'signal_only', 'tree_name', 'blind']:
+        for parameter in ['input', 'signal_only', 'tree_name']:
             if parameter not in self.job_info:
                 raise Exception("Missing input '%s'" % parameter)
 
@@ -27,7 +27,8 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
             candidates = self._select_candidates()
             # _analyze_selection(info,statisitics)
             for cand in self._good_candidates(candidates):
-                if self.job_info['signal_only'] and self.event.bkmm_gen_pdgId[cand]==0: continue
+                if hasattr(self.event, 'bkmm_gen_pdgId'):
+                    if self.job_info['signal_only'] and self.event.bkmm_gen_pdgId[cand]==0: continue
                 self._fill_tree(cand)
 
     def _select_candidates(self):
@@ -41,23 +42,19 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
             selection.append( ('good_muon2', self._good_muon(mu2_index)) )
             selection.append( ('mass_cut',  abs(self.event.bkmm_jpsimc_mass[i] - 5.4) < 0.5) )
             selection.append( ('valid_fit', self.event.bkmm_jpsimc_valid[i]) )
-            selection.append( ('decay_length_significance', self.event.bkmm_jpsimc_sl3d[i] > 4) )
-            selection.append( ('kaon_impact_parameter_significance', self.event.bkmm_kaon_sdxy_bs[i] > 15) )
+            # selection.append( ('kaon_impact_parameter_significance', self.event.bkmm_kaon_sdxy_bs[i] > 15) )
             selection.append( ('vertex_chi2', self.event.bkmm_jpsimc_vtx_chi2dof[i] < 5) )
+            # trigger driven, but tighter for purity
+            selection.append( ('decay_length_significance', self.event.bkmm_jpsimc_sl3d[i] > 4.0) )
+            selection.append( ('alpha', self.event.bkmm_jpsimc_alpha[i] < 0.2) )
+            # phase space tunning
+            selection.append( ('kaon_pt',  self.event.bkmm_kaon_pt[i] < 1.5))
             q1 = 0
             if mu1_index >= 0: q1 = self.event.Muon_charge[mu1_index]
             q2 = 0
             if mu2_index >= 0: q2 = self.event.Muon_charge[mu2_index]
             selection.append( ('charge', q1*q2 == -1) )
 
-            keeper = True
-            if not hasattr(self.event, 'bkmm_gen_pdgId') and blind_signal_region:
-                keeper = False
-                if keep_right_sideband:
-                    if (self.event.bkmm_jpsimc_mass[i]-5.3)>0.2: keeper = True
-                if keep_left_sideband:
-                    if (self.event.bkmm_jpsimc_mass[i]-5.3)<-0.2: keeper = True
-            selection.append( ('blinding', keeper) )
             candidates.append(selection)
         return candidates
 
@@ -89,6 +86,9 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree.addBranch('mm_mu2_eta',         'Float_t', 0)
         self.tree.addBranch('mm_mu1_phi',         'Float_t', 0)
         self.tree.addBranch('mm_mu2_phi',         'Float_t', 0)
+        self.tree.addBranch('mm_kin_l3d',         'Float_t', 0, "Decay length wrt Primary Vertex in 3D")
+        self.tree.addBranch('mm_kin_sl3d',        'Float_t', 0, "Decay length significance wrt Primary Vertex in 3D")
+        self.tree.addBranch('mm_kin_slxy',        'Float_t', 0, "Decay length significance wrt Beam Spot in XY plain")
 
         self.tree.addBranch('mm_kin_alpha',       'Float_t', 0, "Pointing angle in 3D wrt PV")
         self.tree.addBranch('mm_kin_spvip',       'Float_t', 0, "Significance of impact parameter wrt Primary Vertex in 3D")
@@ -123,6 +123,7 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree['mm_mu2_eta']     = self.event.Muon_eta[self.event.mm_mu2_index[self.event.bkmm_mm_index[cand]]]
         self.tree['mm_mu1_phi']     = self.event.Muon_phi[self.event.mm_mu1_index[self.event.bkmm_mm_index[cand]]]
         self.tree['mm_mu2_phi']     = self.event.Muon_phi[self.event.mm_mu2_index[self.event.bkmm_mm_index[cand]]]
+        self.tree['mm_kin_sl3d']    = self.event.bkmm_jpsimc_sl3d[cand]*1.6
 
         self.tree['mm_kin_alpha']   = self.event.bkmm_jpsimc_alpha[cand]
         self.tree['mm_kin_spvip']   = self.event.bkmm_jpsimc_pvip[cand]/self.event.bkmm_jpsimc_pvipErr[cand]
@@ -163,11 +164,12 @@ def unit_test():
     path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/"
     job = {
         "input": [
-            path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/223016AA-82DA-2D4A-B505-B05AFE4AB68A.root"
-            ],
+            # path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/223016AA-82DA-2D4A-B505-B05AFE4AB68A.root"
+            # path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/223016AA-82DA-2D4A-B505-B05AFE4AB68A.root"
+            path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/72AF7677-36A7-E811-851A-FA163E52BDE2.root"
+        ],
         "signal_only": True,
         "tree_name": "mva",
-        "blind": False,
     }
 
     file_name = "/tmp/dmytro/test.job"
