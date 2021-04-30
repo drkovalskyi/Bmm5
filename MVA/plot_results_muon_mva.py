@@ -31,6 +31,9 @@ def load_model(files, model_name, n_split=3, event_index=None):
     features = json.load(open("%s.features" % (model_name)))
     model = MuonMVA("",features, "muons", "evt")
     model.load_datasets(files)
+    model.apply_selection(model.data["pt"]>5)
+    model.apply_selection(model.data["pt"]<6)
+    model.apply_selection(abs(model.data["eta"])<1.4)
 
     model.bst = xgb.Booster({'nthread': 4})  # init model
     model.bst.load_model("%s.model" % (model_name))
@@ -51,6 +54,14 @@ def add_roc_curve(model, label):
     fpr_test, tpr_test, _ = roc_curve(model.y_test, y_pred_test)
     ax.plot(fpr_test, tpr_test, label=label)
 
+def plot_efficiency_pt(model, label):
+    dtest = xgb.DMatrix(model.x_test, label=model.y_test, feature_names=model.features)
+    y_pred_test = model.bst.predict(dtest)
+
+    fpr_test, tpr_test, _ = roc_curve(model.y_test, y_pred_test)
+    ax.plot(fpr_test, tpr_test, label=label)
+
+    
 def add_old_soft_mva_roc_curve_without_preselection(model):
     data = model.test_data
     if not data:
@@ -72,7 +83,7 @@ def get_sig_eff(model, bkg_eff):
             bkg.append(y_pred_test[i])
     
     quantile = np.percentile(bkg, (1-bkg_eff)*100.)
-    # print "quantile:", quantile
+    print "quantile:", quantile
     n_sig = 0
     for entry in sig:
         if entry >= quantile:
@@ -95,7 +106,8 @@ def add_standard_selectors(model):
         print "bkg_eff:", bkg_eff
         sig_eff = float(len(x_passed["sim_type"]))/len(x_data["sim_type"])
         print "sig_eff:", sig_eff
-        print "model sig_eff:", get_sig_eff(model, bkg_eff)
+        model_sig_eff = get_sig_eff(model, bkg_eff)
+        print "model sig_eff:", model_sig_eff
 
         ax.plot([bkg_eff], [sig_eff], marker=marker, label=var)
 
@@ -113,15 +125,22 @@ setup()
 # add_old_soft_mva_roc_curve_without_preselection(model)
 # add_standard_selectors(model)
 
-model = load_model(files, "results/muon_mva/Run2017-20210422-1123", 3, 0)
-add_roc_curve(model, "Run2017-20210422-1123")
-add_old_soft_mva_roc_curve_without_preselection(model)
-add_standard_selectors(model)
-
-# model = load_model(files, "results/muon_mva/Run2018-20210422-1123", 3, 0)
-# add_roc_curve(model, "Run2018-20210422-1123")
+# model = load_model(files, "results/muon_mva/Run2017-20210422-1123", 3, 0)
+# add_roc_curve(model, "Run2017-20210422-1123")
 # add_old_soft_mva_roc_curve_without_preselection(model)
 # add_standard_selectors(model)
+
+model = load_model(files, "results/muon_mva/Run2018-20210430-0757", 3, 0)
+add_roc_curve(model, "Run2018-20210430-0757")
+# model = load_model(files, "results/muon_mva/Run2018-20210424-1707", 3, 0)
+# add_roc_curve(model, "Run2018-20210424-1707")
+# model = load_model(files, "results/muon_mva/Run2017-20210422-1123", 3, 0)
+# add_roc_curve(model, "Run2017-20210422-1123")
+# model = load_model(files, "results/muon_mva/Run2016-20210422-1123", 3, 0)
+# add_roc_curve(model, "Run2016-20210422-1123")
+
+add_old_soft_mva_roc_curve_without_preselection(model)
+add_standard_selectors(model)
 
 # model = load_model(files, "results/muon_mva/Run2016-20210422-1123", 3, 0)
 # add_roc_curve(model, "Run2016-20210422-1123")
@@ -129,14 +148,9 @@ add_standard_selectors(model)
 # add_standard_selectors(model)
 
 
-# model = load_model(files, "results/muon_mva/Run2017-20210422-0453", 3, 0)
-# add_roc_curve(model, "Run2017-20210422-0453")
-
-# model = load_model(files, "results/muon_mva/Run2016-20210422-0453", 3, 0)
-# add_roc_curve(model, "Run2016-20210422-0453")
 
 
 # model = load_model(files, "results/muon_mva/Run2018-20210422-0153", 3, 0)
 # add_roc_curve(model, "Run2018-20210422-0153")
 
-save_result("performance_muon_mva_bkg_vs_sig_Run2017")
+save_result("performance_muon_mva_bkg_vs_sig")

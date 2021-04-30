@@ -17,7 +17,6 @@ feature_names = [
     "nPixels",
     "nValidHits",
     "nLostHitsOn",
-    "eta",
     "match2_dY",
     "match1_dY",
     "match2_pullY",
@@ -47,6 +46,8 @@ def train_model(files, name):
     model = MuonMVA("results/muon_mva", feature_names, "muons", "evt")
     model.load_datasets(files)
     model.apply_selection(model.data["pt"]>5)
+    model.apply_selection(model.data["pt"]<6)
+    model.apply_selection(abs(model.data["eta"])<1.4)
 
     number_of_splits = 3
     train_model_for_all_splits = False
@@ -66,26 +67,26 @@ if __name__ == "__main__":
 
     data_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/512/muon_mva/"
     
-    # files_Run2018 = [
-    #     data_path + "QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM/",
-    #     # data_path + "QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM/",
-    #     # data_path + "QCD_Pt-80to120_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v2+MINIAODSIM/"
+    files_Run2018 = [
+        data_path + "QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM/",
+        # data_path + "QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM/",
+        # data_path + "QCD_Pt-80to120_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v2+MINIAODSIM/"
+    ]
+    train_model(files_Run2018, "Run2018")
+
+    # files_Run2017 = [
+    #     data_path + "QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/",
+    #     # data_path + "QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/",
+    #     # data_path + "QCD_Pt-80to120_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/"
     # ]
-    # train_model(files_Run2018, "Run2018")
+    # train_model(files_Run2017, "Run2017")
 
-    files_Run2017 = [
-        data_path + "QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/",
-        # data_path + "QCD_Pt-50to80_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/",
-        # data_path + "QCD_Pt-80to120_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1+MINIAODSIM/"
-    ]
-    train_model(files_Run2017, "Run2017")
-
-    files_Run2016 = [
-        data_path + "QCD_Pt-30to50_MuEnrichedPt5_TuneCUETP8M1_13TeV_pythia8+RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2+MINIAODSIM/",
-        # data_path + "QCD_Pt-50to80_MuEnrichedPt5_TuneCUETP8M1_13TeV_pythia8+RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2+MINIAODSIM/",
-        # data_path + "QCD_Pt-80to120_MuEnrichedPt5_TuneCUETP8M1_13TeV_pythia8+RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2+MINIAODSIM/",
-        # data_path + "QCD_Pt-80to120_MuEnrichedPt5_TuneCUETP8M1_13TeV_pythia8+RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext1-v2+MINIAODSIM/"
-    ]
-    train_model(files_Run2016, "Run2016")
+    # files_Run2016 = [
+    #     data_path + "QCD_Pt-30to50_MuEnrichedPt5_TuneCUETP8M1_13TeV_pythia8+RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2+MINIAODSIM/",
+    #     # data_path + "QCD_Pt-50to80_MuEnrichedPt5_TuneCUETP8M1_13TeV_pythia8+RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2+MINIAODSIM/",
+    #     # data_path + "QCD_Pt-80to120_MuEnrichedPt5_TuneCUETP8M1_13TeV_pythia8+RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2+MINIAODSIM/",
+    #     # data_path + "QCD_Pt-80to120_MuEnrichedPt5_TuneCUETP8M1_13TeV_pythia8+RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext1-v2+MINIAODSIM/"
+    # ]
+    # train_model(files_Run2016, "Run2016")
     
 
