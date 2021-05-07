@@ -62,6 +62,47 @@ namespace {
   const float JPsiMassErr_ = 92.9e-6;
 };
 
+std::pair<float, float>
+getAlpha(const GlobalPoint& vtx_position, const GlobalError& vtx_error,
+	 const GlobalPoint& ip_position,  const GlobalError& ip_error,
+			     const GlobalVector &momentum,
+			     bool transverse = true){
+  AlgebraicSymMatrix33 error_matrix(vtx_error.matrix() + ip_error.matrix());
+  GlobalVector dir(vtx_position - ip_position);
+  GlobalVector p(momentum);
+  if (transverse){
+    dir = GlobalVector(dir.x(), dir.y(), 0);
+    p = GlobalVector(p.x(), p.y(), 0);
+  }
+  
+  double dot_product = dir.dot(p);
+  double cosAlpha = dot_product / p.mag() / dir.mag();
+  if (cosAlpha > 1) cosAlpha = 1;
+  if (cosAlpha < -1) cosAlpha = -1;
+
+  // Error propagation
+
+  double c1 = 1 / dir.mag() / p.mag();
+  double c2 = dot_product / pow(dir.mag(), 3) / p.mag();
+  
+  double dfdx = p.x() * c1 - dir.x() * c2;
+  double dfdy = p.y() * c1 - dir.y() * c2;
+  double dfdz = p.z() * c1 - dir.z() * c2;
+
+  double err2_cosAlpha =
+    pow(dfdx, 2) * error_matrix(0, 0) +
+    pow(dfdy, 2) * error_matrix(1, 1) +
+    pow(dfdz, 2) * error_matrix(2, 2) +
+    2 * dfdx * dfdy * error_matrix(0, 1) +
+    2 * dfdx * dfdz * error_matrix(0, 2) +
+    2 * dfdy * dfdz * error_matrix(1, 2);
+
+  double err_alpha = fabs(cosAlpha) <= 1 and err2_cosAlpha >=0 ? sqrt(err2_cosAlpha) / sqrt(1-pow(cosAlpha, 2)) : 999;
+  
+  return std::pair<float, float>(acos(cosAlpha), err_alpha);
+  
+}
+
 
 struct KinematicFitResult{
   bool treeIsValid;
@@ -70,9 +111,10 @@ struct KinematicFitResult{
   RefCountedKinematicParticle    refitMother;
   RefCountedKinematicTree        refitTree;
   std::vector<RefCountedKinematicParticle> refitDaughters;
-  float lxy, lxyErr, sigLxy, cosAlphaXY;
+  float lxy, lxyErr, sigLxy, alphaBS, alphaBSErr;
   KinematicFitResult():treeIsValid(false),vertexIsValid(false),
-		       lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0), cosAlphaXY(-999.)
+		       lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0),
+		       alphaBS(-999.), alphaBSErr(-999.)
   {}
 
   bool valid() const {
@@ -103,14 +145,19 @@ struct KinematicFitResult{
     lxyErr = sqrt( v*(errVtx*v) + v*(errBS*v) ) / lxy;
     if (lxyErr > 0) sigLxy = lxy/lxyErr;
     
-    // compute cosAlpha 2D wrt BeamSpot
-    v[0] = refitVertex->position().x()-beamSpot.position().x();
-    v[1] = refitVertex->position().y()-beamSpot.position().y();
-    TVector w(2);
-    w[0] = refitMother->currentState().globalMomentum().x();
-    w[1] = refitMother->currentState().globalMomentum().y();
-    cosAlphaXY = v*w/sqrt(v.Norm2Sqr()*w.Norm2Sqr());
+    // compute pointing angle wrt BeamSpot (2D)
 
+    // rotatedCovariance3D - is a proper covariance matrix for Beam Spot,
+    // which includes the beam spot width, not just uncertainty on the
+    // absolute beamspot position
+    auto alphaXY = getAlpha(refitVertex->vertexState().position(),
+			    refitVertex->vertexState().error(),
+			    GlobalPoint(Basic3DVector<float>(beamSpot.position())),
+			    GlobalError(beamSpot.rotatedCovariance3D()),
+			    refitMother->currentState().globalMomentum(),
+			    true);
+    alphaBS    = alphaXY.first;
+    alphaBSErr = alphaXY.second;
   }
   
   float mass() const
@@ -211,7 +258,8 @@ struct DisplacementInformationIn3D{
     distaceOfClosestApproach2, distaceOfClosestApproach2Err, distaceOfClosestApproach2Sig,
     longitudinalImpactParameter, longitudinalImpactParameterErr, longitudinalImpactParameterSig,
     longitudinalImpactParameter2, longitudinalImpactParameter2Err,longitudinalImpactParameter2Sig,
-    cosAlpha, cosAlphaXY, decayTime, decayTimeError, decayTimeXY, decayTimeXYError;
+    decayTime, decayTimeError, decayTimeXY, decayTimeXYError,
+    alpha, alphaErr, alphaXY, alphaXYErr;
   const reco::Vertex *pv,*pv2;
   int pvIndex,pv2Index;
   DisplacementInformationIn3D():decayLength(-1.0), decayLengthErr(0.), decayLength2(-1.0), decayLength2Err(0.),
@@ -219,8 +267,10 @@ struct DisplacementInformationIn3D{
 				distaceOfClosestApproach2(-1.0), distaceOfClosestApproach2Err(0.0), distaceOfClosestApproach2Sig(0.0),
 				longitudinalImpactParameter(0.0), longitudinalImpactParameterErr(0.), longitudinalImpactParameterSig(0.),
 				longitudinalImpactParameter2(0.0), longitudinalImpactParameter2Err(0.), longitudinalImpactParameter2Sig(0.),
-				cosAlpha(-999.), cosAlphaXY(-999.), decayTime(-999.), decayTimeError(-999.),
+				decayTime(-999.), decayTimeError(-999.),
 				decayTimeXY(-999.), decayTimeXYError(-999.),
+				alpha(-999.), alphaErr(-999.),
+				alphaXY(-999.), alphaXYErr(-999.),
 				pv(0), pv2(0),
 				pvIndex(-1), pv2Index(-1)
   {};
@@ -539,7 +589,7 @@ private:
   fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
 	       const edm::Event& iEvent,
 	       const pat::Muon& muon1,
-	       const pat::Muon& muon2); 
+	       const pat::Muon& muon2);
 
   void 
   injectHadronsThatMayFakeMuons(std::vector<MuonCand>& good_muon_candidates);
@@ -635,6 +685,7 @@ bdtReader2_("!Color:Silent")
     for (auto& xgBooster: xgBoosters_)
       for (const auto& feature: features)
 	xgBooster.addFeature(feature);
+
 }
 
 bool BxToMuMuProducer::isGoodMuon(const pat::Muon& muon){
@@ -657,9 +708,10 @@ namespace {
     cand.addUserFloat( name+"_massErr",     fit.massErr() );
     cand.addUserFloat( name+"_lxy",         fit.lxy );
     cand.addUserFloat( name+"_sigLxy",      fit.sigLxy );
-    cand.addUserFloat( name+"_cosAlphaXY",  fit.cosAlphaXY );
-    cand.addUserFloat( name+"_alpha",       fabs(displacement3d.cosAlpha)<=1?acos(displacement3d.cosAlpha):-999. );
-    cand.addUserFloat( name+"_alphaXY",     fabs(fit.cosAlphaXY)<=1?acos(fit.cosAlphaXY):-999. );
+    cand.addUserFloat( name+"_alpha",       displacement3d.alpha);
+    cand.addUserFloat( name+"_alphaErr",    displacement3d.alphaErr);
+    cand.addUserFloat( name+"_alphaBS",     fit.alphaBS);
+    cand.addUserFloat( name+"_alphaBSErr",  fit.alphaBSErr);
     cand.addUserFloat( name+"_vtx_x",       fit.valid()?fit.refitVertex->position().x():0 );
     cand.addUserFloat( name+"_vtx_xErr",    fit.valid()?sqrt(fit.refitVertex->error().cxx()):0 );
     cand.addUserFloat( name+"_vtx_y",       fit.valid()?fit.refitVertex->position().y():0 );
@@ -676,10 +728,10 @@ namespace {
     cand.addUserFloat( name+"_pv_z",        displacement3d.pv?displacement3d.pv->position().z():0);
     cand.addUserFloat( name+"_pv_zErr",     displacement3d.pv?displacement3d.pv->zError():0);
     cand.addUserFloat( name+"_pvip",        displacement3d.distaceOfClosestApproach);
-    cand.addUserFloat( name+"_pvipSig",     displacement3d.distaceOfClosestApproachSig);
+    cand.addUserFloat( name+"_spvip",       displacement3d.distaceOfClosestApproachSig);
     cand.addUserFloat( name+"_pvipErr",     displacement3d.distaceOfClosestApproachErr);
     cand.addUserFloat( name+"_pv2ip",       displacement3d.distaceOfClosestApproach2);
-    cand.addUserFloat( name+"_pv2ipSig",    displacement3d.distaceOfClosestApproach2Sig);
+    cand.addUserFloat( name+"_spv2ip",      displacement3d.distaceOfClosestApproach2Sig);
     cand.addUserFloat( name+"_pv2ipErr",    displacement3d.distaceOfClosestApproach2Err);
     cand.addUserFloat( name+"_pvlip",       displacement3d.longitudinalImpactParameter);
     cand.addUserFloat( name+"_pvlipSig",    displacement3d.longitudinalImpactParameterSig);
@@ -945,6 +997,42 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
     dimuonCand.addUserFloat("gen_l3d",         (gen_mm.mm_prod_vtx-gen_mm.mm_vtx).r());
     dimuonCand.addUserFloat("gen_lxy",         (gen_mm.mm_prod_vtx-gen_mm.mm_vtx).rho());
     dimuonCand.addUserFloat("gen_tau",         computeDecayTime(gen_mm));
+    if (gen_mm.match and kinematicMuMuVertexFit.valid()){
+      dimuonCand.addUserFloat("gen_alpha_p_phi",
+			      kinematicMuMuVertexFit.refitMother->currentState().globalMomentum().phi() -
+			      gen_mm.match->phi());
+      dimuonCand.addUserFloat("gen_alpha_p_theta",
+			      kinematicMuMuVertexFit.refitMother->currentState().globalMomentum().theta() -
+			      gen_mm.match->theta());
+      // TVector3 p_reco(kinematicMuMuVertexFit.refitMother->currentState().globalMomentum().x(),
+      // 		      kinematicMuMuVertexFit.refitMother->currentState().globalMomentum().y(),
+      // 		      kinematicMuMuVertexFit.refitMother->currentState().globalMomentum().z());
+      TVector3 p_gen(gen_mm.match->px(),
+		     gen_mm.match->py(),
+		     gen_mm.match->pz());
+      TVector3 ip_reco(displacement3D.pv->x(),
+		       displacement3D.pv->y(),
+		       displacement3D.pv->z());
+      TVector3 ip_gen(gen_mm.mm_prod_vtx.x(),
+		      gen_mm.mm_prod_vtx.y(),
+		      gen_mm.mm_prod_vtx.z());
+      TVector3 vtx_reco(kinematicMuMuVertexFit.refitVertex->vertexState().position().x(), 
+			kinematicMuMuVertexFit.refitVertex->vertexState().position().y(), 
+			kinematicMuMuVertexFit.refitVertex->vertexState().position().z());
+      TVector3 vtx_gen(gen_mm.mm_vtx.x(),
+		       gen_mm.mm_vtx.y(),
+		       gen_mm.mm_vtx.z());
+      float cosAlpha_ip  = p_gen.Dot(vtx_gen - ip_reco) / (p_gen.Mag() * (vtx_gen - ip_reco).Mag());
+      float cosAlpha_vtx = p_gen.Dot(vtx_reco - ip_gen) / (p_gen.Mag() * (vtx_reco - ip_gen).Mag());
+      
+      dimuonCand.addUserFloat("gen_alpha_ip", acos(cosAlpha_ip));
+      dimuonCand.addUserFloat("gen_alpha_vtx", acos(cosAlpha_vtx));
+    } else {
+      dimuonCand.addUserFloat("gen_alpha_p_phi", 999);
+      dimuonCand.addUserFloat("gen_alpha_p_theta", 999);
+      dimuonCand.addUserFloat("gen_alpha_ip", 999);
+      dimuonCand.addUserFloat("gen_alpha_vtx", 999);
+    }
     
     double mm_doca = -1;
     if (gen_mm.gen_mu1() and gen_mm.gen_mu2())
@@ -984,9 +1072,10 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
 
   // XGBoost
   unsigned int xg_index = iEvent.eventAuxiliary().event()%3;
+
   xgBoosters_.at(xg_index).set("mm_kin_alpha",       dimuonCand.userFloat("kin_alpha"));
-  xgBoosters_.at(xg_index).set("mm_kin_alphaXY",     dimuonCand.userFloat("kin_cosAlphaXY"));
-  xgBoosters_.at(xg_index).set("mm_kin_spvip",       dimuonCand.userFloat("kin_pvipErr")>0?dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr"):999.);
+  xgBoosters_.at(xg_index).set("mm_kin_alphaXY",     cos(dimuonCand.userFloat("kin_alphaBS"))); // FIXME - need new training
+  xgBoosters_.at(xg_index).set("mm_kin_spvip",       dimuonCand.userFloat("kin_spvip"));
   xgBoosters_.at(xg_index).set("mm_kin_pvip",        dimuonCand.userFloat("kin_pvip"));
   xgBoosters_.at(xg_index).set("mm_iso",             dimuonCand.userFloat("iso"));
   xgBoosters_.at(xg_index).set("mm_m1iso",           dimuonCand.userFloat("m1iso"));
@@ -998,21 +1087,6 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
   xgBoosters_.at(xg_index).set("mm_otherVtxMaxProb2", dimuonCand.userFloat(  "otherVtxMaxProb2"));
   
   dimuonCand.addUserFloat("mva", xgBoosters_.at(xg_index).predict());
-
-  // std::cout << "\n\nmm_kin_alpha: " <<        dimuonCand.userFloat("kin_alpha") << std::endl;
-  // std::cout << "mm_kin_alphaXY: " <<      dimuonCand.userFloat("kin_cosAlphaXY") << std::endl;
-  // std::cout << "mm_kin_spvip: " <<        (dimuonCand.userFloat("kin_pvipErr")>0?dimuonCand.userFloat("kin_pvip")/dimuonCand.userFloat("kin_pvipErr"):999.) << std::endl;
-  // std::cout << "kin_pvipErr: " <<         dimuonCand.userFloat("kin_pvipErr") << std::endl;
-  // std::cout << "mm_kin_pvip: " <<         dimuonCand.userFloat("kin_pvip") << std::endl;
-  // std::cout << "mm_iso: " <<              dimuonCand.userFloat("iso") << std::endl;
-  // std::cout << "mm_m1iso: " <<            dimuonCand.userFloat("m1iso") << std::endl;
-  // std::cout << "mm_m2iso: " <<            dimuonCand.userFloat("m2iso") << std::endl;
-  // std::cout << "mm_kin_sl3d: " <<         dimuonCand.userFloat("kin_sl3d") << std::endl;
-  // std::cout << "mm_nBMTrks: " <<          dimuonCand.userInt(  "nBMTrks") << std::endl;
-  // std::cout << "mm_kin_vtx_chi2dof: " <<  dimuonCand.userFloat("kin_vtx_chi2dof") << std::endl;
-  // std::cout << "mm_closetrks1: " <<       dimuonCand.userInt(  "closetrk") << std::endl;
-  // std::cout << "mm_nDisTrks: " <<         dimuonCand.userInt(  "nDisTrks") << std::endl;
-  // std::cout << "mva: " <<  xgBoosters_.at(xg_index).predict() << std::endl;
 
   // Refit with pointing constraint
   auto bToMuMu_PC = vertexMuonsWithPointingConstraint(muon1,muon2,*displacement3D.pv);
@@ -1201,11 +1275,9 @@ BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCan
   unsigned int xg_index = iEvent.eventAuxiliary().event()%3;
   // Pointing angle - mmK
   xgBoosters_.at(xg_index).set("mm_kin_alpha",       mmK.userFloat("jpsimc_alpha"));
-  xgBoosters_.at(xg_index).set("mm_kin_alphaXY",     mmK.userFloat("jpsimc_cosAlphaXY"));
+  xgBoosters_.at(xg_index).set("mm_kin_alphaXY",     cos(mmK.userFloat("jpsimc_alphaBS"))); // FIXME - need new training
   // PV matching - mmK
-  xgBoosters_.at(xg_index).set("mm_kin_spvip",       mmK.userFloat("jpsimc_pvipErr")>0?
-			       mmK.userFloat("jpsimc_pvip")/mmK.userFloat("jpsimc_pvipErr"):
-			       999.);
+  xgBoosters_.at(xg_index).set("mm_kin_spvip",       mmK.userFloat("jpsimc_spvip"));
   xgBoosters_.at(xg_index).set("mm_kin_pvip",        mmK.userFloat("jpsimc_pvip"));
   // Isolation and extra track variables need to be recomputed ignoring kaon
   xgBoosters_.at(xg_index).set("mm_iso",             mmK.userFloat("bmm_iso"));
@@ -1218,7 +1290,7 @@ BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCan
   xgBoosters_.at(xg_index).set("mm_kin_vtx_chi2dof", mm.userFloat("kin_vtx_chi2dof"));
   // Flight length significance - mm
   xgBoosters_.at(xg_index).set("mm_kin_sl3d",        mm.userFloat("kin_sl3d"));
-  
+
   mmK.addUserFloat("bmm_mva", xgBoosters_.at(xg_index).predict());
 
 
@@ -2320,7 +2392,7 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
   }
   if (impactParameter3D.first) {
     result.distaceOfClosestApproach       = impactParameter3D.second.value();
-    result.distaceOfClosestApproachSig    = impactParameter3D.second.value();
+    result.distaceOfClosestApproachSig    = impactParameter3D.second.significance();
     result.distaceOfClosestApproachErr    = impactParameter3D.second.error();
   }
 
@@ -2357,23 +2429,35 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
 
   }
 
-  // cosAlpha
+  //
+  // Pointing angle
+  //
+  auto alpha = getAlpha(fit.refitVertex->vertexState().position(),
+			fit.refitVertex->vertexState().error(),
+			GlobalPoint(Basic3DVector<float>(bestVertex->position())),
+			GlobalError(bestVertex->covariance()),
+			fit.refitMother->currentState().globalMomentum());
 
+  auto alphaXY = getAlpha(fit.refitVertex->vertexState().position(),
+			  fit.refitVertex->vertexState().error(),
+			  GlobalPoint(Basic3DVector<float>(bestVertex->position())),
+			  GlobalError(bestVertex->covariance()),
+			  fit.refitMother->currentState().globalMomentum(),
+			  true);
+
+  result.alpha    = alpha.first;
+  result.alphaErr = alpha.second;
+
+  result.alphaXY    = alphaXY.first;
+  result.alphaXYErr = alphaXY.second;
+
+  
+  //
+  // Decay time information
+  //
   TVector3 plab(fit.refitMother->currentState().globalMomentum().x(),
 		fit.refitMother->currentState().globalMomentum().y(),
-		fit.refitMother->currentState().globalMomentum().z());
-  TVector3 p1(bestVertex->x(), bestVertex->y(), bestVertex->z());
-  TVector3 p2(fit.refitVertex->vertexState().position().x(), 
-	      fit.refitVertex->vertexState().position().y(), 
-	      fit.refitVertex->vertexState().position().z());
-  TVector3 pDiff = p2-p1;
-  TVector3 pDiffXY = TVector3(pDiff.X(), pDiff.Y(), 0.);
-  TVector3 ptrans  = TVector3(plab.X(), plab.Y(), 0.);
-  result.cosAlpha  = plab.Dot(pDiff) / (plab.Mag() * pDiff.Mag());
-  result.cosAlphaXY  = ptrans.Dot(pDiffXY) / (ptrans.Mag() * pDiffXY.Mag());
-
-  // compute decayTime information
-
+                fit.refitMother->currentState().globalMomentum().z());
   const double massOverC = fit.mass()/TMath::Ccgs();
 
   // get covariance matrix for error propagation in decayTime calculation
@@ -2382,10 +2466,10 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
   auto vtxDistanceJac3d = makeJacobianVector3d(bestVertex->position(), fit.refitVertex->vertexState().position(), plab);
   auto vtxDistanceJac2d = makeJacobianVector2d(bestVertex->position(), fit.refitVertex->vertexState().position(), plab);
 
-  result.decayTime = dist.value() / plab.Mag() * result.cosAlpha * massOverC;
+  result.decayTime = dist.value() / plab.Mag() * cos(result.alpha) * massOverC;
   result.decayTimeError = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac3d)) * massOverC;
 
-  result.decayTimeXY = distXY.value() / plab.Perp() * result.cosAlphaXY * massOverC;
+  result.decayTimeXY = distXY.value() / plab.Perp() * cos(result.alphaXY) * massOverC;
   result.decayTimeXYError = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac2d)) * massOverC;
     
   return result;
@@ -2469,7 +2553,6 @@ BxToMuMuProducer::computeAnalysisBDT(unsigned int event_idx)
     throw cms::Exception("FatalError") << "event index must be in [0-3] range\n";
   }
 }
-
 
 DEFINE_FWK_MODULE(BxToMuMuProducer);
 
