@@ -24,6 +24,7 @@ BmmMuonId = cms.EDProducer("BmmMuonIdProducer",
     muonCollection = cms.InputTag("linkedObjects","muons"),
     prunedGenParticleCollection = cms.InputTag("prunedGenParticles"),
     packedGenParticleCollection = cms.InputTag("packedGenParticles"),
+    softMuonMva = cms.FileInPath('Bmm5/NanoAOD/data/muon_mva/Run2018-20210430-2004-Event0.model'),
     isMC = cms.bool(False)
 )
 
@@ -61,6 +62,7 @@ BmmMuonIdVariables = cms.PSet(
     trkLostLayersOuter  = Var("userInt('trkLostLayersOuter')",      int, doc = "Number of lost layers after tracker track"),
 
     highPurity          = Var("userInt('highPurity')",              int, doc = "High purity inner track"),
+    newSoftMuonMva      = Var("userFloat('newSoftMuonMva')",      float, doc = "New softMuonMva"),
 
 )
 
