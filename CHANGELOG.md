@@ -2,6 +2,17 @@
 
 ## New developments
 
+## [NanoAODv6-V16] - 2021/05/07
+
+### Fixed
+	- Removed confusing pointing angle definitions and renamed some of them
+	- Added protection from NaN in impact parameter calculation
+
+### Added
+	- new soft muon MVA
+	- uncertainty calculation for pointing angle
+	- reorganized/modified some core code - bugs are possible
+
 ## [NanoAODv6-V15] - 2021/04/10
 
 ### Fixed
