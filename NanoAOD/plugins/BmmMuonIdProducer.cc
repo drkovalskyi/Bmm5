@@ -18,6 +18,8 @@
 #include <TMatrix.h>
 #include <algorithm>
 
+#include "Bmm5/NanoAOD/interface/XGBooster.h"
+
 // 
 // BmmMuonIdProducer is designed for Bs/d->mumu analysis
 //
@@ -45,6 +47,7 @@ private:
   // GenMatchInfo getGenMatchInfo( const pat::PackedCandidate& track1,
   // const pat::PackedCandidate& track2);
   void fillMatchInfo(pat::CompositeCandidate& cand, const pat::Muon& muon);
+  void fillSoftMva(pat::CompositeCandidate& mu_cand);
   
   // ----------member data ---------------------------
     
@@ -53,16 +56,56 @@ private:
   const std::vector<pat::PackedGenParticle>* packedGenParticles_;
 
   bool isMC_;
+  XGBooster softMuonMva_;
 };
 
 BmmMuonIdProducer::BmmMuonIdProducer(const edm::ParameterSet &iConfig):
 muonToken_( consumes<std::vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
 packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( iConfig.getParameter<edm::InputTag>( "packedGenParticleCollection" ) ) ),
 packedGenParticles_(nullptr),
-isMC_(             iConfig.getParameter<bool>( "isMC" ) )
+isMC_(             iConfig.getParameter<bool>( "isMC" ) ),
+softMuonMva_(iConfig.getParameter<edm::FileInPath>("softMuonMva").fullPath())
 {
     produces<pat::CompositeCandidateCollection>("muons");
+    
+    std::vector<std::string> features = {"trkValidFrac", "glbTrackProbability", "nLostHitsInner",
+      "nLostHitsOuter", "trkKink", "chi2LocalPosition", "match2_dX", "match2_pullX", "match1_dX", "match1_pullX",
+      "nPixels", "nValidHits", "nLostHitsOn", "match2_dY", "match1_dY", "match2_pullY", "match1_pullY",
+      "match2_pullDyDz", "match1_pullDyDz", "match2_pullDxDz", "match1_pullDxDz"};
+    for (const auto& feature: features)
+      softMuonMva_.addFeature(feature);
 }
+
+void BmmMuonIdProducer::fillSoftMva(pat::CompositeCandidate& mu_cand){
+  // "match2_pullDyDz"
+  // "match1_pullDyDz"
+  // "match2_pullDxDz"
+  // "match1_pullDxDz"
+  softMuonMva_.set("trkValidFrac",        mu_cand.userFloat("trkValidFrac"));
+  softMuonMva_.set("glbTrackProbability", mu_cand.userFloat("glbTrackProbability"));
+  softMuonMva_.set("nLostHitsInner",      mu_cand.userInt(  "nLostHitsInner"));
+  softMuonMva_.set("nLostHitsOuter",      mu_cand.userInt(  "nLostHitsOuter"));
+  softMuonMva_.set("trkKink",             mu_cand.userFloat("trkKink"));
+  softMuonMva_.set("chi2LocalPosition",   mu_cand.userFloat("chi2LocalPosition"));
+  softMuonMva_.set("match2_dX",           mu_cand.userFloat("match2_dX"));
+  softMuonMva_.set("match2_pullX",        mu_cand.userFloat("match2_pullX"));
+  softMuonMva_.set("match1_dX",           mu_cand.userFloat("match1_dX"));
+  softMuonMva_.set("match1_pullX",        mu_cand.userFloat("match1_pullX"));
+  softMuonMva_.set("nPixels",             mu_cand.userInt(  "nPixels"));
+  softMuonMva_.set("nValidHits",          mu_cand.userInt(  "nValidHits"));
+  softMuonMva_.set("nLostHitsOn",         mu_cand.userInt(  "nLostHitsOn"));
+  softMuonMva_.set("match2_dY",           mu_cand.userFloat("match2_dY"));
+  softMuonMva_.set("match2_pullY",        mu_cand.userFloat("match2_pullY"));
+  softMuonMva_.set("match1_dY",           mu_cand.userFloat("match1_dY"));
+  softMuonMva_.set("match1_pullY",        mu_cand.userFloat("match1_pullY"));
+  softMuonMva_.set("match2_pullDyDz",     mu_cand.userFloat("match2_pullDyDz"));
+  softMuonMva_.set("match1_pullDyDz",     mu_cand.userFloat("match1_pullDyDz"));
+  softMuonMva_.set("match2_pullDxDz",     mu_cand.userFloat("match2_pullDxDz"));
+  softMuonMva_.set("match1_pullDxDz",     mu_cand.userFloat("match1_pullDxDz"));
+
+  mu_cand.addUserFloat("newSoftMuonMva", softMuonMva_.predict());
+}
+
 
 void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
@@ -125,6 +168,7 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
       }
 	
       fillMatchInfo(mu_cand, muon);
+      fillSoftMva(mu_cand);
       
       if (isMC_){
 	mu_cand.addUserInt("simType", muon.simType());
