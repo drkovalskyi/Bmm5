@@ -2390,7 +2390,7 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
     result.longitudinalImpactParameterSig = impactParameterZ.second.significance();
     result.longitudinalImpactParameterErr = impactParameterZ.second.error();
   }
-  if (impactParameter3D.first) {
+  if (impactParameter3D.first and not isnan(impactParameter3D.second.error())) {
     result.distaceOfClosestApproach       = impactParameter3D.second.value();
     result.distaceOfClosestApproachSig    = impactParameter3D.second.significance();
     result.distaceOfClosestApproachErr    = impactParameter3D.second.error();
