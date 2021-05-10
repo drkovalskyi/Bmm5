@@ -2,6 +2,11 @@
 
 ## New developments
 
+## [NanoAODv6-V17] - 2021/05/10
+
+### Fixed
+	- Added protection from getting NaN for pointing angle in a special case
+
 ## [NanoAODv6-V16] - 2021/05/07
 
 ### Fixed
