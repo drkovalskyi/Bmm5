@@ -69,6 +69,9 @@ getAlpha(const GlobalPoint& vtx_position, const GlobalError& vtx_error,
 			     bool transverse = true){
   AlgebraicSymMatrix33 error_matrix(vtx_error.matrix() + ip_error.matrix());
   GlobalVector dir(vtx_position - ip_position);
+  if (dir.mag() == 0)
+    return std::pair<float, float>(999., 999.);
+
   GlobalVector p(momentum);
   if (transverse){
     dir = GlobalVector(dir.x(), dir.y(), 0);
@@ -1085,7 +1088,7 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
   xgBoosters_.at(xg_index).set("mm_nBMTrks",         dimuonCand.userInt(  "nBMTrks"));
   xgBoosters_.at(xg_index).set("mm_otherVtxMaxProb1", dimuonCand.userFloat(  "otherVtxMaxProb1"));
   xgBoosters_.at(xg_index).set("mm_otherVtxMaxProb2", dimuonCand.userFloat(  "otherVtxMaxProb2"));
-  
+
   dimuonCand.addUserFloat("mva", xgBoosters_.at(xg_index).predict());
 
   // Refit with pointing constraint
