@@ -9,38 +9,44 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### Time per event for the event loop (sec)
 | Tag           | Production Version | NanoAOD path | Bmm module | V0 module | MuonId module |
 | ------------- | ------------------ | ------------ | ---------- | --------- | ------------- |
-| NanoAODv6-V16 |      513           |     0.070    |    0.020   |    0.019  |    0.000      |
+| NanoAODv8-V01 |      514           |     0.074    |    0.020   |    0.016  |    0.000      | 
+| NanoAODv6-V17 |      513           |     0.070    |    0.020   |    0.019  |    0.000      |
 | NanoAODv6-V14 |      511           |     0.070    |    0.040   |    0.025  |    0.000      |
 
 #### Size per event (KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
+| NanoAODv8-V01 |      514           |         |               |       2.0          |
 | NanoAODv6-V16 |      513           |         |               |       1.9          |
 | NanoAODv6-V14 |      511           |   1.1   |     1.6       |       1.7          |
 
 #### Memory Usage (RSS KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 | NanoAOD + Bmm + V0 + Id |
 | ------------- | ------------------ | ------- | ------------- | ------------------ | ----------------------- |
-| NanoAODv6-V16 |      513           |         |               |                    |         1886            |
+| NanoAODv8-V01 |      514           |         |               |                    |         1839            |
+| NanoAODv6-V17 |      513           |         |               |                    |         1886            |
 | NanoAODv6-V14 |      511           |   1630  |     1812      |      1903          |         1893            |
 
 ### Data: Charmonium Run2018D
 #### Time per event for the event loop (sec)
 | Tag           | Production Version | NanoAOD path | Bmm module | V0 module | MuonId module |
 | ------------- | ------------------ | ------------ | ---------- | --------- | ------------- |
-| NanoAODv6-V16 |      513           |     0.076    |    0.082   |    0.024  |    0.000      |
+| NanoAODv8-V01 |      514           |     0.100    |    0.079   |    0.022  |    0.000      |
+| NanoAODv6-V17 |      513           |     0.076    |    0.082   |    0.024  |    0.000      |
 | NanoAODv6-V14 |      511           |     0.073    |    0.062   |    0.025  |    0.000      |
 
 #### Size per event (KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
-| NanoAODv6-V16 |      513           |         |               |       2.5          |
+| NanoAODv8-V01 |      514           |         |               |       2.6          |
+| NanoAODv6-V17 |      513           |         |               |       2.5          |
 | NanoAODv6-V14 |      511           |   1.0   |     2.0       |       2.1          |
 
 #### Memory Usage (RSS KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 | NanoAOD + Bmm + V0 + Id |
 | ------------- | ------------------ | ------- | ------------- | ------------------ | ----------------------- |
-| NanoAODv6-V16 |      513           |         |               |                    |         1794            |
+| NanoAODv8-V01 |      514           |         |               |                    |         1790            |
+| NanoAODv6-V17 |      513           |         |               |                    |         1794            |
 | NanoAODv6-V14 |      511           |   1665  |     1697      |      1761          |         1799            |
 
 

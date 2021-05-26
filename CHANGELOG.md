@@ -2,6 +2,9 @@
 
 ## New developments
 
+## [NanoAODv8-V01] - 2021/05/26
+	- Ultra Legacy equivalent of NanoAODv6-V17. Requires CMSSW_10_6_19_patch2
+
 ## [NanoAODv6-V17] - 2021/05/10
 
 ### Fixed
