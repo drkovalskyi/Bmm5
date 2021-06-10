@@ -463,7 +463,21 @@ BxToMuMuGenSummaryTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProdu
     variables = BxToMuMuGenSummaryVars
 )
 
+##################################################################################
+###
+###                              Gen Summary Info
+###
+##################################################################################
+
+prescaleTable = cms.EDProducer("TriggerPrescaleProducer",
+      trigger       = cms.InputTag("TriggerResults","","HLT"),
+      prescales     = cms.InputTag('patTrigger'),
+      triggerNames  = cms.vstring('HLT_DoubleMu4_3_Bs', 'HLT_DoubleMu4_3_Jpsi',
+                                  'HLT_DoubleMu4_Jpsi_Displaced', 'HLT_DoubleMu4_Jpsi_NoVertexing',
+                                  'HLT_DoubleMu4_3_Jpsi_Displaced')
+)
+
 BxToMuMuSequence   = cms.Sequence(BxToMuMu)
 BxToMuMuMcSequence = cms.Sequence(BxToMuMuMc * BxToMuMuGen )
-BxToMuMuTables     = cms.Sequence(BxToMuMuDiMuonTable   * BxToMuMuBToKmumuTable * BxToMuMuBToKKmumuTable)
-BxToMuMuMcTables   = cms.Sequence(BxToMuMuDiMuonMcTable * BxToMuMuBToKmumuMcTable * BxToMuMuBToKKmumuMcTable * BxToMuMuGenTable * BxToMuMuGenSummaryTable)
+BxToMuMuTables     = cms.Sequence(BxToMuMuDiMuonTable   * BxToMuMuBToKmumuTable * BxToMuMuBToKKmumuTable * prescaleTable)
+BxToMuMuMcTables   = cms.Sequence(BxToMuMuDiMuonMcTable * BxToMuMuBToKmumuMcTable * BxToMuMuBToKKmumuMcTable * BxToMuMuGenTable * BxToMuMuGenSummaryTable * prescaleTable)
