@@ -2,6 +2,12 @@
 
 ## New developments
 
+## [NanoAODv6-V18] - 2021/06/12
+
+### Added
+	- Trigger prescale for selected set of HLT triggers
+	- GenFilterInfo in LuminosityBlocks to compute proper event yield normalization
+
 ## [NanoAODv6-V17] - 2021/05/10
 
 ### Fixed
