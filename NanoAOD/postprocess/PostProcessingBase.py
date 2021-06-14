@@ -101,6 +101,11 @@ class Processor(object):
 class FlatNtupleBase(Processor):
     """Flat ROOT ntuple producer for Bmm5 analysis"""
 
+    def __init__(self, job_filename, take_ownership=False):
+        self.n_gen_all = None
+        self.n_gen_passed = None
+        super(FlatNtupleBase, self).__init__(job_filename, take_ownership)
+    
     def _validate_inputs(self):
         """Task specific input validation"""
         raise Exception("Not implemented")
@@ -133,12 +138,22 @@ class FlatNtupleBase(Processor):
             for file in good_files:
                 os.remove(file)
 
-            # Store number of events
+            # Store meta data
             f = TFile(self.job_output_tmp, "UPDATE")
             t = TTree("info","Selection information")
+            
             n_processed = np.empty((1), dtype="i")
             t.Branch("n_processed", n_processed, "n_processed/I")
             n_processed[0] = n_events
+
+            if self.n_gen_all != None:
+                n_gen_all = np.empty((1), dtype="i")
+                n_gen_passed = np.empty((1), dtype="i")
+                t.Branch("n_gen_all", n_gen_all, "n_gen_all/I")
+                t.Branch("n_gen_passed", n_gen_passed, "n_gen_passed/I")
+                n_gen_all[0] = self.n_gen_all
+                n_gen_passed[0] = self.n_gen_passed
+            
             t.Fill()
             f.Write()
             f.Close()
@@ -164,6 +179,18 @@ class FlatNtupleBase(Processor):
         self._configure_output_tree()
 
         fin = TFile(input_file)
+
+        # GenFilterInfo
+        lumis = fin.Get("LuminosityBlocks")
+        if lumis:
+            for lumi in lumis:
+                if hasattr(lumi, 'GenFilter_numEventsPassed'):
+                    if self.n_gen_all == None:
+                        self.n_gen_all = 0
+                        self.n_gen_passed = 0
+                    self.n_gen_passed += lumi.GenFilter_numEventsPassed
+                    self.n_gen_all    += lumi.GenFilter_numEventsTotal
+        
         self.input_tree = fin.Get("Events")
         nevents = self.input_tree.GetEntries()
 
