@@ -14,6 +14,7 @@ import sys
 
 from Bmm5.MVA.mtree import MTree
 from ROOT import TFile, TTree
+import numpy as np
 
 class Processor(object):
     """Base class for processors"""
@@ -117,7 +118,7 @@ class FlatNtupleBase(Processor):
             result, n = self.process_file(f)
             n_events += n
             results.append(result)
-        print n//(time.clock()-t0), "Hz"
+        print n_events//(time.clock()-t0), "Hz"
 
         print "Merging output."
         # merge results
@@ -131,6 +132,16 @@ class FlatNtupleBase(Processor):
             print "Merged output."
             for file in good_files:
                 os.remove(file)
+
+            # Store number of events
+            f = TFile(self.job_output_tmp, "UPDATE")
+            t = TTree("info","Selection information")
+            n_processed = np.empty((1), dtype="i")
+            t.Branch("n_processed", n_processed, "n_processed/I")
+            n_processed[0] = n_events
+            t.Fill()
+            f.Write()
+            f.Close()
         else:
             raise Exception("Merge failed")
 
@@ -181,6 +192,7 @@ class FlatNtupleBase(Processor):
         # process cut
 
         cut = self.job_info['cut']
+        cut = re.sub('\&\&', ' and ', cut)
 
         cut_list = re.split('([^\w\_]+)', cut)
 
