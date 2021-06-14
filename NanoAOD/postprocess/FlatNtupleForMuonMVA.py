@@ -175,6 +175,8 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
         self.tree.addBranch('HLT_DoubleMu4_3_Jpsi_Displaced', 'UInt_t', 0)
         self.tree.addBranch('HLT_Dimuon6_Jpsi_NoVertexing',   'UInt_t', 0)
         self.tree.addBranch('trigger',                        'UInt_t', 0, "OR of all relevant HLT Jpsi triggers")
+        self.tree.addBranch('HLT_Mu3_L1SingleMu5orSingleMu7', 'UInt_t', 0)
+        self.tree.addBranch('HLT_Mu3_PFJet40',                'UInt_t', 0)
 
 
     def _fill_tree(self, i, data):
@@ -234,7 +236,7 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
 
         self.tree['highPurity']          = self.event.MuonId_highPurity[i]
 
-        # Trigger info
+        # Signal Jpsi Triggers
         trigger = 0
         if hasattr(self.event, 'HLT_DoubleMu4_3_Jpsi'):
             self.tree['HLT_DoubleMu4_3_Jpsi'] = self.event.HLT_DoubleMu4_3_Jpsi
@@ -253,7 +255,13 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
             trigger |= self.event.HLT_Dimuon6_Jpsi_NoVertexing
 
         self.tree['trigger'] = trigger
-            
+        
+        # Other triggers
+        if hasattr(self.event, 'HLT_Mu3_L1SingleMu5orSingleMu7'):
+            self.tree['HLT_Mu3_L1SingleMu5orSingleMu7'] = self.event.HLT_Mu3_L1SingleMu5orSingleMu7
+        if hasattr(self.event, 'HLT_Mu3_PFJet40'):
+            self.tree['HLT_Mu3_PFJet40'] = self.event.HLT_Mu3_PFJet40
+
         for key, value in data.items():
             self.tree[key] = value
 
@@ -263,8 +271,9 @@ if __name__ == "__main__":
 
     job = {
         "input": [
-            "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/Charmonium+Run2018D-PromptReco-v2+MINIAOD/98841806-7910-3B4F-8818-832B7FFDC87B.root"
+            # "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/Charmonium+Run2018D-PromptReco-v2+MINIAOD/98841806-7910-3B4F-8818-832B7FFDC87B.root"
             # "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/BsToMuMu_bmm_fakes_and_ids.root"
+            "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM/8C7F570C-A4C8-F942-96D3-E87AFB8471A7.root"
         ],
         "tree_name" : "muons",
       }  
