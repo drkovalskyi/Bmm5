@@ -99,7 +99,7 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree.addBranch('mm_otherVtxMaxProb2','Float_t', 0, "Max vertexing probability of one of the muons with a random track with minPt=2.0GeV")
         self.tree.addBranch('mm_m1iso',           'Float_t', 0, "Muon isolation the way it's done in Bmm4")
         self.tree.addBranch('mm_m2iso',           'Float_t', 0, "Muon isolation the way it's done in Bmm4")
-        self.tree.addBranch('mm_kin_alphaXY',     'Float_t', 0, "Cosine of pointing angle in XY wrt BS")
+        self.tree.addBranch('mm_kin_alphaBS',     'Float_t', 0, "Cosine of pointing angle in XY wrt BS")
         self.tree.addBranch('mm_nBMTrks',         'UInt_t',  0, "Number of tracks more compatible with the mm vertex than with PV by doca significance")
 
         self.tree.addBranch('trigger',            'UInt_t',  0, "Main analysis trigger")
@@ -126,7 +126,8 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree['mm_kin_sl3d']    = self.event.bkmm_jpsimc_sl3d[cand]*1.6
 
         self.tree['mm_kin_alpha']   = self.event.bkmm_jpsimc_alpha[cand]
-        self.tree['mm_kin_spvip']   = self.event.bkmm_jpsimc_pvip[cand]/self.event.bkmm_jpsimc_pvipErr[cand]
+        if self.event.bkmm_jpsimc_pvipErr[cand] > 0:
+            self.tree['mm_kin_spvip'] = self.event.bkmm_jpsimc_pvip[cand]/self.event.bkmm_jpsimc_pvipErr[cand]
         self.tree['mm_kin_pvip']    = self.event.bkmm_jpsimc_pvip[cand]
         self.tree['mm_iso']         = self.event.bkmm_bmm_iso[cand]
         self.tree['mm_kin_vtx_chi2dof'] = self.event.mm_kin_vtx_chi2dof[self.event.bkmm_mm_index[cand]]
@@ -134,7 +135,7 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree['mm_otherVtxMaxProb2'] = self.event.bkmm_bmm_otherVtxMaxProb2[cand]
         self.tree['mm_m1iso']       = self.event.bkmm_bmm_m1iso[cand]
         self.tree['mm_m2iso']       = self.event.bkmm_bmm_m2iso[cand]
-        self.tree['mm_kin_alphaXY'] = self.event.bkmm_jpsimc_cosAlphaXY[cand]
+        self.tree['mm_kin_alphaBS'] = self.event.bkmm_jpsimc_alphaBS[cand]
         self.tree['mm_nBMTrks']     = self.event.bkmm_bmm_nBMTrks[cand]
 
         trigger_2018 = 0
@@ -161,12 +162,13 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         return True
 
 def unit_test():
-    path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/"
+    path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/513/"
     job = {
         "input": [
             # path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/223016AA-82DA-2D4A-B505-B05AFE4AB68A.root"
             # path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/223016AA-82DA-2D4A-B505-B05AFE4AB68A.root"
-            path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/72AF7677-36A7-E811-851A-FA163E52BDE2.root"
+            # path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/72AF7677-36A7-E811-851A-FA163E52BDE2.root"
+            path + "Charmonium+Run2016C-17Jul2018-v1+MINIAOD/24A4BFE3-4B8B-E811-9349-0CC47AC52CA0.root"
         ],
         "signal_only": True,
         "tree_name": "mva",
