@@ -4,6 +4,7 @@ from LocalResourceHandler import LocalResourceHandler
 from SSHResourceHandler import SSHResourceHandler
 from Skimmer import Skimmer
 from FlatNtupleForBmmMva import FlatNtupleForBmmMva
+from FlatNtupleForMLFit import FlatNtupleForMLFit
 from pprint import pprint
 
 class JobDispatcher(object):
@@ -147,6 +148,9 @@ class JobDispatcher(object):
 
         if 'Failed' in self.jobs_by_status:
             for job in self.jobs_by_status['Failed']:
+                if detailed:
+                    print "\n", job
+                     
                 job_info = self._job_info(job)
 
                 failure_type = None
@@ -156,11 +160,12 @@ class JobDispatcher(object):
                     failure_type = 'Locked without output'
                 elif os.path.exists(job_info['log']):
                     failure_type = 'Only log'
-                    if detailed:
-                        subprocess.call("tail %s" % job_info['log'], shell=True)
                 else:
                     failure_type = 'Missing log'
 
+                if detailed and os.path.exists(job_info['log']):
+                    subprocess.call("tail %s" % job_info['log'], shell=True)
+                    
                 if failure_type:
                     if failure_type not in failures:
                         failures[failure_type] = []
@@ -335,12 +340,14 @@ class JobDispatcher(object):
                             
 if __name__ == "__main__":
     jd = JobDispatcher()
+    # jd.kill_all_jobs()
     # jd.show_resource_availability()
     # jd.show_failures(True)
-    jd.show_failures()
-    # jd.reset_failures()
     # jd.clean_up()
     # jd.update_status_of_jobs()
-    # jd.process_jobs()
-    # jd.kill_all_jobs()
     # jd.job_report()
+    
+    jd.show_failures()
+
+    # jd.reset_failures()
+    # jd.process_jobs()
