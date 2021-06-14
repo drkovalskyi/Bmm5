@@ -126,7 +126,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
 
         for trigger in self.triggers:
             self.tree.addBranch(trigger, 'UInt_t', 0)
-            self.tree.addBranch("%s_ps" % trigger, 'UInt_t', 0, "Prescale")
+            self.tree.addBranch("%s_ps" % trigger, 'UInt_t', 999999, "Prescale. 0 - Off, 999999 - no information")
         
     def _fill_tree(self, cand):
         self.tree.reset()
@@ -264,7 +264,8 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         for trigger in self.triggers:
             if hasattr(self.event, trigger):
                 self.tree[trigger] = getattr(self.event, trigger)
-                # FIXME - add prescale
+            if hasattr(self.event, "prescale_" + trigger):
+                self.tree[trigger + "_ps"] = getattr(self.event, "prescale_" + trigger)
 
         self.tree.fill()
 
@@ -272,52 +273,52 @@ if __name__ == "__main__":
 
     ### create a test job
 
-    # job = {
-    #     "input": [
-    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/513/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root",
-    #         ],
-    #     "signal_only" : True,
-    #     "tree_name" : "bsmmMc",
-    #     "blind" : False,
-    #     "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-    #             "Muon_softMvaId[mm_mu1_index] and "\
-    #             "abs(mm_kin_mu1eta)<1.4 and "\
-    #             "mm_kin_mu1pt>4 and "\
-    #             "Muon_softMvaId[mm_mu2_index] and "\
-    #             "abs(mm_kin_mu2eta)<1.4 and "\
-    #             "mm_kin_mu2pt>4 and "\
-    #             "abs(mm_kin_mass-5.4)<0.5 and "\
-    #             "mm_kin_sl3d>4 and "\
-    #             "mm_kin_vtx_chi2dof<5",
-    #     "final_state" : "mm",
-    #     "best_candidate": "mm_kin_pt",
-    #     # "best_candidate": "",
-    #   }  
-
     job = {
         "input": [
-            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/513/Charmonium+Run2018D-PromptReco-v2+MINIAOD/FF21B6D9-FF6D-C042-8CAE-AC6E965ABD00.root",
-        ],
-        "signal_only" : False,
-        "tree_name" : "bupsikData",
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/515/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root",
+            ],
+        "signal_only" : True,
+        "tree_name" : "bsmmMc",
         "blind" : False,
-        "cut" :
-            "mm_mu1_index[bkmm_mm_index]>=0 and "\
-            "mm_mu2_index[bkmm_mm_index]>=0 and "\
-            "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 and "\
-            "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 and "\
-            "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 and "\
-            "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 and "\
-            "mm_kin_pt[bkmm_mm_index]>7.0 and "\
-            "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "\
-            "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and "\
-            "bkmm_jpsimc_vtx_prob>0.1 and "\
-            "mm_kin_sl3d[bkmm_mm_index]>4 and "\
-            "abs(bkmm_jpsimc_mass-5.4)<0.5",
-        "final_state" : "bkmm",
-        # "best_candidate": "bkmm_jpsimc_pt",
-        "best_candidate": "",
+        "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+                "Muon_softMvaId[mm_mu1_index] and "\
+                "abs(mm_kin_mu1eta)<1.4 and "\
+                "mm_kin_mu1pt>4 and "\
+                "Muon_softMvaId[mm_mu2_index] and "\
+                "abs(mm_kin_mu2eta)<1.4 and "\
+                "mm_kin_mu2pt>4 and "\
+                "abs(mm_kin_mass-5.4)<0.5 and "\
+                "mm_kin_sl3d>4 and "\
+                "mm_kin_vtx_chi2dof<5",
+        "final_state" : "mm",
+        "best_candidate": "mm_kin_pt",
+        # "best_candidate": "",
       }  
+
+    # job = {
+    #     "input": [
+    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/515/Charmonium+Run2018D-PromptReco-v2+MINIAOD/6E7D2677-4622-F047-86A2-91E4D847CD88.root",
+    #     ],
+    #     "signal_only" : False,
+    #     "tree_name" : "bupsikData",
+    #     "blind" : False,
+    #     "cut" :
+    #         "mm_mu1_index[bkmm_mm_index]>=0 and "\
+    #         "mm_mu2_index[bkmm_mm_index]>=0 and "\
+    #         "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 and "\
+    #         "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 and "\
+    #         "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 and "\
+    #         "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 and "\
+    #         "mm_kin_pt[bkmm_mm_index]>7.0 and "\
+    #         "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "\
+    #         "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and "\
+    #         "bkmm_jpsimc_vtx_prob>0.1 and "\
+    #         "mm_kin_sl3d[bkmm_mm_index]>4 and "\
+    #         "abs(bkmm_jpsimc_mass-5.4)<0.5",
+    #     "final_state" : "bkmm",
+    #     # "best_candidate": "bkmm_jpsimc_pt",
+    #     "best_candidate": "",
+    #   }  
 
     # job = {
     #     "input": [
