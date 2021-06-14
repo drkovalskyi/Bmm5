@@ -61,6 +61,8 @@ class JobCreator(object):
     def create_new_jobs(self, make_small_jobs=False):
         """Find new files and create jobs"""
         for task in cfg.tasks:
+            if task['name'] not in cfg.active_tasks[task['type']]:
+                continue
             task_id = "%s-%s" % (task['type'], task['name'])
             print "Processing task %s" % task_id
 
