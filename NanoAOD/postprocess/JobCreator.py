@@ -66,7 +66,6 @@ class JobCreator(object):
 
             for dataset, ds_inputs in self.all_inputs_by_datasets.items():
                 if not re.search(task['input_pattern'], dataset): continue
-                print "  Processing dataset %s" % dataset
                 # find new inputs
                 new_inputs = []
                 for input in ds_inputs:
@@ -75,7 +74,6 @@ class JobCreator(object):
                             if input in self.files_in_use_by_task_and_dataset[task_id][dataset]:
                                 continue
                     new_inputs.append(input)
-                print "    Number of new input files %u" % len(new_inputs)
 
                 # create jobs
                 n_elements = len(new_inputs)
@@ -112,7 +110,10 @@ class JobCreator(object):
                     # save job
                     json.dump(job_info, open(job_filename, "w"))
                     njobs += 1
-                print "    Number of new jobs created %u" % njobs
+                if len(new_inputs) > 0:
+                    print "  Dataset %s" % dataset
+                    print "    Number of new input files %u" % len(new_inputs)
+                    print "    Number of new jobs created %u" % njobs
                             
 if __name__ == "__main__":
 
