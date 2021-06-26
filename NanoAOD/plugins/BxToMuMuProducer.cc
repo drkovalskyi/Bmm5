@@ -1672,9 +1672,15 @@ BxToMuMuProducer::vertexWithKinematicFitter(std::vector<const reco::Track*> trks
     particles.push_back(factory.particle(transTrks.back(),masses[i],chi,ndf,muonMassErr));
   }
 
-  RefCountedKinematicTree vertexFitTree = fitter.fit(particles);
+  RefCountedKinematicTree vertexFitTree;
   KinematicFitResult result;
-    
+
+  try {
+    vertexFitTree = fitter.fit(particles);
+  } catch (const std::exception& e) {
+    return result;
+  }
+
   if ( !vertexFitTree->isValid()) return result;
   
   result.treeIsValid = true;
@@ -1759,8 +1765,6 @@ BxToMuMuProducer::fitBToKJPsiMuMu( RefCountedKinematicParticle refitMuMu,
   try {
     vertexFitTree = fitter.fit(BToKMuMuParticles);
   } catch (const std::exception& e) {
-    std::cout << "Exception: " << e.what() << std::endl;
-    std::cout << "Fit failed. Result is invalid." << std::endl;
     return result;
   }
 
@@ -1804,7 +1808,11 @@ BxToMuMuProducer::fitBToMuMuKNew( RefCountedKinematicTree tree,
     float mass_sigma = JPsiMassErr_;
     // FIXME: memory leak
     mc = new MassKinematicConstraint(mass, mass_sigma);
-    tree = csFitter.fit(mc, tree);
+    try {
+      tree = csFitter.fit(mc, tree);
+    } catch (const std::exception& e) {
+      return result;
+    }
   }
 
   const reco::TransientTrack kaonTT = theTTBuilder_->build(kaon.bestTrack());
@@ -1825,8 +1833,6 @@ BxToMuMuProducer::fitBToMuMuKNew( RefCountedKinematicTree tree,
   try {
     vertexFitTree = fitter.fit(BToKMuMuParticles);
   } catch (const std::exception& e) {
-    std::cout << "Exception: " << e.what() << std::endl;
-    std::cout << "Fit failed. Result is invalid." << std::endl;
     return result;
   }
 
@@ -1871,7 +1877,11 @@ BxToMuMuProducer::fitBToKKMuMu( RefCountedKinematicTree jpsiTree,
     float jp_m_sigma = JPsiMassErr_;
     // FIXME: memory leak
     jpsi_mc = new MassKinematicConstraint(jpsi, jp_m_sigma);
-    jpsiTree = csFitter.fit(jpsi_mc, jpsiTree);
+    try {
+      jpsiTree = csFitter.fit(jpsi_mc, jpsiTree);
+    } catch (const std::exception& e) {
+    return result;
+    }
   }
 
   const reco::TransientTrack kaonTT1 = theTTBuilder_->build(kaon1.bestTrack());
@@ -1890,7 +1900,12 @@ BxToMuMuProducer::fitBToKKMuMu( RefCountedKinematicTree jpsiTree,
   BToKKMuMuParticles.push_back(partFactory.particle(kaonTT1,KaonMass_,chi,ndf,kaonMassErr));
   BToKKMuMuParticles.push_back(partFactory.particle(kaonTT2,KaonMass_,chi,ndf,kaonMassErr));
 
-  RefCountedKinematicTree vertexFitTree = fitter.fit(BToKKMuMuParticles);
+  RefCountedKinematicTree vertexFitTree;
+  try {
+    vertexFitTree = fitter.fit(BToKKMuMuParticles);
+  } catch (const std::exception& e) {
+    return result;
+  }
 
   if ( !vertexFitTree->isValid()) return result;
 
@@ -1941,7 +1956,6 @@ BxToMuMuProducer::vertexMuonsWithPointingConstraint( const pat::Muon& muon1,
   try {
     refittedTree = fitter.fit(pointing_constraint,tree);
   } catch (const VertexException &e) {
-    // fit failed
     return KinematicFitResult();
   }
 
