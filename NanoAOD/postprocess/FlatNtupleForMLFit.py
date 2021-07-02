@@ -273,27 +273,27 @@ if __name__ == "__main__":
 
     ### create a test job
 
-    job = {
-        "input": [
-            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/515/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root",
-            ],
-        "signal_only" : True,
-        "tree_name" : "bsmmMc",
-        "blind" : False,
-        "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
-                "abs(mm_kin_mu1eta)<1.4 and "\
-                "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
-                "abs(mm_kin_mu2eta)<1.4 and "\
-                "mm_kin_mu2pt>4 and "\
-                "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
-        "final_state" : "mm",
-        "best_candidate": "mm_kin_pt",
-        # "best_candidate": "",
-      }  
+    # job = {
+    #     "input": [
+    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/515/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root",
+    #         ],
+    #     "signal_only" : True,
+    #     "tree_name" : "bsmmMc",
+    #     "blind" : False,
+    #     "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+    #             "Muon_softMvaId[mm_mu1_index] and "\
+    #             "abs(mm_kin_mu1eta)<1.4 and "\
+    #             "mm_kin_mu1pt>4 and "\
+    #             "Muon_softMvaId[mm_mu2_index] and "\
+    #             "abs(mm_kin_mu2eta)<1.4 and "\
+    #             "mm_kin_mu2pt>4 and "\
+    #             "abs(mm_kin_mass-5.4)<0.5 and "\
+    #             "mm_kin_sl3d>4 and "\
+    #             "mm_kin_vtx_chi2dof<5",
+    #     "final_state" : "mm",
+    #     "best_candidate": "mm_kin_pt",
+    #     # "best_candidate": "",
+    #   }  
 
     # job = {
     #     "input": [
@@ -320,6 +320,34 @@ if __name__ == "__main__":
     #     "best_candidate": "",
     #   }  
 
+    job = {
+        "input": [
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/515/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0440EA45-411F-E04F-92A6-B3DDA0AA9DDD.root",
+        ],
+        "signal_only" : False,
+        "tree_name" : "bupsikMC",
+        "blind" : False,
+        "cut" :
+        
+        "mm_mu1_index[bkmm_mm_index]>=0 and "\
+        "mm_mu2_index[bkmm_mm_index]>=0 and "\
+        "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 and "\
+        "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 and "\
+        "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 and "\
+        "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 and "\
+        "mm_kin_pt[bkmm_mm_index]>7.0 and "\
+        "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "\
+        "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and "\
+        "bkmm_jpsimc_vtx_prob>0.1 and "\
+        "mm_kin_sl3d[bkmm_mm_index]>4 and "\
+        "abs(bkmm_jpsimc_mass-5.4)<0.5",
+
+        "final_state" : "bkmm",
+        "best_candidate": "bkmm_jpsimc_pt",
+        # "best_candidate": "",
+      }  
+
+    
     # job = {
     #     "input": [
     #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/BsToJpsiPhi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/3BF074E4-960E-4E4D-80FA-D0B67D2EFC7F.root"
