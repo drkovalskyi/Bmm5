@@ -69,7 +69,13 @@ class Processor(object):
 
         # check if we own the lock
         if info['pid'] == os.getpid():
-            subprocess.call("rm -v %s " % self.job_lock, shell=True) 
+            if re.search('^\/eos\/', self.job_lock):
+                subprocess.call("eos rm %s " % self.job_lock, shell=True)
+            else:
+                subprocess.call("rm -v %s " % self.job_lock, shell=True)
+        else:
+            raise Exception("The job is locked. Ownership information:\n" + str(info))
+            
 
     def _finalize(self):
         """Finish processing and clean up"""
@@ -96,7 +102,6 @@ class Processor(object):
         self._process()
         self._finalize()
         self._release_lock()
-
 
 class FlatNtupleBase(Processor):
     """Flat ROOT ntuple producer for Bmm5 analysis"""
