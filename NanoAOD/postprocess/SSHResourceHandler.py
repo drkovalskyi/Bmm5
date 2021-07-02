@@ -80,12 +80,13 @@ class SSHResourceHandler(ResourceHandler):
         print "Killing jobs at %s" % self.name()
         response = self._send_command_and_get_response("ps -Af")
         for line in response.splitlines():
-            match = re.search('^\S+\s+(\S+).*?job_starter.sh', line)
+            match = re.search('^\S+\s+(\S+).*?job_starter', line)
             if match:
                 self._send_command_and_get_response("kill %s" % match.group(1))
 
     def clean_up(self):
-        command = "find %s -path '*%s*' -exec rm -rfv {} \;" % (tempfile.gettempdir(), cfg.tmp_prefix)
+        # command = "find %s -path '*%s*' -exec rm -rfv {} \;" % (tempfile.gettempdir(), cfg.tmp_prefix)
+        command = "find /tmp/ -type d -name '*%s*' -exec rm -rfv {} \;" % (cfg.tmp_prefix)
         self._send_command_and_get_response(command)
 
 def unit_test():

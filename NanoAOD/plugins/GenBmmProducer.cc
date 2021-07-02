@@ -204,6 +204,20 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
       }
       break;
 
+    case 321*13*13:  // Kmm
+    case -321*13*13:  // Kmm
+      for (auto dau: final_state_particles){
+	if (abs(dau->pdgId())==13){
+	  if (not mu_cand1)
+	    mu_cand1 = dau;
+	  else
+	    mu_cand2 = dau;
+	} else {
+	    dau3 = dau;
+	}
+      }
+      break;
+
     case 321*321*13*13:  // KKmm
       for (auto dau: final_state_particles){
 	if (abs(dau->pdgId())==13){

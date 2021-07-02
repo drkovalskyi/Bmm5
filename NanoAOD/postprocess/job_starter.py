@@ -5,6 +5,7 @@
 #  python job_starter.py [Processor] [Job file]
 #
 from FlatNtupleForBmmMva  import FlatNtupleForBmmMva
+from FlatNtupleForBmmMvaJpsiK import FlatNtupleForBmmMvaJpsiK
 from FlatNtupleForMLFit   import FlatNtupleForMLFit
 from FlatNtupleForMuonMVA import FlatNtupleForMuonMVA
 from Skimmer import Skimmer

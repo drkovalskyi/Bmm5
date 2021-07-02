@@ -14,6 +14,7 @@ import sys
 
 from Bmm5.MVA.mtree import MTree
 from ROOT import TFile, TTree
+import numpy as np
 
 class Processor(object):
     """Base class for processors"""
@@ -68,7 +69,13 @@ class Processor(object):
 
         # check if we own the lock
         if info['pid'] == os.getpid():
-            subprocess.call("rm -v %s " % self.job_lock, shell=True) 
+            if re.search('^\/eos\/', self.job_lock):
+                subprocess.call("eos rm %s " % self.job_lock, shell=True)
+            else:
+                subprocess.call("rm -v %s " % self.job_lock, shell=True)
+        else:
+            raise Exception("The job is locked. Ownership information:\n" + str(info))
+            
 
     def _finalize(self):
         """Finish processing and clean up"""
@@ -96,10 +103,14 @@ class Processor(object):
         self._finalize()
         self._release_lock()
 
-
 class FlatNtupleBase(Processor):
     """Flat ROOT ntuple producer for Bmm5 analysis"""
 
+    def __init__(self, job_filename, take_ownership=False):
+        self.n_gen_all = None
+        self.n_gen_passed = None
+        super(FlatNtupleBase, self).__init__(job_filename, take_ownership)
+    
     def _validate_inputs(self):
         """Task specific input validation"""
         raise Exception("Not implemented")
@@ -117,7 +128,7 @@ class FlatNtupleBase(Processor):
             result, n = self.process_file(f)
             n_events += n
             results.append(result)
-        print n//(time.clock()-t0), "Hz"
+        print n_events//(time.clock()-t0), "Hz"
 
         print "Merging output."
         # merge results
@@ -131,6 +142,26 @@ class FlatNtupleBase(Processor):
             print "Merged output."
             for file in good_files:
                 os.remove(file)
+
+            # Store meta data
+            f = TFile(self.job_output_tmp, "UPDATE")
+            t = TTree("info","Selection information")
+            
+            n_processed = np.empty((1), dtype="i")
+            t.Branch("n_processed", n_processed, "n_processed/I")
+            n_processed[0] = n_events
+
+            if self.n_gen_all != None:
+                n_gen_all = np.empty((1), dtype="i")
+                n_gen_passed = np.empty((1), dtype="i")
+                t.Branch("n_gen_all", n_gen_all, "n_gen_all/I")
+                t.Branch("n_gen_passed", n_gen_passed, "n_gen_passed/I")
+                n_gen_all[0] = self.n_gen_all
+                n_gen_passed[0] = self.n_gen_passed
+            
+            t.Fill()
+            f.Write()
+            f.Close()
         else:
             raise Exception("Merge failed")
 
@@ -153,6 +184,18 @@ class FlatNtupleBase(Processor):
         self._configure_output_tree()
 
         fin = TFile(input_file)
+
+        # GenFilterInfo
+        lumis = fin.Get("LuminosityBlocks")
+        if lumis:
+            for lumi in lumis:
+                if hasattr(lumi, 'GenFilter_numEventsPassed'):
+                    if self.n_gen_all == None:
+                        self.n_gen_all = 0
+                        self.n_gen_passed = 0
+                    self.n_gen_passed += lumi.GenFilter_numEventsPassed
+                    self.n_gen_all    += lumi.GenFilter_numEventsTotal
+        
         self.input_tree = fin.Get("Events")
         nevents = self.input_tree.GetEntries()
 
@@ -181,6 +224,7 @@ class FlatNtupleBase(Processor):
         # process cut
 
         cut = self.job_info['cut']
+        cut = re.sub('\&\&', ' and ', cut)
 
         cut_list = re.split('([^\w\_]+)', cut)
 

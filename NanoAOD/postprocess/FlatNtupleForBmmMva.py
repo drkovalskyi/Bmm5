@@ -42,12 +42,12 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
             selection.append( ('decay_length_significance', self.event.mm_kin_sl3d[i]>4) )
             selection.append( ('vertex_chi2', self.event.mm_kin_vtx_chi2dof[i]<5) )
             keeper = True
-            if not hasattr(self.event, 'mm_gen_pdgId') and blind_signal_region:
+            if not hasattr(self.event, 'mm_gen_pdgId') and self.job_info['blind']:
                 keeper = False
-                if keep_right_sideband:
-                    if (self.event.mm_kin_mass[i]-5.3)>0.2: keeper = True
-                if keep_left_sideband:
-                    if (self.event.mm_kin_mass[i]-5.3)<-0.2: keeper = True
+                # if keep_right_sideband:
+                if (self.event.mm_kin_mass[i]-5.3)>0.2: keeper = True
+                # if keep_left_sideband:
+                if (self.event.mm_kin_mass[i]-5.3)<-0.2: keeper = True
             selection.append( ('blinding', keeper) )
             candidates.append(selection)
         return candidates
@@ -85,6 +85,7 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         self.tree.addBranch('mm_kin_l3d',         'Float_t', 0, "Decay length wrt Primary Vertex in 3D")
         self.tree.addBranch('mm_kin_sl3d',        'Float_t', 0, "Decay length significance wrt Primary Vertex in 3D")
         self.tree.addBranch('mm_kin_slxy',        'Float_t', 0, "Decay length significance wrt Beam Spot in XY plain")
+
         self.tree.addBranch('mm_kin_alpha',       'Float_t', 0, "Pointing angle in 3D wrt PV")
         self.tree.addBranch('mm_kin_spvip',       'Float_t', 0, "Significance of impact parameter wrt Primary Vertex in 3D")
         self.tree.addBranch('mm_kin_spvlip',      'Float_t', 0, "Significance of longitudinal impact parameter wrt Primary Vertex in 3D")
@@ -97,7 +98,7 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         self.tree.addBranch('mm_m2iso',           'Float_t', 0, "Muon isolation the way it's done in Bmm4")
         self.tree.addBranch('mm_os',              'UInt_t',  0, "Opposite charge or not")
 
-        self.tree.addBranch('mm_kin_alphaXY',     'Float_t', 0, "Cosine of pointing angle in XY wrt BS")
+        self.tree.addBranch('mm_kin_alphaBS',     'Float_t', 0, "Cosine of pointing angle in XY wrt BS")
         self.tree.addBranch('mm_nBMTrks',         'UInt_t',  0, "Number of tracks more compatible with the mm vertex than with PV by doca significance")
         self.tree.addBranch('mm_nDisTrks',        'UInt_t',  0, "Number of displaced tracks compatible with the vertex by vertex probability")
         self.tree.addBranch('mm_closetrks1',      'UInt_t',  0, "Number of tracks compatible with the vertex by DOCA(0.3mm) and signifance less than 1")
@@ -159,7 +160,7 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         self.tree['mm_m1iso']       = self.event.mm_m1iso[cand]
         self.tree['mm_m2iso']       = self.event.mm_m2iso[cand]
         self.tree['mm_os'] = 1 if (self.event.Muon_charge[self.event.mm_mu1_index[cand]] * self.event.Muon_charge[self.event.mm_mu2_index[cand]] == -1) else 0
-        self.tree['mm_kin_alphaXY'] = self.event.mm_kin_cosAlphaXY[cand]
+        self.tree['mm_kin_alphaBS'] = self.event.mm_kin_alphaBS[cand]
         self.tree['mm_nBMTrks']     = self.event.mm_nBMTrks[cand]
         self.tree['mm_nDisTrks']    = self.event.mm_nDisTrks[cand]
         self.tree['mm_doca']        = self.event.mm_doca[cand]
@@ -186,14 +187,15 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         return True
 
 def unit_test():
-    path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/"
+    path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/513/"
     job = {
         "input": [
-            path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root"
+            # path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root"
+            path + "Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD/EC7AE4F3-188B-E811-8CE9-90B11C2AA16C.root"
             ],
-        "signal_only": True,
+        "signal_only": False,
         "tree_name": "mva",
-        "blind": False,
+        "blind": True,
     }
 
     file_name = "/tmp/dmytro/test.job"
