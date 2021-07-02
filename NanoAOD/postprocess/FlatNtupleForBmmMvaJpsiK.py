@@ -91,6 +91,11 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree.addBranch('mm_kin_slxy',        'Float_t', 0, "Decay length significance wrt Beam Spot in XY plain")
 
         self.tree.addBranch('mm_kin_alpha',       'Float_t', 0, "Pointing angle in 3D wrt PV")
+        self.tree.addBranch('mm_kin_alphaErr',    'Float_t', 0, "Pointing angle in 3D wrt PV uncertainty")
+        self.tree.addBranch('mm_kin_alphaSig',    'Float_t', 999, "Pointing angle in 3D wrt PV significance")
+        self.tree.addBranch('mm_kin_alphaBS',     'Float_t', 0, "Cosine of pointing angle in XY wrt BS")
+        self.tree.addBranch('mm_kin_alphaBSErr',  'Float_t', 0, "Cosine of pointing angle in XY wrt BS uncertainty")
+        self.tree.addBranch('mm_kin_alphaBSSig',  'Float_t', 999, "Cosine of pointing angle in XY wrt BS significance")
         self.tree.addBranch('mm_kin_spvip',       'Float_t', 0, "Significance of impact parameter wrt Primary Vertex in 3D")
         self.tree.addBranch('mm_kin_pvip',        'Float_t', 0, "Impact parameter wrt Primary Vertex in 3D")
         self.tree.addBranch('mm_iso',             'Float_t', 0, "B isolation the way it's done in Bmm4")
@@ -99,10 +104,10 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree.addBranch('mm_otherVtxMaxProb2','Float_t', 0, "Max vertexing probability of one of the muons with a random track with minPt=2.0GeV")
         self.tree.addBranch('mm_m1iso',           'Float_t', 0, "Muon isolation the way it's done in Bmm4")
         self.tree.addBranch('mm_m2iso',           'Float_t', 0, "Muon isolation the way it's done in Bmm4")
-        self.tree.addBranch('mm_kin_alphaBS',     'Float_t', 0, "Cosine of pointing angle in XY wrt BS")
         self.tree.addBranch('mm_nBMTrks',         'UInt_t',  0, "Number of tracks more compatible with the mm vertex than with PV by doca significance")
 
         self.tree.addBranch('trigger',            'UInt_t',  0, "Main analysis trigger")
+        self.tree.addBranch('mm_mva',             'Float_t', 0, "MVA")
   
     def _fill_tree(self, cand):
         self.tree.reset()
@@ -126,6 +131,13 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree['mm_kin_sl3d']    = self.event.bkmm_jpsimc_sl3d[cand]*1.6
 
         self.tree['mm_kin_alpha']   = self.event.bkmm_jpsimc_alpha[cand]
+        self.tree['mm_kin_alphaErr'] = self.event.bkmm_jpsimc_alphaErr[cand]
+        if self.event.bkmm_jpsimc_alphaErr[cand] > 0:
+            self.tree['mm_kin_alphaSig'] = self.event.bkmm_jpsimc_alpha[cand] / self.event.bkmm_jpsimc_alphaErr[cand]
+        self.tree['mm_kin_alphaBS'] = self.event.bkmm_jpsimc_alphaBS[cand]
+        self.tree['mm_kin_alphaBSErr'] = self.event.bkmm_jpsimc_alphaBSErr[cand]
+        if self.event.bkmm_jpsimc_alphaBSErr[cand] > 0:
+            self.tree['mm_kin_alphaBSSig'] = self.event.bkmm_jpsimc_alphaBS[cand] / self.event.bkmm_jpsimc_alphaBSErr[cand]
         if self.event.bkmm_jpsimc_pvipErr[cand] > 0:
             self.tree['mm_kin_spvip'] = self.event.bkmm_jpsimc_pvip[cand]/self.event.bkmm_jpsimc_pvipErr[cand]
         self.tree['mm_kin_pvip']    = self.event.bkmm_jpsimc_pvip[cand]
@@ -135,8 +147,9 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree['mm_otherVtxMaxProb2'] = self.event.bkmm_bmm_otherVtxMaxProb2[cand]
         self.tree['mm_m1iso']       = self.event.bkmm_bmm_m1iso[cand]
         self.tree['mm_m2iso']       = self.event.bkmm_bmm_m2iso[cand]
-        self.tree['mm_kin_alphaBS'] = self.event.bkmm_jpsimc_alphaBS[cand]
         self.tree['mm_nBMTrks']     = self.event.bkmm_bmm_nBMTrks[cand]
+        self.tree['mm_mva']         = self.event.bkmm_bmm_mva[cand]
+        
 
         trigger_2018 = 0
         if hasattr(self.event, 'HLT_DoubleMu4_3_Jpsi'):
