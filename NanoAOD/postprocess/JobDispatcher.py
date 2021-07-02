@@ -347,7 +347,7 @@ if __name__ == "__main__":
     # jd.update_status_of_jobs()
     # jd.job_report()
     
-    jd.show_failures()
-
-    # jd.reset_failures()
-    # jd.process_jobs()
+    # jd.show_failures()
+    
+    jd.reset_failures()
+    jd.process_jobs()
