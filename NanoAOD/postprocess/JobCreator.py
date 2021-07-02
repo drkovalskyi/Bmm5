@@ -60,6 +60,9 @@ class JobCreator(object):
 
     def create_new_jobs(self, make_small_jobs=False):
         """Find new files and create jobs"""
+
+        report = dict()
+        
         for task in cfg.tasks:
             if task['name'] not in cfg.active_tasks[task['type']]:
                 continue
@@ -116,10 +119,15 @@ class JobCreator(object):
                     print "  Dataset %s" % dataset
                     print "    Number of new input files %u" % len(new_inputs)
                     print "    Number of new jobs created %u" % njobs
+                    report[task_id] = report.get(task_id, 0) + njobs
+        print "Number of new job created:"
+        for task_id in sorted(report, key=report.get, reverse=True):
+            print "\t%4u %s" % (report[task_id], task_id)
                             
 if __name__ == "__main__":
 
     jc = JobCreator()
     jc.find_all_inputs()
     jc.load_existing_jobs()
+    # jc.create_new_jobs(False)
     jc.create_new_jobs(True)
