@@ -2,7 +2,7 @@
 from resources_cfg import resources
 
 workdir = "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/postprocess/"
-version = 513
+version = 514
 input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD"
 output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing"
 xrootd_prefix = "root://eoscms.cern.ch:/"
@@ -16,11 +16,12 @@ require_log_for_success = True
 
 active_tasks = {
     'NanoAOD-skims':[
-        # 'bkmm', 'trig', 'ks', 'lambda', 'phi', 'ds', 
+        # 'bkmm', 'trig', 'ks', 'lambda', 'phi', 'ds'
+        'mm'
     ],
     'FlatNtuples':[
         # bmm_mva_jpsik, muon_mva, bmm_mva
-        'fit', 'fit-bkmm'
+        'fit', 'fit-bkmm', 'bmm_mva_jpsik'
     ]
 }
 
@@ -123,7 +124,7 @@ tasks = [
         'tree_name': "mva",
         'name':'bmm_mva_jpsik',
         'type':'FlatNtuples',
-        'files_per_job':50
+        'files_per_job':20
     },
 
     ################ fit ################
