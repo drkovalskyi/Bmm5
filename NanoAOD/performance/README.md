@@ -9,6 +9,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### Time per event for the event loop (sec)
 | Tag           | Production Version | NanoAOD path | Bmm module | V0 module | MuonId module |
 | ------------- | ------------------ | ------------ | ---------- | --------- | ------------- |
+| NanoAODv8-V02 |      516           |     0.078    |    0.020   |    0.019  |    0.000      | 
 | NanoAODv6-V18 |      515           |     0.073    |    0.020   |    0.019  |    0.000      |
 | NanoAODv8-V01 |      514           |     0.074    |    0.020   |    0.016  |    0.000      | 
 | NanoAODv6-V17 |      513           |     0.070    |    0.020   |    0.019  |    0.000      |
@@ -17,6 +18,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### Size per event (KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 |
 | ------------- | ------------------ | ------- |-------------- | ------------------ | 
+| NanoAODv8-V02 |      516           |         |               |       2.1          |
 | NanoAODv6-V18 |      515           |         |               |       1.9          |
 | NanoAODv8-V01 |      514           |         |               |       2.0          |
 | NanoAODv6-V17 |      513           |         |               |       1.9          |
@@ -25,6 +27,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### Memory Usage (RSS KB)
 | Tag           | Production Version | NanoAOD | NanoAOD + Bmm | NanoAOD + Bmm + V0 | NanoAOD + Bmm + V0 + Id |
 | ------------- | ------------------ | ------- | ------------- | ------------------ | ----------------------- |
+| NanoAODv8-V02 |      516           |         |               |                    |         1915            |
 | NanoAODv6-V18 |      515           |         |               |                    |         1893            |
 | NanoAODv8-V01 |      514           |         |               |                    |         1839            |
 | NanoAODv6-V17 |      513           |         |               |                    |         1886            |

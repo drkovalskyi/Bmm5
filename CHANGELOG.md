@@ -2,12 +2,14 @@
 
 ## New developments
 
+## [NanoAODv8-V02] - 2021/07/03
 ### Added
 	- Trigger prescale for selected set of HLT triggers
 	- GenFilterInfo in LuminosityBlocks to compute proper event yield normalization
 
 ### Fixed
 	- GenInfo extraction for JpsiK
+	- Added exception handling for bad fits
 
 ## [NanoAODv8-V01] - 2021/05/26
 	- Ultra Legacy equivalent of NanoAODv6-V17. Requires CMSSW_10_6_19_patch2
