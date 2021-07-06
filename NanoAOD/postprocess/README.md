@@ -23,3 +23,22 @@ cd PhysicsTools/NanoAODTools
 cmsenv
 scram b
 ```
+
+## Design
+
+### Processors
+```mermaid
+classDiagram
+	Processor <|-- FlatNtupleBase
+	Processor <|-- Skimmer
+	FlatNtupleBase <|-- FlatNtupleForBmmMva
+	FlatNtupleBase <|-- FlatNtupleForMLFit
+	FlatNtupleBase <|-- FlatNtupleForMuonMVA
+	FlatNtupleBase <|-- FlatNtupleForBmmMvaJpsiK
+```
+* Skimmer - generic skimmer using ROOT-style cuts
+* FlatNtupleForMLFit - "small" ntuples used for UML fit
+* FlatNtupleForBmmMva - ntuples for Bmm MVA training
+* FlatNtupleForBmmMvaJpsiK - ntuples for Bmm MVA training using BuToJpsiK events reconstructed as Bmm
+* FlatNtupleForMuonMVA - ntuples for Muon Id MVA training
+
