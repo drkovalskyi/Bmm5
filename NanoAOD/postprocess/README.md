@@ -42,3 +42,12 @@ classDiagram
 * FlatNtupleForBmmMvaJpsiK - ntuples for Bmm MVA training using BuToJpsiK events reconstructed as Bmm
 * FlatNtupleForMuonMVA - ntuples for Muon Id MVA training
 
+### Processing Strategy
+- JobCreator 
+  - Read the config file to understand the task
+  - Find unprocessed files
+  - Create jobs
+- JobDispatcher 
+  - Check available resources
+  - If resources are available and new jobs are present - submit the jobs
+  - Waits for jobs to finish
