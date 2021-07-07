@@ -2,7 +2,7 @@
 from resources_cfg import resources
 
 workdir = "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/postprocess/"
-version = 514
+version = 516
 input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD"
 output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing"
 xrootd_prefix = "root://eoscms.cern.ch:/"
@@ -137,10 +137,10 @@ tasks = [
         "tree_name" : "bsmmMc",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -160,10 +160,10 @@ tasks = [
         "tree_name" : "bmmMc",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -183,10 +183,10 @@ tasks = [
         "tree_name" : "bmmData",
         "blind" : True,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -206,10 +206,10 @@ tasks = [
         "tree_name" : "bskkMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -228,10 +228,10 @@ tasks = [
         "tree_name" : "bskpiMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -250,10 +250,10 @@ tasks = [
         "tree_name" : "bspipiMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -272,10 +272,10 @@ tasks = [
         "tree_name" : "bdkkMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -294,10 +294,10 @@ tasks = [
         "tree_name" : "bdkpiMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -316,10 +316,10 @@ tasks = [
         "tree_name" : "bdpipiMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -338,10 +338,10 @@ tasks = [
         "tree_name" : "lbppiMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -360,10 +360,10 @@ tasks = [
         "tree_name" : "lbpkMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -382,10 +382,10 @@ tasks = [
         "tree_name" : "bskmunuMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -404,10 +404,10 @@ tasks = [
         "tree_name" : "bspimunuMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -426,10 +426,10 @@ tasks = [
         "tree_name" : "lbpmunuMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
@@ -448,10 +448,10 @@ tasks = [
         "tree_name" : "bdpimumuMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
