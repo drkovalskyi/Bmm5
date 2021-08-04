@@ -93,6 +93,8 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         self.tree.addBranch('run',         'UInt_t', 0)
         self.tree.addBranch('evt',      'ULong64_t', 0)
         self.tree.addBranch('ls',          'UInt_t', 0)
+        self.tree.addBranch('npu',         'UInt_t', 0, "number of pileup interactions that have been added to the event in the current bunch crossing")
+        self.tree.addBranch('npu_mean',   'Float_t', 0, "tru mean number of pileup interactions")
         # ps
         # cw8
         self.tree.addBranch('bdt',        'Float_t', 0, "BDT score")
@@ -135,6 +137,9 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         self.tree['run'] = self.event.run
         self.tree['ls']  = self.event.luminosityBlock
         self.tree['evt'] = self.event.event
+        if hasattr(self.event, 'Pileup_nTrueInt'):
+            self.tree['npu']      = self.event.Pileup_nPU
+            self.tree['npu_mean'] = self.event.Pileup_nTrueInt
 
         if self.job_info['final_state'] == 'mm':
             # B to mm
