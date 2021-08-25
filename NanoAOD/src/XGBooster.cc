@@ -1,5 +1,6 @@
 #include "Bmm5/NanoAOD/interface/XGBooster.h"
 #include <assert.h>
+#include <math.h>
 
 XGBooster::XGBooster(std::string model_file)
 {
@@ -16,6 +17,8 @@ void XGBooster::addFeature(std::string name){
 }
 
 void XGBooster::set(std::string name, float value){
+  if (isnan(value))
+    throw std::runtime_error(" NaN is used as value for " + name);
   features_.at(feature_name_to_index_[name]) = value;
 }
 
