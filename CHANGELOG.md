@@ -2,6 +2,10 @@
 
 ## New developments
 
+## [NanoAODv8-V03] - 2021/08/26
+### Fixed
+	- Added protection from getting Nan for kin_alpha
+
 ## [NanoAODv8-V02] - 2021/07/03
 ### Added
 	- Trigger prescale for selected set of HLT triggers
