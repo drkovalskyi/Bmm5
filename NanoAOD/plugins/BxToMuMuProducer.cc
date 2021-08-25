@@ -41,6 +41,7 @@
 #include <TVector.h>
 #include <TMatrix.h>
 #include <algorithm>
+#include <math.h>
 
 #include "Bmm5/NanoAOD/interface/XGBooster.h"
 
@@ -100,10 +101,12 @@ getAlpha(const GlobalPoint& vtx_position, const GlobalError& vtx_error,
     2 * dfdx * dfdz * error_matrix(0, 2) +
     2 * dfdy * dfdz * error_matrix(1, 2);
 
-  double err_alpha = fabs(cosAlpha) <= 1 and err2_cosAlpha >=0 ? sqrt(err2_cosAlpha) / sqrt(1-pow(cosAlpha, 2)) : 999;
-  
-  return std::pair<float, float>(acos(cosAlpha), err_alpha);
-  
+  float err_alpha = fabs(cosAlpha) <= 1 and err2_cosAlpha >=0 ? sqrt(err2_cosAlpha) / sqrt(1-pow(cosAlpha, 2)) : 999;
+  float alpha = acos(cosAlpha);
+  if (isnan(alpha) or isnan(err_alpha))
+    return std::pair<float, float>(999., 999.);
+  else
+    return std::pair<float, float>(alpha, err_alpha);
 }
 
 
