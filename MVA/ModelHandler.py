@@ -14,6 +14,7 @@ import matplotlib as mpl
 # https://matplotlib.org/faq/usage_faq.html
 mpl.use('Agg')
 import matplotlib.pyplot as plt
+from math import cos
 
 class ModelHandler(object):
     """XGBoost Model training and validation"""
@@ -32,6 +33,11 @@ class ModelHandler(object):
         self.test_matrix = None
         self.train_data = None
         self.test_data = None
+        self.roc_bkg_min = 0.001
+        self.roc_bkg_max = 1.0
+        self.roc_sig_min = 0.2
+        self.roc_sig_max = 1.0
+        self.feature_map = dict()
         
     def get_true_classification(self, data):
         """Make a column representing the true classification of events.
@@ -85,7 +91,16 @@ class ModelHandler(object):
         """Get columns containing feature data."""
         x_data = []
         for feature in self.features:
-            x_data.append(data[feature])
+            name = feature
+            func = None
+            if feature in self.feature_map:
+                name = self.feature_map[feature]['name']
+                if 'func' in self.feature_map[feature]:
+                    func = self.feature_map[feature]['func']
+            if func != None:
+                x_data.append(func(data[name]))
+            else:
+                x_data.append(data[name])
         return np.column_stack(x_data)
 
     @staticmethod
@@ -348,8 +363,8 @@ class ModelHandler(object):
         ax.plot(fpr_train, tpr_train, label="train AUC = {:.6f}".format(auc_train))
         ax.set_xlabel("bkg eff")
         ax.set_ylabel("sig eff")
-        ax.set_xlim([0.001, 1])
-        ax.set_ylim([0.2, 1.0])
+        ax.set_xlim([self.roc_bkg_min, self.roc_bkg_max])
+        ax.set_ylim([self.roc_sig_min, self.roc_sig_max])
         ax.set_title("ROC curves")
         ax.legend()
         fig.set_tight_layout(True)
