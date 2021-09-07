@@ -239,7 +239,7 @@ class ModelHandler(object):
         return param
 
 
-    def train(self, model_name="test", num_boost_round=5000, make_validation_plots=True):
+    def train(self, model_name="test", num_boost_round=5000, make_validation_plots=True, target_s_over_b=None):
         """Train a model"""
         self.train_matrix = xgb.DMatrix(self.x_train, label=self.y_train, feature_names=self.features)
         self.test_matrix  = xgb.DMatrix(self.x_test,  label=self.y_test,  feature_names=self.features)
@@ -258,8 +258,8 @@ class ModelHandler(object):
 
         # target_s_over_b = 0.005
         # target_s_over_b = .1
-
-        # param["scale_pos_weight"] = sumw_neg/float(sumw_pos)*target_s_over_b
+        if target_s_over_b != None:
+            param["scale_pos_weight"] = sumw_neg/float(sumw_pos)*target_s_over_b
         
         pprint(param)
 
