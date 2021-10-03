@@ -1,6 +1,6 @@
 from PostProcessingBase import Processor
 from PhysicsTools.NanoAODTools.postprocessing.framework.postprocessor import PostProcessor
-import sys, os, subprocess
+import sys, os, subprocess, json
 
 class Skimmer(Processor):
     """Processor to Skim files and Merge output"""
@@ -43,7 +43,19 @@ class Skimmer(Processor):
 
 
 def unit_test():
-    p = Skimmer("/eos/cms/store/group/phys_muon/dmytro/tmp/skim-test/1960fd1c81fb0d8371a3899fcf5cd36a.job")
+    ### create a test job
+    job = {
+        "input": [
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD//515/EGamma+Run2018B-17Sep2018-v1+MINIAOD/EC8FE87A-ADBA-8F40-A4F4-C6C28431BB91.root"
+        ],
+        "cut": "ks_kin_sipPV<3 && ks_kin_slxy>3 && ks_trk1_sip>5 && ks_trk2_sip>5 && ks_kin_cosAlphaXY>0.999",
+        "processor": "Skimmer"
+    }
+    
+    file_name = "/tmp/dmytro/test.job"
+    json.dump(job, open(file_name, "w"))
+
+    p = Skimmer(file_name)
     print p.__dict__
     p.process()
 
