@@ -1,9 +1,10 @@
 # Config file for the postprocessor
 from resources_cfg import resources
 
-workdir = "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/postprocess/"
+workdir = "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv8/src/Bmm5/NanoAOD/postprocess/"
 version = 516
 input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD"
+# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing-NEW"
 output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing"
 xrootd_prefix = "root://eoscms.cern.ch:/"
 web_report_path = "/afs/cern.ch/user/d/dmytro/www/public_html/bmm5/postprocessing/"
@@ -16,12 +17,14 @@ require_log_for_success = True
 
 active_tasks = {
     'NanoAOD-skims':[
-        # 'bkmm', 'trig', 'ks', 'lambda', 'phi', 'ds'
-        'mm'
+        ## 'bkmm', 'trig', 'ks', 'lambda', 'phi', 'ds'
+        # 'mm', 'ks', 'phi', 'lambda', 'bkmm',
+        # 'lambda'
     ],
     'FlatNtuples':[
-        # bmm_mva_jpsik, muon_mva, bmm_mva
-        'fit', 'fit-bkmm', 'bmm_mva_jpsik'
+        ## bmm_mva_jpsik, muon_mva, bmm_mva
+        # 'fit', 'fit-bkmm', 'bmm_mva_jpsik', 'bmm_mva', 'muon_mva'
+        'fit'
     ]
 }
 
@@ -61,7 +64,7 @@ tasks = [
         'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton|MINIAODSIM',
         # 'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton',
         'processor':'Skimmer',
-        'cut':'nks>0',
+        'cut':'ks_kin_sipPV<3 && ks_kin_slxy>3 && ks_trk1_sip>5 && ks_trk2_sip>5 && ks_kin_cosAlphaXY>0.999',
         'name':'ks',
         'type':'NanoAOD-skims',
         'files_per_job':100
@@ -70,7 +73,7 @@ tasks = [
         'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton|MINIAODSIM',
         # 'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton',
         'processor':'Skimmer',
-        'cut':'nlambda>0',
+        'cut':'lambda_kin_slxy>3 && lambda_kin_sipPV<3 && lambda_proton_sip>2 && lambda_pion_sip>2',
         'name':'lambda',
         'type':'NanoAOD-skims',
         'files_per_job':100
@@ -197,6 +200,9 @@ tasks = [
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
     },
+
+    ### Btohh exclusive
+
     {
         'input_pattern':'BsToKK_',
         'processor':'FlatNtupleForMLFit',
@@ -329,6 +335,34 @@ tasks = [
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
     },
+
+    ### Btohh inclusive
+    
+    {
+        'input_pattern':'BTohh',
+        'processor':'FlatNtupleForMLFit',
+        'name':'fit',
+        'type':'FlatNtuples',
+        'files_per_job':20,
+        "tree_name" : "btohhMcBg",
+        "blind" : False,
+        "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
+                "abs(mm_kin_mu1eta)<1.4 and "\
+                "mm_kin_mu1pt>4 and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
+                "abs(mm_kin_mu2eta)<1.4 and "\
+                "mm_kin_mu2pt>4 and "\
+                "abs(mm_kin_mass-5.4)<0.5 and "\
+                "mm_kin_sl3d>4 and "\
+                "mm_kin_vtx_chi2dof<5",
+        "final_state" : "mm",
+        # "best_candidate": "mm_kin_pt",
+        "best_candidate": "",
+    },
+
+    ###
+    
     {
         'input_pattern':'LambdaBToPPi_',
         'processor':'FlatNtupleForMLFit',
@@ -396,12 +430,12 @@ tasks = [
         "best_candidate": "",
     },
     {
-        'input_pattern':'BsToKPiNu_',
+        'input_pattern':'BdToPiMuNu_',
         'processor':'FlatNtupleForMLFit',
         'name':'fit',
         'type':'FlatNtuples',
         'files_per_job':20,
-        "tree_name" : "bspimunuMcBg",
+        "tree_name" : "bdpimunuMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
                 # "Muon_softMvaId[mm_mu1_index] and "\
@@ -446,6 +480,28 @@ tasks = [
         'type':'FlatNtuples',
         'files_per_job':20,
         "tree_name" : "bdpimumuMcBg",
+        "blind" : False,
+        "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+                # "Muon_softMvaId[mm_mu1_index] and "\
+                "abs(mm_kin_mu1eta)<1.4 and "\
+                "mm_kin_mu1pt>4 and "\
+                # "Muon_softMvaId[mm_mu2_index] and "\
+                "abs(mm_kin_mu2eta)<1.4 and "\
+                "mm_kin_mu2pt>4 and "\
+                "abs(mm_kin_mass-5.4)<0.5 and "\
+                "mm_kin_sl3d>4 and "\
+                "mm_kin_vtx_chi2dof<5",
+        "final_state" : "mm",
+        # "best_candidate": "mm_kin_pt",
+        "best_candidate": "",
+    },
+    {
+        'input_pattern':'BuToMuMuPi_',
+        'processor':'FlatNtupleForMLFit',
+        'name':'fit',
+        'type':'FlatNtuples',
+        'files_per_job':20,
+        "tree_name" : "bupimumuMcBg",
         "blind" : False,
         "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
                 # "Muon_softMvaId[mm_mu1_index] and "\
