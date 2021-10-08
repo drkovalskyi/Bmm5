@@ -7,9 +7,15 @@ import tdrstyle
 # Set the TDR style
 tdrstyle.setTDRStyle()
 
-version = 514
+version = 516
 
-output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-%u/bjpsik-splots/" % version;
+output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_binned/" % version;
+# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_sl3d.gt.25.and.sl3d.lt.35/" % version;
+# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_abs_eta.lt.0.9/" % version;
+# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_mva.gt.0.995/" % version;
+# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_mva.lt.0.99/" % version;
+# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_mva.lt.0.99/" % version;
+# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_nvtx.lt.20/" % version;
 
 # bool silent_roofit = true;
 # bool store_projections = false;
@@ -29,6 +35,8 @@ trigger.defineType("passed", 1)
 
 variables = [
     ROOT.RooRealVar("mm_kin_pt", "", 0, 30),
+    ROOT.RooRealVar("mm_mu1_pt", "", 0, 30),
+    ROOT.RooRealVar("mm_mu2_pt", "", 0, 30),
     ROOT.RooRealVar("mm_kin_eta", "", -1.5, 1.5),
     ROOT.RooRealVar("mm_kin_alpha", "", 0, 0.05),
     ROOT.RooRealVar("mm_kin_alphaSig", "", 0, 10),
@@ -46,8 +54,10 @@ variables = [
     ROOT.RooRealVar("mm_otherVtxMaxProb1", "", -0.01, 1.01),
     ROOT.RooRealVar("mm_otherVtxMaxProb2", "", -0.01, 1.01),
     ROOT.RooRealVar("trigger","", 0),
-
+    ROOT.RooRealVar("evt_nvtx","", 0, 100),
 ]
+
+
 
 # struct dataset{
 #   string name, mc_files, data_files, trigger;
@@ -365,11 +375,20 @@ c1 = ROOT.TCanvas("c1","c1", 800, 600)
 for dataset, info in datasets.items():
 
     name = dataset
+    selection = "trigger>0"
+    # selection = "trigger>0&&evt_nvtx<20"
+    # selection = "trigger>0&&mm_mva<0.99"
     
     chain_mc = ROOT.TChain("mva")
     chain_mc.Add(info['mc'])
     print chain_mc.GetEntries()
-    ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, "trigger>0")
+    # ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, "trigger>0")
+    # ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, "trigger>0&&mm_kin_alphaSig<1")
+    # ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, "trigger>0&&mm_kin_pvip>0.0030&&mm_kin_pvip<0.0040")
+    # ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, "trigger>0&&evt_nvtx>20&&evt_nvtx<30")
+    # ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, "trigger>0&&mm_mva>0.99&&mm_kin_pvip<0.002")
+    ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, selection)
+    
     # for i in range(10):
     #     ds_mc.get(i).Print("V")
     # break
@@ -377,7 +396,13 @@ for dataset, info in datasets.items():
     chain_data = ROOT.TChain("mva")
     for pattern in info['data']:
         chain_data.Add(pattern)
-    ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0")
+    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0")
+    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0&&mm_kin_alphaSig<1")
+    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0&&mm_kin_pvip>0.0030&&mm_kin_pvip<0.0040")
+    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0&&evt_nvtx>20&&evt_nvtx<30")
+    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0&&mm_kin_alpha<0.005")
+    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0&&mm_mva>0.99&&mm_kin_pvip<0.002")
+    ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, selection)
 
     ### Fit Validation
     
@@ -400,17 +425,32 @@ for dataset, info in datasets.items():
 
     dataw_sig = ROOT.RooDataSet(ds_data.GetName(), ds_data.GetTitle(), ds_data, ds_data.get(), "", "Nsig_sw")
 
+    ROOT.gStyle.SetOptFit(1)
+    
     for v in variables:
         if v.GetName()=="trigger":
             continue
-        h_data = ROOT.RooAbsData.createHistogram( dataw_sig, 'sig', v, ROOT.RooFit.Binning(50))
+        nbins = 50
+        if v.GetName() == 'mm_mva':
+            nbins = 11
+        h_data = ROOT.RooAbsData.createHistogram( dataw_sig, 'sig', v, ROOT.RooFit.Binning(nbins))
+        if v.GetName() == 'mm_kin_alphaSig':
+            h_data.Fit("gaus")
         h_data.Draw()
-        print_canvas(name + "_splot_" + v.GetName(), output_path)
-
-        h_mc = ROOT.RooAbsData.createHistogram( ds_mc, 'mc', v, ROOT.RooFit.Binning(50))
+        # print_canvas(name + "_splot_" + v.GetName(), output_path)
+        print_canvas(v.GetName() + "_splot_" + name, output_path)
+        if v.GetName() == 'mm_kin_alphaSig':
+            h_data.GetListOfFunctions().Clear()
+            
+        h_mc = ROOT.RooAbsData.createHistogram( ds_mc, 'mc', v, ROOT.RooFit.Binning(nbins))
         h_mc.SetMarkerColor(ROOT.kRed)
+        if v.GetName() == 'mm_kin_alphaSig':
+            h_mc.Fit("gaus")
         h_mc.Draw()
-        print_canvas(name + "_mc_" + v.GetName(), output_path)
+        # print_canvas(name + "_mc_" + v.GetName(), output_path)
+        print_canvas(v.GetName() + "_mc_" + name, output_path)
+        if v.GetName() == 'mm_kin_alphaSig':
+            h_mc.GetListOfFunctions().Clear()
 
         max_value = h_data.GetMaximum()
         h_mc.Scale(h_data.Integral()/h_mc.Integral())
@@ -421,7 +461,14 @@ for dataset, info in datasets.items():
         h_data.Draw()
         h_mc.Draw("same")
 
-        legend = ROOT.TLegend(0.15,0.75,0.5,0.87)
+        # right handside legend
+        if v.GetName() in ['mm_kin_alpha', 'mm_kin_alphaSig', 'mm_kin_alphaBS', 'mm_kin_alphaBSSig',
+                           'mm_kin_spvip', 'mm_kin_pvip', 'mm_kin_sl3d', 'mm_kin_vtx_chi2dof', 'mm_nBMTrks',
+                           'mm_otherVtxMaxProb2'
+                           ]:
+            legend = ROOT.TLegend(0.60,0.75,0.85,0.87)
+        else:
+            legend = ROOT.TLegend(0.15,0.75,0.5,0.87)
         legend.SetFillStyle(0)
         legend.SetLineWidth(0)
         legend.SetBorderSize(1)
@@ -430,12 +477,14 @@ for dataset, info in datasets.items():
         legend.AddEntry(h_mc, "MC")
         legend.Draw()
 
-        print_canvas(name + "_all_" + v.GetName(), output_path)
+        # print_canvas(name + "_all_" + v.GetName(), output_path)
+        print_canvas(v.GetName() + "_all_" + name, output_path)
 
         h_data.Divide(h_data, h_mc)
         h_data.SetMinimum(0.5)
         h_data.SetMaximum(1.5)
         h_data.Draw()
-        print_canvas(name + "_ratio_" + v.GetName(), output_path)
+        # print_canvas(name + "_ratio_" + v.GetName(), output_path)
+        print_canvas(v.GetName() + "_ratio_" + name, output_path)
     
     ws.Delete() # Cleanup
