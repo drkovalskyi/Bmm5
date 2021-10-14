@@ -422,12 +422,12 @@ namespace {
   class MuonCand: public pat::Muon{
   public:
     MuonCand(const pat::Muon& muon, int index):
-      pat::Muon(muon), index_(index)
+      pat::Muon(muon), index_(index), gen_(false)
     {
     }
-    MuonCand(const pat::PackedCandidate& hadron):
+    MuonCand(const pat::PackedCandidate& hadron, bool from_gen):
       pat::Muon(reco::Muon(hadron.charge(), hadron.p4())),
-      index_(-1)
+      index_(-1), gen_(from_gen)
     {
       std::vector<reco::Track> tracks;
       assert(hadron.hasTrackDetails());
@@ -437,8 +437,10 @@ namespace {
       setPdgId(hadron.pdgId());
     }
     int index() const { return index_; }
+    bool from_gen() const { return gen_; }
   private:
     int index_;
+    bool gen_;
   };
 }
 
@@ -600,6 +602,9 @@ private:
   void 
   injectHadronsThatMayFakeMuons(std::vector<MuonCand>& good_muon_candidates);
 
+  void 
+  injectBhhHadrons(std::vector<MuonCand>& good_muon_candidates);
+
   float  computeAnalysisBDT(unsigned int event_idx);
   
   void setupTmvaReader(TMVA::Reader& reader, std::string file);
@@ -639,6 +644,15 @@ private:
   double minBKKmmMass_;
   double maxBKKmmMass_;
   double maxTwoTrackDOCA_;
+  bool   injectMatchedBtohh_;
+  bool   injectBtohh_;
+  double minBhhPt_;
+  double minBhhMass_;
+  double maxBhhMass_;
+  double maxBhhEta_;
+  double minBhhSigLxy_;
+  double minBhhVtxProb_;
+  
   BdtReaderData bdtData_;
   TMVA::Reader  bdtReader0_;
   TMVA::Reader  bdtReader1_;
@@ -669,6 +683,14 @@ maxBKmmMass_(     iConfig.getParameter<double>( "maxBKmmMass" ) ),
 minBKKmmMass_(    iConfig.getParameter<double>( "minBKKmmMass" ) ),
 maxBKKmmMass_(    iConfig.getParameter<double>( "maxBKKmmMass" ) ),
 maxTwoTrackDOCA_( iConfig.getParameter<double>( "maxTwoTrackDOCA" ) ),
+injectMatchedBtohh_( iConfig.getParameter<bool>( "injectMatchedBtohh" ) ),
+injectBtohh_(        iConfig.getParameter<bool>( "injectBtohh" ) ),
+minBhhPt_(        iConfig.getParameter<double>( "minBhhHadronPt" ) ),
+minBhhMass_(      iConfig.getParameter<double>( "minBhhMass" ) ),
+maxBhhMass_(      iConfig.getParameter<double>( "maxBhhMass" ) ),
+maxBhhEta_(       iConfig.getParameter<double>( "maxBhhHadronEta" ) ),
+minBhhSigLxy_(    iConfig.getParameter<double>( "minBhhSigLxy" ) ),
+minBhhVtxProb_(   iConfig.getParameter<double>( "minBhhVtxProb" ) ),
 bdtReader0_("!Color:Silent"),
 bdtReader1_("!Color:Silent"),
 bdtReader2_("!Color:Silent")
@@ -1390,9 +1412,23 @@ BxToMuMuProducer::injectHadronsThatMayFakeMuons(std::vector<MuonCand>& good_muon
 	  }
 	}
 	if (good_candidate)
-	  good_muon_candidates.push_back(MuonCand(pfCand));
+	  good_muon_candidates.push_back(MuonCand(pfCand, true));
       }
     }
+  }
+}
+
+void 
+BxToMuMuProducer::injectBhhHadrons(std::vector<MuonCand>& good_muon_candidates){
+
+  // find reco tracks matching preselection requirements
+  for (const auto& pfCand: *pfCandHandle_.product()){
+    if (pfCand.charge() == 0) continue;
+    if (pfCand.pt() < minBhhPt_) continue;
+    if (abs(pfCand.eta()) > maxBhhEta_) continue;
+    if (not pfCand.hasTrackDetails()) continue;
+    if (not pfCand.bestTrack()->quality(reco::Track::highPurity)) continue;
+    good_muon_candidates.push_back(MuonCand(pfCand, false));
   }
 }
 
@@ -1452,11 +1488,17 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
       good_muon_candidates.push_back(MuonCand(muon, i));
     }
     
-    // FIXME: add a switch to disable this feature
-    if ( isMC_ ) {
+    // Inject B to hh candidates where hadrons are explicitely matched
+    // to gen level decays 
+    if ( injectMatchedBtohh_ and isMC_ ) {
       injectHadronsThatMayFakeMuons(good_muon_candidates);
     }
 
+    // Inject reco B to hh candidates
+    if ( injectBtohh_ ) {
+      injectBhhHadrons(good_muon_candidates);
+    }
+    
     // Build dimuon candidates
     if ( good_muon_candidates.size() > 1 ){
       for (unsigned int i = 0; i < good_muon_candidates.size(); ++i) {
@@ -1466,17 +1508,25 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	  const MuonCand & muon2 = good_muon_candidates.at(j);
 	  // Ensure that muon1.pt > muon2.pt
 	  if (muon2.pt() > muon1.pt()) continue;
-	  
+
 	  auto mm_doca = distanceOfClosestApproach(muon1.innerTrack().get(),
 						   muon2.innerTrack().get());
 	  if (maxTwoTrackDOCA_>0 and mm_doca > maxTwoTrackDOCA_) continue;
-	  if (diMuonCharge_ && muon1.charge()*muon2.charge()>0) continue;
+	  if (diMuonCharge_ && muon1.charge() * muon2.charge()>0) continue;
 
 	  pat::CompositeCandidate dimuonCand;
 	  dimuonCand.addDaughter( muon1 , "muon1");
 	  dimuonCand.addDaughter( muon2 , "muon2");
 	  addP4.set( dimuonCand );
 
+	  // reco Btohh
+	  if (muon1.index() < 0 and not muon1.from_gen() and 
+	      muon2.index() < 0 and not muon2.from_gen())
+	    {
+	      if (dimuonCand.mass() < minBhhMass_) continue;
+	      if (dimuonCand.mass() > maxBhhMass_) continue;
+	    }
+	  	  
 	  dimuonCand.addUserInt("mu1_index", muon1.index());
 	  dimuonCand.addUserInt("mu1_pdgId", muon1.pdgId());
 	  dimuonCand.addUserFloat("mu1_pt",  muon1.pt());
@@ -1501,101 +1551,100 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	  // Kinematic Fits
 	  auto kinematicMuMuVertexFit = fillMuMuInfo(dimuonCand,iEvent,muon1,muon2);
 
-	  auto imm = dimuon->size();
-	  for (unsigned int k = 0; k < nPFCands; ++k) {
-	    pat::PackedCandidate kaonCand1((*pfCandHandle_)[k]);
-	    kaonCand1.setMass(KaonMass_);
-	    if (deltaR(muon1, kaonCand1) < 0.01 || deltaR(muon2, kaonCand1) < 0.01) continue;
-	    if (kaonCand1.charge() == 0 ) continue;
-	    if (!kaonCand1.hasTrackDetails()) continue;
-	    double mu1_kaon_doca = distanceOfClosestApproach(muon1.innerTrack().get(),
-							     kaonCand1.bestTrack());
-	    double mu2_kaon_doca = distanceOfClosestApproach(muon2.innerTrack().get(),
-							     kaonCand1.bestTrack());
-	    // BtoMuMuK
-	    bool goodBtoMuMuK = true;
-	    if (kinematicMuMuVertexFit.mass() < 2.9) goodBtoMuMuK = false;
-	    if (abs(kaonCand1.pdgId()) != 211) goodBtoMuMuK = false; //Charged hadrons
-	    if (kaonCand1.pt() < ptMinKaon_ || abs(kaonCand1.eta()) > etaMaxKaon_)
-	      goodBtoMuMuK = false;
-	    if (maxTwoTrackDOCA_ > 0 and mu1_kaon_doca > maxTwoTrackDOCA_) goodBtoMuMuK = false;
-	    if (maxTwoTrackDOCA_ > 0 and mu2_kaon_doca > maxTwoTrackDOCA_) goodBtoMuMuK = false;
-
-	    // BToJpsiKK
-	    bool goodBtoJpsiKK = goodBtoMuMuK;
-	    if (fabs(kinematicMuMuVertexFit.mass()-3.1) > 0.2) goodBtoJpsiKK = false;
-	  
-	    double kmm_mass = (muon1.p4() + muon2.p4() + kaonCand1.p4()).mass();
-	    if (kmm_mass < minBKmmMass_ || kmm_mass > maxBKmmMass_) goodBtoMuMuK = false;
-	    
-	    if (goodBtoMuMuK){
-	      // fill BtoMuMuK candidate info
-	    
-	      pat::CompositeCandidate btokmmCand;
-	      btokmmCand.addUserInt("mm_index", imm);
-	      btokmmCand.addUserFloat("kaon_mu1_doca", mu1_kaon_doca);
-	      btokmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon_doca);
-
-	      fillBtoMuMuKInfo(btokmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
-	      fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
-
-	      btokmm->push_back(btokmmCand);
+	  // reco Btohh
+	  if (muon1.index() < 0 and not muon1.from_gen() and 
+	      muon2.index() < 0 and not muon2.from_gen())
+	    {
+	      if (not kinematicMuMuVertexFit.valid()) continue;
+	      if (kinematicMuMuVertexFit.vtxProb() < minBhhVtxProb_) continue;
+	      if (kinematicMuMuVertexFit.sigLxy < minBhhSigLxy_) continue;
 	    }
-	    // else{
-	    // New methods of counting tracks
-	    // if (maxTwoTrackDOCA_>0 and mu1_kaon_doca<maxTwoTrackDOCA_ and mu2_kaon_doca<maxTwoTrackDOCA_){
-	    // 	auto fit_result = vertexWithKinematicFitter(muon1, muon2, kaonCand1);
-	    // 	if ( fit_result.vtxProb()>0.1 ) {
-	    // 	  nTracksCompatibleWithTheMuMuVertex++;
-	    // 	  double sigDxy = kaonCand1.bestTrack()->dxyError()>0 ? fabs(kaonCand1.bestTrack()->dxy(beamSpot))/kaonCand1.bestTrack()->dxyError():0.0;
-	    // 	  if (sigDxy>2.0) nDisplacedTracksCompatibleWithTheMuMuVertex++;
-	    // 	}
-	    // }	
-	    //
-	    //  continue;
-	    // }
 
-	    if (goodBtoJpsiKK){ // good candidate to consider for JpsiKK
-	      for (unsigned int k2 = k+1; k2 < nPFCands; ++k2) { // only works if selection requirements for both kaons are identical
-		pat::PackedCandidate kaonCand2((*pfCandHandle_)[k2]);
-		kaonCand2.setMass(KaonMass_);
-		if (deltaR(muon1, kaonCand2) < 0.01 || deltaR(muon2, kaonCand2) < 0.01) continue;
-		if (kaonCand2.charge() == 0 ) continue;
-		if (!kaonCand2.hasTrackDetails()) continue;
-		double mu1_kaon2_doca = distanceOfClosestApproach(muon1.innerTrack().get(),
-							     kaonCand2.bestTrack());
-		double mu2_kaon2_doca = distanceOfClosestApproach(muon2.innerTrack().get(),
-							     kaonCand2.bestTrack());
+	  
+	  if (muon1.index() >= 0 and muon2.index() >= 0){
+	    auto imm = dimuon->size();
+	    for (unsigned int k = 0; k < nPFCands; ++k) {
+	      pat::PackedCandidate kaonCand1((*pfCandHandle_)[k]);
+	      kaonCand1.setMass(KaonMass_);
+	      if (deltaR(muon1, kaonCand1) < 0.01 || deltaR(muon2, kaonCand1) < 0.01) continue;
+	      if (kaonCand1.charge() == 0 ) continue;
+	      if (!kaonCand1.hasTrackDetails()) continue;
+	      double mu1_kaon_doca = distanceOfClosestApproach(muon1.innerTrack().get(),
+							       kaonCand1.bestTrack());
+	      double mu2_kaon_doca = distanceOfClosestApproach(muon2.innerTrack().get(),
+							       kaonCand1.bestTrack());
+	      // BtoMuMuK
+	      bool goodBtoMuMuK = true;
+	      if (kinematicMuMuVertexFit.mass() < 2.9) goodBtoMuMuK = false;
+	      if (abs(kaonCand1.pdgId()) != 211) goodBtoMuMuK = false; //Charged hadrons
+	      if (kaonCand1.pt() < ptMinKaon_ || abs(kaonCand1.eta()) > etaMaxKaon_)
+		goodBtoMuMuK = false;
+	      if (maxTwoTrackDOCA_ > 0 and mu1_kaon_doca > maxTwoTrackDOCA_) goodBtoMuMuK = false;
+	      if (maxTwoTrackDOCA_ > 0 and mu2_kaon_doca > maxTwoTrackDOCA_) goodBtoMuMuK = false;
 	      
-		if (abs(kaonCand2.pdgId())!=211) goodBtoJpsiKK = false; //Charged hadrons
-		if (kaonCand2.pt()<ptMinKaon_ || abs(kaonCand2.eta())>etaMaxKaon_) goodBtoJpsiKK = false;
-		if (maxTwoTrackDOCA_>0 and mu1_kaon2_doca> maxTwoTrackDOCA_) goodBtoJpsiKK = false;	      
-		if (maxTwoTrackDOCA_>0 and mu2_kaon2_doca> maxTwoTrackDOCA_) goodBtoJpsiKK = false;	      
-
-		double kkmm_mass = (muon1.p4()+muon2.p4()+kaonCand1.p4()+kaonCand2.p4()).mass();
-		if ( kkmm_mass<minBKKmmMass_ || kkmm_mass>maxBKKmmMass_ ) goodBtoJpsiKK = false;
+	      // BToJpsiKK
+	      bool goodBtoJpsiKK = goodBtoMuMuK;
+	      if (fabs(kinematicMuMuVertexFit.mass()-3.1) > 0.2) goodBtoJpsiKK = false;
+	  
+	      double kmm_mass = (muon1.p4() + muon2.p4() + kaonCand1.p4()).mass();
+	      if (kmm_mass < minBKmmMass_ || kmm_mass > maxBKmmMass_) goodBtoMuMuK = false;
+	    
+	      if (goodBtoMuMuK){
+		// fill BtoMuMuK candidate info
+	    
+		pat::CompositeCandidate btokmmCand;
+		btokmmCand.addUserInt("mm_index", imm);
+		btokmmCand.addUserFloat("kaon_mu1_doca", mu1_kaon_doca);
+		btokmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon_doca);
 		
-		if (goodBtoJpsiKK){
-		  // fill BtoJpsiKK candidate info
-		  
-		  pat::CompositeCandidate btokkmmCand;
-		  btokkmmCand.addUserInt("mm_index", imm);
-		  int ikmm = -1;
-		  if (goodBtoMuMuK) ikmm = btokmm->size()-1;
-		  btokkmmCand.addUserInt("kmm_index", ikmm);
-		  btokkmmCand.addUserFloat("kaon_mu1_doca", mu1_kaon2_doca);
-		  btokkmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon2_doca);
-	      
-		  fillBstoJpsiKKInfo(btokkmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1,kaonCand2);
-		  // FIXME
-		  // fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokkmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
+		fillBtoMuMuKInfo(btokmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
+		fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
 
-		  btokkmm->push_back(btokkmmCand);
+		btokmm->push_back(btokmmCand);
+	      }
+
+	      if (goodBtoJpsiKK){ // good candidate to consider for JpsiKK
+		for (unsigned int k2 = k+1; k2 < nPFCands; ++k2) { // only works if selection requirements for both kaons are identical
+		  pat::PackedCandidate kaonCand2((*pfCandHandle_)[k2]);
+		  kaonCand2.setMass(KaonMass_);
+		  if (deltaR(muon1, kaonCand2) < 0.01 || deltaR(muon2, kaonCand2) < 0.01) continue;
+		  if (kaonCand2.charge() == 0 ) continue;
+		  if (!kaonCand2.hasTrackDetails()) continue;
+		  double mu1_kaon2_doca = distanceOfClosestApproach(muon1.innerTrack().get(),
+								    kaonCand2.bestTrack());
+		  double mu2_kaon2_doca = distanceOfClosestApproach(muon2.innerTrack().get(),
+								    kaonCand2.bestTrack());
+	      
+		  if (abs(kaonCand2.pdgId())!=211) goodBtoJpsiKK = false; //Charged hadrons
+		  if (kaonCand2.pt()<ptMinKaon_ || abs(kaonCand2.eta())>etaMaxKaon_) goodBtoJpsiKK = false;
+		  if (maxTwoTrackDOCA_>0 and mu1_kaon2_doca> maxTwoTrackDOCA_) goodBtoJpsiKK = false;	      
+		  if (maxTwoTrackDOCA_>0 and mu2_kaon2_doca> maxTwoTrackDOCA_) goodBtoJpsiKK = false;	      
+		  
+		  double kkmm_mass = (muon1.p4()+muon2.p4()+kaonCand1.p4()+kaonCand2.p4()).mass();
+		  if ( kkmm_mass<minBKKmmMass_ || kkmm_mass>maxBKKmmMass_ ) goodBtoJpsiKK = false;
+		  
+		  if (goodBtoJpsiKK){
+		    // fill BtoJpsiKK candidate info
+		    
+		    pat::CompositeCandidate btokkmmCand;
+		    btokkmmCand.addUserInt("mm_index", imm);
+		    int ikmm = -1;
+		    if (goodBtoMuMuK) ikmm = btokmm->size()-1;
+		    btokkmmCand.addUserInt("kmm_index", ikmm);
+		    btokkmmCand.addUserFloat("kaon_mu1_doca", mu1_kaon2_doca);
+		    btokkmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon2_doca);
+		    
+		    fillBstoJpsiKKInfo(btokkmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1,kaonCand2);
+		    // FIXME
+		    // fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokkmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
+
+		    btokkmm->push_back(btokkmmCand);
+		  }
 		}
 	      }
-	    }
-	  }                  
-
+	    }                  
+	  }
+	  
 	  dimuon->push_back(dimuonCand);
 	}
       }

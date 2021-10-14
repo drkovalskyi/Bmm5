@@ -45,7 +45,8 @@ def copy_pset(pset,replace_dict):
 ###
 ##################################################################################
 
-BxToMuMu = cms.EDProducer("BxToMuMuProducer",
+BxToMuMu = cms.EDProducer(
+    "BxToMuMuProducer",
     beamSpot=cms.InputTag("offlineBeamSpot"),
     vertexCollection=cms.InputTag("offlineSlimmedPrimaryVertices"),
     muonCollection = cms.InputTag("linkedObjects","muons"),
@@ -69,7 +70,16 @@ BxToMuMu = cms.EDProducer("BxToMuMuProducer",
     xgbEvent0 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200515-1144-Event0.model'),
     xgbEvent1 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200515-1143-Event1.model'),
     xgbEvent2 = cms.FileInPath('Bmm5/NanoAOD/data/Run2017-2018-20200515-1143-Event2.model'),
-    isMC = cms.bool(False)
+    isMC = cms.bool(False),
+    # injectMatchedBtohh = cms.bool(True),
+    injectMatchedBtohh = cms.bool(False),
+    injectBtohh = cms.bool(True),
+    minBhhHadronPt = cms.double(4.0),
+    maxBhhHadronEta = cms.double(1.4),
+    minBhhMass   = cms.double(4.9),
+    maxBhhMass   = cms.double(5.9),
+    minBhhSigLxy = cms.double(4.0),
+    minBhhVtxProb  = cms.double(0.01),
 )
 
 BxToMuMuMc = BxToMuMu.clone( isMC = cms.bool(True) ) 
