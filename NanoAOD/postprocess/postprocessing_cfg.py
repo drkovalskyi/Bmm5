@@ -4,8 +4,8 @@ from resources_cfg import resources
 workdir = "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv8/src/Bmm5/NanoAOD/postprocess/"
 version = 516
 input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD"
-# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing-NEW"
-output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing"
+output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing-NEW2"
+# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing"
 xrootd_prefix = "root://eoscms.cern.ch:/"
 web_report_path = "/afs/cern.ch/user/d/dmytro/www/public_html/bmm5/postprocessing/"
 
@@ -24,7 +24,8 @@ active_tasks = {
     'FlatNtuples':[
         ## bmm_mva_jpsik, muon_mva, bmm_mva
         # 'fit', 'fit-bkmm', 'bmm_mva_jpsik', 'bmm_mva', 'muon_mva'
-        'fit'
+        # 'fit'
+        'bmm_mva', 'bmm_mva_jpsik'
     ]
 }
 
@@ -148,7 +149,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -171,7 +172,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -220,7 +221,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -242,7 +243,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -264,7 +265,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -286,7 +287,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -308,7 +309,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -330,7 +331,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -355,7 +356,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -380,7 +381,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -402,7 +403,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -424,7 +425,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -446,7 +447,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -468,7 +469,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -490,7 +491,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -512,7 +513,7 @@ tasks = [
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
                 "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
