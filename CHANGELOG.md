@@ -2,6 +2,14 @@
 
 ## New developments
 
+## [NanoAODv8-V04] - 2021/11/05
+### New
+	- Improved MVA matching between JpsiK and Bmm
+
+### Fixed
+	- Gen particle identification in genbmm block is more robust now
+
+
 ## [NanoAODv8-V03] - 2021/08/26
 ### Fixed
 	- Added protection from getting Nan for kin_alpha
