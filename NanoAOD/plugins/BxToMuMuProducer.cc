@@ -1317,7 +1317,7 @@ BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCan
   // Vertexing - mm
   xgBoosters_.at(xg_index).set("mm_kin_vtx_chi2dof", mm.userFloat("kin_vtx_chi2dof"));
   // Flight length significance - mm
-  xgBoosters_.at(xg_index).set("mm_kin_sl3d",        mm.userFloat("kin_sl3d"));
+  xgBoosters_.at(xg_index).set("mm_kin_sl3d",        mm.userFloat("kin_sl3d")*1.6);
 
   mmK.addUserFloat("bmm_mva", xgBoosters_.at(xg_index).predict());
 
