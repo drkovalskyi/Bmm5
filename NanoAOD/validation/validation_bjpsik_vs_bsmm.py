@@ -63,16 +63,16 @@ samples = {
     }
 }
 
-n_max = 10
+n_max = 100
 bmm_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/516/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v1+MINIAODSIM/"
 for i,f in enumerate(subprocess.check_output("find %s/ -type f -name '*.root'" % (bmm_path), shell=True).split("\n")):
     if i >= n_max: break
-    samples['BsToMuMu']['files'].append(f)
+    if f: samples['BsToMuMu']['files'].append(f)
     
 bjpsik_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/516/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/"
 for i,f in enumerate(subprocess.check_output("find %s/ -type f -name '*.root'" % (bjpsik_path), shell=True).split("\n")):
     if i >= n_max: break
-    samples['BuToJpsiK']['files'].append(f)
+    if f: samples['BuToJpsiK']['files'].append(f)
 
 
 # read list of files from a file instead
@@ -273,7 +273,7 @@ plot_generic_1D(selections, "otherVtxMaxProb2", "07_otherVtxMaxProb2",
 
 plot_generic_1D(selections,"MVA Matched", "09_mva_matched",
                 {'bmm':'mm_mva', 'bjpsik':'bkmm_bmm_mva'}, 110, 0, 1.1)
-plot_generic_1D(selections,"MVA Matched", "09_mva_matched",
+plot_generic_1D(selections,"MVA Matched", "09_mva_matched_zoomed",
                 {'bmm':'mm_mva', 'bjpsik':'bkmm_bmm_mva'}, 101, 0.9, 1.01)
 plot_generic_1D(selections,"MVA Raw", "09_mva_raw",
                 {'bmm':'mm_mva', 'bjpsik':'mm_mva[bkmm_mm_index]'}, 110, 0, 1.1)
