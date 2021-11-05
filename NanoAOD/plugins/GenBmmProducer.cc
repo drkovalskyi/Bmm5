@@ -8,6 +8,7 @@
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 
+#include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
 #include "DataFormats/PatCandidates/interface/CompositeCandidate.h"
@@ -30,10 +31,19 @@ explicit GenBmmProducer(const edm::ParameterSet &iConfig);
 ~GenBmmProducer() override {};
     
 private:
-virtual void produce(edm::Event&, const edm::EventSetup&);
-// ----------member data ---------------------------
-edm::EDGetTokenT<std::vector<reco::GenParticle> >   prunedGenToken_;
-edm::EDGetTokenT<std::vector<pat::PackedGenParticle> >   packedGenToken_;
+  virtual void produce(edm::Event&, const edm::EventSetup&);
+  int match_muon(const reco::Candidate* gen_muon);
+  const pat::PackedCandidate* match_tack(const reco::Candidate* gen_cand);
+  bool isGoodMuon(const pat::Muon& muon);
+  
+  // ----------member data ---------------------------
+  edm::EDGetTokenT<std::vector<reco::GenParticle> >   prunedGenToken_;
+  edm::EDGetTokenT<std::vector<pat::PackedGenParticle> >   packedGenToken_;
+  edm::EDGetTokenT<std::vector<pat::Muon>> muonToken_;
+  edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandToken_;
+
+  edm::Handle<std::vector<pat::Muon>> muonHandle_;
+  edm::Handle<edm::View<pat::PackedCandidate>> pfCandHandle_;
 };
 
 namespace {
@@ -50,14 +60,62 @@ namespace {
     return a->pt() > b->pt();
   }
 
+  void fill_final_state_daugheters(std::vector<const reco::GenParticle*>& daus,
+				   const reco::GenParticle& cand)
+  {
+    for (auto const& dau: cand.daughterRefVector()){
+      if (dau->daughterRefVector().empty())
+	daus.push_back(&*dau);
+      else
+	fill_final_state_daugheters(daus, *dau);
+    }
+  }
+
+  bool dr_match(const LorentzVector& reco , const LorentzVector& gen){
+    if (fabs(reco.pt()-gen.pt())/gen.pt()<0.1 and deltaR(reco,gen)<0.02)
+      return true;
+    return false;
+  }
+
+}
+
+bool GenBmmProducer::isGoodMuon(const pat::Muon& muon){
+  if ( not muon.isLooseMuon() ) return false;
+  if ( not muon.isTrackerMuon() ) return false;
+  if ( not muon.innerTrack()->quality(reco::Track::highPurity) ) return false; 
+  return true;
 }
 
 GenBmmProducer::GenBmmProducer(const edm::ParameterSet &iConfig):
   prunedGenToken_( consumes<std::vector<reco::GenParticle>> ( edm::InputTag( "prunedGenParticles" ) ) ),
-  packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( edm::InputTag( "packedGenParticles" ) ) )
+  packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( edm::InputTag( "packedGenParticles" ) ) ),
+  muonToken_( consumes<std::vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
+  pfCandToken_( consumes<edm::View<pat::PackedCandidate>> ( iConfig.getParameter<edm::InputTag>( "PFCandCollection" ) ) )
 {
   produces<pat::CompositeCandidateCollection>("genbmm");
   produces<pat::CompositeCandidateCollection>("gensummary");
+}
+
+int GenBmmProducer::match_muon(const reco::Candidate* gen_muon){
+  int index = -1;
+  for (unsigned int i=0; i < muonHandle_->size(); ++i){
+    if (dr_match(muonHandle_->at(i).p4(), gen_muon->p4())){
+      return i;
+    }
+  }
+  return index;
+}
+
+const pat::PackedCandidate* GenBmmProducer::match_tack(const reco::Candidate* gen_cand){
+  if (not gen_cand) return nullptr;
+  for (auto const& pfCand: *pfCandHandle_){
+    if (pfCand.charge() == 0 ) continue;
+    if (not pfCand.hasTrackDetails()) continue;
+    if (dr_match(pfCand.p4(), gen_cand->p4())){
+      return &pfCand;
+    }
+  }
+  return nullptr;
 }
 
 void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
@@ -70,6 +128,9 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
   edm::Handle<std::vector<pat::PackedGenParticle> > packed;
   iEvent.getByToken(packedGenToken_,packed);
 
+  iEvent.getByToken(muonToken_, muonHandle_);
+  iEvent.getByToken(pfCandToken_, pfCandHandle_);
+  
   // Pruned GenParticles - subset of original GenParticles keeping
   // only "interesting" objects, i.e. leptons, neutrinos, B-hadrons,
   // vector bosons etc
@@ -109,29 +170,50 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     // find final state daughters and compute signature
     // note: ignore photos
     long long int signature = 1;
-    std::vector<const reco::Candidate*> final_state_particles;
+    std::vector<const reco::GenParticle*> daughters;
+    fill_final_state_daugheters(daughters, cand);
+    
+    std::vector<const reco::GenParticle*> final_state_particles;
     LorentzVector radiation;
 
-    // Loop over final state particles stored in the packed gen collection
-    for (auto const& dau: *packed){
-      auto mother = dau.mother(0);
-      if (mother and isAncestor(&cand,mother)){
-	if (dau.pdgId()!=22){
-	  signature *= dau.pdgId();
-	  if (abs(dau.pdgId()) == 13  or // mu+/-
-	      abs(dau.pdgId()) == 211 or // pi+/-
-	      abs(dau.pdgId()) == 321 or // K+/-
-	      abs(dau.pdgId()) == 14  or // nu_mu
-	      abs(dau.pdgId()) == 2212 or // protons
-	      dau.pdgId() == 111)        // pi0
-	    final_state_particles.push_back(&dau);
-	} else {
-	  radiation += dau.p4();
-	}
+    // // Loop over final state particles stored in the packed gen collection
+    // for (auto const& dau: *packed){
+    //   auto mother = dau.mother(0);
+    //   if (mother and isAncestor(&cand,mother)){
+    // 	if (dau.pdgId()!=22){
+    // 	  signature *= dau.pdgId();
+    // 	  if (abs(dau.pdgId()) == 13  or // mu+/-
+    // 	      abs(dau.pdgId()) == 211 or // pi+/-
+    // 	      abs(dau.pdgId()) == 321 or // K+/-
+    // 	      abs(dau.pdgId()) == 14  or // nu_mu
+    // 	      abs(dau.pdgId()) == 2212 or // protons
+    // 	      dau.pdgId() == 111)        // pi0
+    // 	    final_state_particles.push_back(&dau);
+    // 	} else {
+    // 	  radiation += dau.p4();
+    // 	}
+    //   }
+    // }
+    // std::sort(final_state_particles.begin(), final_state_particles.end(), order_by_pt);
+
+    for (auto const* dau: daughters){
+      if (dau->pdgId()!=22){
+	signature *= dau->pdgId();
+	if (abs(dau->pdgId()) == 13  or // mu+/-
+	    abs(dau->pdgId()) == 211 or // pi+/-
+	    abs(dau->pdgId()) == 321 or // K+/-
+	    abs(dau->pdgId()) == 14  or // nu_mu
+	    abs(dau->pdgId()) == 2212 or // protons
+	    dau->pdgId() == 111)        // pi0
+	  final_state_particles.push_back(dau);
+      } else {
+	radiation += dau->p4();
       }
     }
     std::sort(final_state_particles.begin(), final_state_particles.end(), order_by_pt);
 
+    // Loop over daughters
+    
     // Interpret the signature
     // 
     // We will store directly acceessible the following information
@@ -252,10 +334,18 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     bCand.addUserFloat("mu1_pt",    mu_cand1->pt());
     bCand.addUserFloat("mu1_eta",   mu_cand1->eta());
     bCand.addUserFloat("mu1_phi",   mu_cand1->phi());
+    int mu1_reco = match_muon(mu_cand1);
+    bCand.addUserInt(  "mu1_index", mu1_reco);
+    bCand.addUserInt(  "mu1_good",  mu1_reco>=0?isGoodMuon(muonHandle_->at(mu1_reco)):0);
+    
     bCand.addUserInt(  "mu2_pdgId", mu_cand2->pdgId());
     bCand.addUserFloat("mu2_pt",    mu_cand2->pt());
     bCand.addUserFloat("mu2_eta",   mu_cand2->eta());
     bCand.addUserFloat("mu2_phi",   mu_cand2->phi());
+    int mu2_reco = match_muon(mu_cand1);
+    bCand.addUserInt(  "mu2_index", mu2_reco);
+    bCand.addUserInt(  "mu2_good",  mu2_reco>=0?isGoodMuon(muonHandle_->at(mu2_reco)):0);
+
     auto dimuon_p2 = 
       pow(mu_cand1->px() + mu_cand2->px(),2) +
       pow(mu_cand1->py() + mu_cand2->py(),2) +
@@ -271,10 +361,20 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
     bCand.addUserFloat("dau3_pt",    dau3?dau3->pt():0);
     bCand.addUserFloat("dau3_eta",   dau3?dau3->eta():0);
     bCand.addUserFloat("dau3_phi",   dau3?dau3->phi():0);
+    auto dau3_reco = match_tack(dau3);
+    bCand.addUserFloat("dau3_reco_pt",    dau3_reco?dau3_reco->pt():0);
+    bCand.addUserFloat("dau3_reco_eta",   dau3_reco?dau3_reco->eta():0);
+    bCand.addUserFloat("dau3_reco_phi",   dau3_reco?dau3_reco->phi():0);
+      
     bCand.addUserInt(  "dau4_pdgId", dau4?dau4->pdgId():0);
     bCand.addUserFloat("dau4_pt",    dau4?dau4->pt():0);
     bCand.addUserFloat("dau4_eta",   dau4?dau4->eta():0);
     bCand.addUserFloat("dau4_phi",   dau4?dau4->phi():0);
+    auto dau4_reco = match_tack(dau4);
+    bCand.addUserFloat("dau4_reco_pt",    dau4_reco?dau4_reco->pt():0);
+    bCand.addUserFloat("dau4_reco_eta",   dau4_reco?dau4_reco->eta():0);
+    bCand.addUserFloat("dau4_reco_phi",   dau4_reco?dau4_reco->phi():0);
+
     // bCand.addUserFloat("kk_mass",   kaons.size()>1?(kaons[0]->p4()+kaons[1]->p4()).mass():0);
 
     // radiation

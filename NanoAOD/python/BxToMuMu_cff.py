@@ -406,7 +406,11 @@ BxToMuMuBToKKmumuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProd
 ###
 ##################################################################################
 
-BxToMuMuGen = cms.EDProducer("GenBmmProducer")
+BxToMuMuGen = cms.EDProducer(
+    "GenBmmProducer",
+    muonCollection = cms.InputTag("linkedObjects","muons"),
+    PFCandCollection=cms.InputTag("packedPFCandidates"),
+)
 
 BxToMuMuGenVars = cms.PSet(
     signature    = Var("userInt('signature')",     int, doc = "Product of PDG ids of all daughters"),
@@ -420,10 +424,14 @@ BxToMuMuGenVars = cms.PSet(
 
     # dimuon
     mu1_pdgId        = Var("userInt('mu1_pdgId')",         int, doc = "PDG id of mu1"),
+    mu1_index        = Var("userInt('mu1_index')",         int, doc = "Reco muon index"),
+    mu1_good         = Var("userInt('mu1_good')",          int, doc = "Reco muon preselection"),
     mu1_pt           = Var("userFloat('mu1_pt')",        float, doc = "Pt of mu1"),
     mu1_eta          = Var("userFloat('mu1_eta')",       float, doc = "Eta of mu1"),
     mu1_phi          = Var("userFloat('mu1_phi')",       float, doc = "Phi of mu1"),
     mu2_pdgId        = Var("userInt('mu2_pdgId')",         int, doc = "PDG id of mu2"),
+    mu2_index        = Var("userInt('mu2_index')",         int, doc = "Reco muon index"),
+    mu2_good         = Var("userInt('mu2_good')",          int, doc = "Reco muon preselection"),
     mu2_pt           = Var("userFloat('mu2_pt')",        float, doc = "Pt of mu2"),
     mu2_eta          = Var("userFloat('mu2_eta')",       float, doc = "Eta of mu2"),
     mu2_phi          = Var("userFloat('mu2_phi')",       float, doc = "Phi of mu2"),
@@ -434,10 +442,16 @@ BxToMuMuGenVars = cms.PSet(
     dau3_pt           = Var("userFloat('dau3_pt')",        float, doc = "Pt of dau3"),
     dau3_eta          = Var("userFloat('dau3_eta')",       float, doc = "Eta of dau3"),
     dau3_phi          = Var("userFloat('dau3_phi')",       float, doc = "Phi of dau3"),
+    dau3_reco_pt      = Var("userFloat('dau3_reco_pt')",   float, doc = "Pt of dau3 PFCandidate match"),
+    dau3_reco_eta     = Var("userFloat('dau3_reco_eta')",  float, doc = "Eta of dau3 PFCandidate match"),
+    dau3_reco_phi     = Var("userFloat('dau3_reco_phi')",  float, doc = "Phi of dau3 PFCandidate match"),
     dau4_pdgId        = Var("userInt('dau4_pdgId')",         int, doc = "PDG id of dau4"),
     dau4_pt           = Var("userFloat('dau4_pt')",        float, doc = "Pt of dau4"),
     dau4_eta          = Var("userFloat('dau4_eta')",       float, doc = "Eta of dau4"),
     dau4_phi          = Var("userFloat('dau4_phi')",       float, doc = "Phi of dau4"),
+    dau4_reco_pt      = Var("userFloat('dau4_reco_pt')",   float, doc = "Pt of dau4 PFCandidate match"),
+    dau4_reco_eta     = Var("userFloat('dau4_reco_eta')",  float, doc = "Eta of dau4 PFCandidate match"),
+    dau4_reco_phi     = Var("userFloat('dau4_reco_phi')",  float, doc = "Phi of dau4 PFCandidate match"),
     
     # radiation
     rad_p            = Var("userFloat('rad_p')",         float, doc = "P of radiation sum"),
