@@ -14,11 +14,12 @@ class SSHResourceHandler(ResourceHandler):
                                      stdout = subprocess.PIPE
                                      )
         # prepare working area
+        workdir = os.getcwd()
         self._send_command_and_get_response("""
-        cd /afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/Bmm5/NanoAOD/postprocess
+        cd %s
         eval `scramv1 runtime -sh`
-        """)
-        
+        """ % workdir)
+
     def _non_block_read(self):
         fd = self.proc.stdout.fileno()
         fl = fcntl.fcntl(fd, fcntl.F_GETFL)
