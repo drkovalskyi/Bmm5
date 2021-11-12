@@ -87,6 +87,11 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         self.tree.addBranch('mm_kin_slxy',        'Float_t', 0, "Decay length significance wrt Beam Spot in XY plain")
 
         self.tree.addBranch('mm_kin_alpha',       'Float_t', 0, "Pointing angle in 3D wrt PV")
+        self.tree.addBranch('mm_kin_alphaErr',    'Float_t', 0, "Pointing angle in 3D wrt PV uncertainty")
+        self.tree.addBranch('mm_kin_alphaSig',    'Float_t', 999, "Pointing angle in 3D wrt PV significance")
+        self.tree.addBranch('mm_kin_alphaBS',     'Float_t', 0, "Pointing angle in XY wrt BS")
+        self.tree.addBranch('mm_kin_alphaBSErr',  'Float_t', 0, "Pointing angle in XY wrt BS uncertainty")
+        self.tree.addBranch('mm_kin_alphaBSSig',  'Float_t', 999, "Pointing angle in XY wrt BS significance")
         self.tree.addBranch('mm_kin_spvip',       'Float_t', 0, "Significance of impact parameter wrt Primary Vertex in 3D")
         self.tree.addBranch('mm_kin_spvlip',      'Float_t', 0, "Significance of longitudinal impact parameter wrt Primary Vertex in 3D")
         self.tree.addBranch('mm_iso',             'Float_t', 0, "B isolation the way it's done in Bmm4")
@@ -98,7 +103,6 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         self.tree.addBranch('mm_m2iso',           'Float_t', 0, "Muon isolation the way it's done in Bmm4")
         self.tree.addBranch('mm_os',              'UInt_t',  0, "Opposite charge or not")
 
-        self.tree.addBranch('mm_kin_alphaBS',     'Float_t', 0, "Cosine of pointing angle in XY wrt BS")
         self.tree.addBranch('mm_nBMTrks',         'UInt_t',  0, "Number of tracks more compatible with the mm vertex than with PV by doca significance")
         self.tree.addBranch('mm_nDisTrks',        'UInt_t',  0, "Number of displaced tracks compatible with the vertex by vertex probability")
         self.tree.addBranch('mm_closetrks1',      'UInt_t',  0, "Number of tracks compatible with the vertex by DOCA(0.3mm) and signifance less than 1")
@@ -115,9 +119,13 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
 
         ## gen info
         self.tree.addBranch('mm_gen_pdgId',       'Int_t',   0, "Gen match: dimuon pdg Id")
+        self.tree.addBranch('bhad_pt',            'Float_t', 0, "B hadron pt for MC matched decays")
 
         ## BDT info
         self.tree.addBranch('mm_bdt',             'Float_t', 0, "Bmm4 BDT")
+        
+        self.tree.addBranch('trigger',            'UInt_t',  0, "Main analysis trigger")
+        self.tree.addBranch('mm_mva',             'Float_t', 0, "MVA")
 
     def _fill_tree(self, cand):
         self.tree.reset()
@@ -143,6 +151,14 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         self.tree['mm_kin_sl3d']    = self.event.mm_kin_sl3d[cand]
         self.tree['mm_kin_slxy']    = self.event.mm_kin_slxy[cand]
         self.tree['mm_kin_alpha']   = self.event.mm_kin_alpha[cand]
+        self.tree['mm_kin_alphaErr'] = self.event.mm_kin_alphaErr[cand]
+        if self.event.mm_kin_alphaErr[cand] > 0:
+            self.tree['mm_kin_alphaSig'] = self.event.mm_kin_alpha[cand] / self.event.mm_kin_alphaErr[cand]
+        self.tree['mm_kin_alphaBS'] = self.event.mm_kin_alphaBS[cand]
+        self.tree['mm_kin_alphaBSErr'] = self.event.mm_kin_alphaBSErr[cand]
+        if self.event.mm_kin_alphaBSErr[cand] > 0:
+            self.tree['mm_kin_alphaBSSig'] = self.event.mm_kin_alphaBS[cand] / self.event.mm_kin_alphaBSErr[cand]
+
         self.tree['mm_kin_spvip']   = self.event.mm_kin_pvip[cand]/self.event.mm_kin_pvipErr[cand]
         self.tree['mm_kin_spvlip']  = self.event.mm_kin_pvlip[cand]/self.event.mm_kin_pvlipErr[cand]
         self.tree['mm_kin_pvip']    = self.event.mm_kin_pvip[cand]
@@ -160,7 +176,6 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         self.tree['mm_m1iso']       = self.event.mm_m1iso[cand]
         self.tree['mm_m2iso']       = self.event.mm_m2iso[cand]
         self.tree['mm_os'] = 1 if (self.event.Muon_charge[self.event.mm_mu1_index[cand]] * self.event.Muon_charge[self.event.mm_mu2_index[cand]] == -1) else 0
-        self.tree['mm_kin_alphaBS'] = self.event.mm_kin_alphaBS[cand]
         self.tree['mm_nBMTrks']     = self.event.mm_nBMTrks[cand]
         self.tree['mm_nDisTrks']    = self.event.mm_nDisTrks[cand]
         self.tree['mm_doca']        = self.event.mm_doca[cand]
@@ -169,6 +184,8 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         ## gen info
         if hasattr(self.event, 'mm_gen_pdgId'):
             self.tree['mm_gen_pdgId'] = self.event.mm_gen_pdgId[cand]
+            if self.event.mm_gen_pdgId[cand] != 0:
+                self.tree['bhad_pt'] = self.event.mm_gen_pt[cand]
         else:
             self.tree['mm_gen_pdgId'] = 0
 
@@ -176,6 +193,14 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
 
         ## old BDT
         self.tree['mm_bdt']       = self.event.mm_bdt[cand]
+
+        self.tree['mm_mva']       = self.event.mm_mva[cand]
+        
+        trigger = 0
+        if hasattr(self.event, 'HLT_DoubleMu4_3_Bs'):
+            trigger = self.event.HLT_DoubleMu4_3_Bs
+
+        self.tree['trigger'] = trigger
 
         self.tree.fill()
 
@@ -187,15 +212,14 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         return True
 
 def unit_test():
-    path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/513/"
+    path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/516/"
     job = {
         "input": [
-            # path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root"
-            path + "Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD/EC7AE4F3-188B-E811-8CE9-90B11C2AA16C.root"
+            path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v1+MINIAODSIM/F36A84DB-86B1-A84E-9205-C79D2ABE2A9D.root"
             ],
         "signal_only": False,
         "tree_name": "mva",
-        "blind": True,
+        "blind": False,
     }
 
     file_name = "/tmp/dmytro/test.job"
