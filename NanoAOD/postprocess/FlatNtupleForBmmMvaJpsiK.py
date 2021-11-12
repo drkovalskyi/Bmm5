@@ -108,6 +108,7 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
 
         self.tree.addBranch('trigger',            'UInt_t',  0, "Main analysis trigger")
         self.tree.addBranch('mm_mva',             'Float_t', 0, "MVA")
+        self.tree.addBranch('bhad_pt',            'Float_t', 0, "B hadron pt for MC matched decays")
   
     def _fill_tree(self, cand):
         self.tree.reset()
@@ -165,6 +166,10 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
 
         self.tree['trigger'] = trigger_2018 | trigger_2017 | trigger_2016
 
+        if hasattr(self.event, 'bkmm_gen_pdgId'):
+            if self.job_info['signal_only'] and self.event.bkmm_gen_pdgId[cand]!=0:
+                self.tree['bhad_pt'] = self.event.bkmm_gen_pt[cand]
+        
         self.tree.fill()
 
     def _good_muon(self, index):
@@ -175,13 +180,10 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         return True
 
 def unit_test():
-    path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/513/"
+    path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/516/"
     job = {
         "input": [
-            # path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/223016AA-82DA-2D4A-B505-B05AFE4AB68A.root"
-            # path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/223016AA-82DA-2D4A-B505-B05AFE4AB68A.root"
-            # path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/72AF7677-36A7-E811-851A-FA163E52BDE2.root"
-            path + "Charmonium+Run2016C-17Jul2018-v1+MINIAOD/24A4BFE3-4B8B-E811-9349-0CC47AC52CA0.root"
+            path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/3161083A-28F2-244D-AEE2-0DD084D47E23.root"
         ],
         "signal_only": True,
         "tree_name": "mva",
