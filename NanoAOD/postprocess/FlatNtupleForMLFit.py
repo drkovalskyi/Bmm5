@@ -20,7 +20,12 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         'HLT_DoubleMu4_Jpsi_Displaced',
         'HLT_DoubleMu4_Jpsi_NoVertexing',
         'HLT_DoubleMu4_3_Jpsi_Displaced',
-        'HLT_Dimuon6_Jpsi_NoVertexing'
+        'HLT_Dimuon6_Jpsi_NoVertexing',
+        'HLT_DoubleMu4_JpsiTrk_Displaced',       # Jpsi
+        'HLT_DoubleMu4_PsiPrimeTrk_Displaced',   # Psi2S
+        'HLT_Dimuon0_Upsilon_NoVertexing',       # Upsilon 2017-2018
+        'HLT_Dimuon8_Upsilon_Barrel'             # Upsilon 2016
+        
     ]
 
     def _validate_inputs(self):
@@ -327,12 +332,12 @@ if __name__ == "__main__":
                 "Muon_softMvaId[mm_mu1_index] and "\
                 "abs(mm_kin_mu1eta)<1.4 and "\
                 "mm_kin_mu1pt>4 and "\
-                "Muon_softMvaId[mm_mu2_index] and "\
+                "Muon_softMva[mm_mu2_index] > 0.45 and "\
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5",
+                "mm_kin_sl3d>6 and "\
+                "mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
         "best_candidate": "",
@@ -352,7 +357,7 @@ if __name__ == "__main__":
     #             "mm_kin_mu2pt>4 and "\
     #             "abs(mm_kin_mass-5.4)<0.5 and "\
     #             "mm_kin_sl3d>4 and "\
-    #             "mm_kin_vtx_chi2dof<5",
+    #             "mm_kin_vtx_prob>0.025",
     #     "final_state" : "mm",
     #     "best_candidate": "mm_kin_pt",
     #     # "best_candidate": "",
