@@ -2,10 +2,10 @@
 from resources_cfg import resources
 
 workdir = "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv8/src/Bmm5/NanoAOD/postprocess/"
-version = 516
+version = 517
 input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD"
-output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing-NEW2"
-# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing"
+# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing-NEW2"
+output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing"
 xrootd_prefix = "root://eoscms.cern.ch:/"
 web_report_path = "/afs/cern.ch/user/d/dmytro/www/public_html/bmm5/postprocessing/"
 
@@ -24,8 +24,7 @@ active_tasks = {
     'FlatNtuples':[
         ## bmm_mva_jpsik, muon_mva, bmm_mva
         # 'fit', 'fit-bkmm', 'bmm_mva_jpsik', 'bmm_mva', 'muon_mva'
-        # 'fit'
-        'bmm_mva', 'bmm_mva_jpsik'
+        'fit', 'fit-bkmm', 'bmm_mva', 'bmm_mva_jpsik', 'dimuon'
     ]
 }
 
@@ -39,7 +38,7 @@ tasks = [
         'input_pattern':'BuToJpsiK',
         'processor':'Skimmer',
         # trigger based
-        "cut" : "mm_mu1_index[bkmm_mm_index]>=0 && mm_mu2_index[bkmm_mm_index]>=0 && abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 && abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 && mm_kin_pt[bkmm_mm_index]>7.0 && mm_kin_alphaXY[bkmm_mm_index]<0.4 && mm_kin_vtx_prob[bkmm_mm_index]>0.1 && bkmm_jpsimc_vtx_prob>0.1 && mm_kin_sl3d[bkmm_mm_index]>4",
+        "cut" : "mm_mu1_index[bkmm_mm_index]>=0 && mm_mu2_index[bkmm_mm_index]>=0 && abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 && abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 && mm_kin_pt[bkmm_mm_index]>7.0 && mm_kin_alphaXY[bkmm_mm_index]<0.4 && mm_kin_vtx_prob[bkmm_mm_index]>0.1 && bkmm_jpsimc_vtx_prob>0.025 && mm_kin_sl3d[bkmm_mm_index]>4",
         'name':'bkmm',
         'type':'NanoAOD-skims',
         'files_per_job':10
@@ -48,7 +47,7 @@ tasks = [
         'input_pattern':'Charmonium',
         'processor':'Skimmer',
         # trigger based
-        "cut" : "mm_mu1_index[bkmm_mm_index]>=0 && mm_mu2_index[bkmm_mm_index]>=0 && abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 && abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 && mm_kin_pt[bkmm_mm_index]>7.0 && mm_kin_alphaXY[bkmm_mm_index]<0.4 && mm_kin_vtx_prob[bkmm_mm_index]>0.1 && bkmm_jpsimc_vtx_prob>0.1 && mm_kin_sl3d[bkmm_mm_index]>4",
+        "cut" : "mm_mu1_index[bkmm_mm_index]>=0 && mm_mu2_index[bkmm_mm_index]>=0 && abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 && abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 && mm_kin_pt[bkmm_mm_index]>7.0 && mm_kin_alphaXY[bkmm_mm_index]<0.4 && mm_kin_vtx_prob[bkmm_mm_index]>0.1 && bkmm_jpsimc_vtx_prob>0.025 && mm_kin_sl3d[bkmm_mm_index]>4",
         'name':'bkmm',
         'type':'NanoAOD-skims',
         'files_per_job':100
@@ -148,7 +147,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -171,7 +170,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -194,8 +193,8 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_chi2dof<5 and "\
+                "mm_kin_sl3d>6 and "\
+                "mm_kin_vtx_prob>0.025 and "\
                 "HLT_DoubleMu4_3_Bs",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -220,7 +219,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -242,7 +241,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -264,7 +263,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -286,7 +285,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -308,7 +307,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -330,7 +329,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -355,7 +354,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -380,7 +379,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -402,7 +401,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -424,7 +423,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -446,7 +445,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -468,7 +467,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -490,7 +489,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -512,7 +511,7 @@ tasks = [
                 "abs(mm_kin_mu2eta)<1.4 and "\
                 "mm_kin_mu2pt>4 and "\
                 "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>4 and "\
+                "mm_kin_sl3d>6 and "\
                 "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
         "final_state" : "mm",
         # "best_candidate": "mm_kin_pt",
@@ -538,7 +537,7 @@ tasks = [
             "mm_kin_pt[bkmm_mm_index]>7.0 and "\
             "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "\
             "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and "\
-            "bkmm_jpsimc_vtx_prob>0.1 and "\
+            "bkmm_jpsimc_vtx_prob>0.025 and "\
             "mm_kin_sl3d[bkmm_mm_index]>4 and "\
             "abs(bkmm_jpsimc_mass-5.4)<0.5",
         "final_state" : "bkmm",
@@ -562,13 +561,145 @@ tasks = [
             "mm_kin_pt[bkmm_mm_index]>7.0 and "\
             "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "\
             "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and "\
-            "bkmm_jpsimc_vtx_prob>0.1 and "\
+            "bkmm_jpsimc_vtx_prob>0.025 and "\
             "mm_kin_sl3d[bkmm_mm_index]>4 and "\
             "abs(bkmm_jpsimc_mass-5.4)<0.5",
         "final_state" : "bkmm",
         "best_candidate": "",
     },
 
+    ################ dimuon ################
+    # {
+    #     'input_pattern':'BsToMuMu',
+    #     'processor':'FlatNtupleForMLFit',
+    #     'name':'fit',
+    #     'type':'FlatNtuples',
+    #     'files_per_job':20,
+    #     "tree_name" : "bsmmMc",
+    #     "blind" : False,
+    #     "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+    #             # "Muon_softMvaId[mm_mu1_index] and "\
+    #             "abs(mm_kin_mu1eta)<1.4 and "\
+    #             "mm_kin_mu1pt>4 and "\
+    #             # "Muon_softMvaId[mm_mu2_index] and "\
+    #             "abs(mm_kin_mu2eta)<1.4 and "\
+    #             "mm_kin_mu2pt>4 and "\
+    #             "abs(mm_kin_mass-5.4)<0.5 and "\
+    #             "mm_kin_sl3d>6 and "\
+    #             "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
+    #     "final_state" : "mm",
+    #     # "best_candidate": "mm_kin_pt",
+    #     "best_candidate": "",
+        
+    # },
+    # {
+    #     'input_pattern':'BdToMuMu',
+    #     'processor':'FlatNtupleForMLFit',
+    #     'name':'fit',
+    #     'type':'FlatNtuples',
+    #     'files_per_job':20,
+    #     "tree_name" : "bmmMc",
+    #     "blind" : False,
+    #     "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+    #             # "Muon_softMvaId[mm_mu1_index] and "\
+    #             "abs(mm_kin_mu1eta)<1.4 and "\
+    #             "mm_kin_mu1pt>4 and "\
+    #             # "Muon_softMvaId[mm_mu2_index] and "\
+    #             "abs(mm_kin_mu2eta)<1.4 and "\
+    #             "mm_kin_mu2pt>4 and "\
+    #             "abs(mm_kin_mass-5.4)<0.5 and "\
+    #             "mm_kin_sl3d>6 and "\
+    #             "mm_kin_pt>5.0 && mm_kin_vtx_prob>0.025",
+    #     "final_state" : "mm",
+    #     # "best_candidate": "mm_kin_pt",
+    #     "best_candidate": "",
+        
+    # },
+    {
+        'input_pattern':'Jpsi',
+        'processor':'FlatNtupleForMLFit',
+        'name':'dimuon',
+        'type':'FlatNtuples',
+        'files_per_job':20,
+        "tree_name" : "jpsiMC",
+        "blind" : False,
+        "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+                "Muon_softMva[mm_mu1_index]>0.45 and "\
+                "abs(mm_kin_mu1eta)<1.4 and "\
+                "mm_kin_mu1pt>4 and "\
+                "Muon_softMva[mm_mu2_index]>0.45 and "\
+                "abs(mm_kin_mu2eta)<1.4 and "\
+                "mm_kin_mass>2.9 and "\
+                "mm_kin_mass<4.0 and "\
+                "mm_kin_vtx_prob>0.1",
+        "final_state" : "mm",
+        # "best_candidate": "mm_kin_pt",
+        "best_candidate": "",
+    },
+    {
+        'input_pattern':'YnSToMuMu',
+        'processor':'FlatNtupleForMLFit',
+        'name':'dimuon',
+        'type':'FlatNtuples',
+        'files_per_job':20,
+        "tree_name" : "ynsMC",
+        "blind" : False,
+        "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+                "Muon_softMva[mm_mu1_index]>0.45 and "\
+                "abs(mm_kin_mu1eta)<1.4 and "\
+                "mm_kin_mu1pt>4 and "\
+                "Muon_softMva[mm_mu2_index]>0.45 and "\
+                "abs(mm_kin_mu2eta)<1.4 and "\
+                "mm_kin_mass>8.5 and "\
+                "mm_kin_mass<11.5 and "\
+                "mm_kin_vtx_prob>0.1",
+        "final_state" : "mm",
+        # "best_candidate": "mm_kin_pt",
+        "best_candidate": "",
+    },
+    {
+        'input_pattern':'Charmonium',
+        'processor':'FlatNtupleForMLFit',
+        'name':'dimuon',
+        'type':'FlatNtuples',
+        'files_per_job':20,
+        "tree_name" : "mmData",
+        "blind" : False,
+        "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+                "Muon_softMva[mm_mu1_index]>0.45 and "\
+                "abs(mm_kin_mu1eta)<1.4 and "\
+                "mm_kin_mu1pt>4 and "\
+                "Muon_softMva[mm_mu2_index]>0.45 and "\
+                "abs(mm_kin_mu2eta)<1.4 and "\
+                "mm_kin_mass>2.9 and "\
+                "mm_kin_mass<4.0 and "\
+                "mm_kin_vtx_prob>0.1",
+        "final_state" : "mm",
+        # "best_candidate": "mm_kin_pt",
+        "best_candidate": "",
+    },
+    {
+        'input_pattern':'MuOnia',
+        'processor':'FlatNtupleForMLFit',
+        'name':'dimuon',
+        'type':'FlatNtuples',
+        'files_per_job':20,
+        "tree_name" : "mmData",
+        "blind" : False,
+        "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+                "Muon_softMva[mm_mu1_index]>0.45 and "\
+                "abs(mm_kin_mu1eta)<1.4 and "\
+                "mm_kin_mu1pt>4 and "\
+                "Muon_softMva[mm_mu2_index]>0.45 and "\
+                "abs(mm_kin_mu2eta)<1.4 and "\
+                "mm_kin_mass>8.0 and "\
+                "mm_kin_mass<12.0 and "\
+                "mm_kin_vtx_prob>0.1",
+        "final_state" : "mm",
+        # "best_candidate": "mm_kin_pt",
+        "best_candidate": "",
+    },
+        
     ################ muon_mva ################
     {
         'input_pattern':'QCD_Pt.*?_MuEnriched|Charmonium|BuToJpsiK',
