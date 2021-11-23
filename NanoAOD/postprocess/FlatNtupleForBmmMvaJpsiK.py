@@ -43,7 +43,8 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
             selection.append( ('mass_cut',  abs(self.event.bkmm_jpsimc_mass[i] - 5.4) < 0.5) )
             selection.append( ('valid_fit', self.event.bkmm_jpsimc_valid[i]) )
             # selection.append( ('kaon_impact_parameter_significance', self.event.bkmm_kaon_sdxy_bs[i] > 15) )
-            selection.append( ('vertex_chi2', self.event.bkmm_jpsimc_vtx_chi2dof[i] < 5) )
+            selection.append( ('mm_vtx_prob', self.event.mm_kin_vtx_prob[self.event.bkmm_mm_index[i]] > 0.1) )
+            selection.append( ('mmk_vtx_prob', self.event.bkmm_jpsimc_vtx_prob[i] > 0.025) )
             # trigger driven, but tighter for purity
             selection.append( ('decay_length_significance', self.event.bkmm_jpsimc_sl3d[i] > 4.0) )
             selection.append( ('alpha', self.event.bkmm_jpsimc_alpha[i] < 0.2) )
@@ -157,11 +158,9 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
             trigger_2018 = self.event.HLT_DoubleMu4_3_Jpsi
 
         trigger_2017 = 0
-        if hasattr(self.event, 'HLT_DoubleMu4_Jpsi_Displaced'):
-            trigger_2017 = self.event.HLT_DoubleMu4_Jpsi_Displaced
-
         trigger_2016 = 0
         if hasattr(self.event, 'HLT_DoubleMu4_3_Jpsi_Displaced'):
+            trigger_2017 = self.event.HLT_DoubleMu4_3_Jpsi_Displaced
             trigger_2016 = self.event.HLT_DoubleMu4_3_Jpsi_Displaced
 
         self.tree['trigger'] = trigger_2018 | trigger_2017 | trigger_2016
