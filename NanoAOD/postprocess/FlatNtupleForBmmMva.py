@@ -39,8 +39,8 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
             selection.append( ('good_muon2', self._good_muon(self.event.mm_mu2_index[i])) )
             selection.append( ('mass_cut',  abs(self.event.mm_kin_mass[i]-5.4)<0.5) )
             selection.append( ('valid_fit', self.event.mm_kin_valid[i]) )
-            selection.append( ('decay_length_significance', self.event.mm_kin_sl3d[i]>4) )
-            selection.append( ('vertex_chi2', self.event.mm_kin_vtx_chi2dof[i]<5) )
+            selection.append( ('decay_length_significance', self.event.mm_kin_sl3d[i]>6) )
+            selection.append( ('vertex_prob', self.event.mm_kin_vtx_prob[i]>0.025) )
             keeper = True
             if not hasattr(self.event, 'mm_gen_pdgId') and self.job_info['blind']:
                 keeper = False
@@ -208,7 +208,7 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         if index < 0: return False
         if not (abs(self.event.Muon_eta[index]) < 1.4): return False
         if not (self.event.Muon_pt[index] > 4): return False
-        if not self.event.Muon_softId[index]: return False
+        if self.event.Muon_softMva[index] < 0.45: return False
         return True
 
 def unit_test():
