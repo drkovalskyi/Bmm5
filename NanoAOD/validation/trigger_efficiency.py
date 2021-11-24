@@ -100,14 +100,14 @@ studies = {
 
 	# ======= HLT_DoubleMu4_3_Jpsi ==========
 
-	# 'HLT_DoubleMu4_3_Jpsi - 2018 MC':{
-	# 	'samples':[
-	# 		# path + "/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/E9A429AF-972C-9B4D-98EF-CD3AD16A5062.root"
-	# 		# path + "/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/E9A429AF-972C-9B4D-98EF-CD3AD16A5062.root"
-	# 		path + "/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/"
-	# 	],
-	# 	'trigger':'HLT_DoubleMu4_3_Jpsi',
-	# },
+	'HLT_DoubleMu4_3_Jpsi - 2018 MC':{
+		'samples':[
+			path + "/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/E9A429AF-972C-9B4D-98EF-CD3AD16A5062.root"
+			# path + "/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/E9A429AF-972C-9B4D-98EF-CD3AD16A5062.root"
+			# path + "/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/"
+		],
+		'trigger':'HLT_DoubleMu4_3_Jpsi',
+	},
 	
 	# 'HLT_DoubleMu4_3_Jpsi - 2018':{
 	# 	'samples':[
@@ -224,7 +224,7 @@ triggers = {
 	}
 }
 
-output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv6-516/trigger_efficiency"
+output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-516/trigger_efficiency"
 
 ROOT.gROOT.SetBatch(True)
 
@@ -256,10 +256,10 @@ for name, info in studies.items():
 	h_off_trig.Write()
 
 	# n_off_trig = chain.GetEntries(triggers[trigger]['cuts'] + "&&" + trigger)
-	err_off = Double(0)
+	err_off = ROOT.Double(0)
 	n_off = h_off.IntegralAndError(1, nbins, err_off)
 	
-	err_off_trig = Double(0)
+	err_off_trig = ROOT.Double(0)
 	n_off_trig = h_off_trig.IntegralAndError(1, nbins, err_off_trig)
 	
 	eff = float(n_off_trig) / n_off
@@ -271,6 +271,7 @@ for name, info in studies.items():
 
 
 ## Make plots
+sys.exit()
 
 setTDRStyle()
 c1 = ROOT.TCanvas("c1", "c1", 800, 800)
