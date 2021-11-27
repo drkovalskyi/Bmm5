@@ -233,7 +233,7 @@ triggers = {
 		'cuts':
 		# 'sqrt(pow(abs(mm_mu2_eta-mm_mu1_eta),2) + pow(acos(cos(mm_mu2_phi-mm_mu1_phi)),2)) &&' +
 		'mm_mu1_index>=0 && mm_mu2_index>=0 &&' +
-		'mm_kin_pt>5 && mm_kin_vtx_prob>0.025 && Muon_softMva[mm_mu1_index]>0.5 && Muon_softMva[mm_mu2_index]>0.5 &&' +
+		'mm_kin_pt>5 && mm_kin_vtx_prob>0.025 && Muon_softMva[mm_mu1_index]>0.45 && Muon_softMva[mm_mu2_index]>0.45 &&' +
 		'abs(Muon_eta[mm_mu1_index])<1.4 && abs(Muon_eta[mm_mu2_index])<1.4 && Muon_pt[mm_mu1_index]>4.0 &&' +
 		'Muon_pt[mm_mu2_index]>4.0 && mm_kin_mass>4.6 && mm_kin_mass<5.9 && Muon_charge[mm_mu1_index]*Muon_charge[mm_mu2_index]==-1'
 	},
@@ -336,7 +336,29 @@ print "\nSummary"
 for study, info in sorted(results.items()):
 	print "%s \t: %0.1f +/- %0.1f %%" % (study, 100. * info['eff'], 100. * info['eff_err'])
 
+## Ratios
+def compute_ratio(bmm, jpsik):
+	bmm_rel_err = results[bmm]['eff_err']/results[bmm]['eff']
+	jpsik_rel_err = results[jpsik]['eff_err']/results[jpsik]['eff']
+	ratio = results[jpsik]['eff']/results[bmm]['eff']
+	ratio_err = sqrt(bmm_rel_err * bmm_rel_err + jpsik_rel_err * jpsik_rel_err) * ratio
+	print "%s / %s: \t%0.2f \pm %0.2f" % (jpsik, bmm, ratio, ratio_err)
 
+print "\nRatios"
+for bmm in sorted(results):
+	match = re.search("HLT_DoubleMu4_3_Bs(.*)$", bmm)
+	if not match: continue
+	suffix = match.group(1)
+	for jpsik in results:
+		if jpsik == bmm:
+			continue
+		if not re.search("^\S+%s$" % re.escape(suffix), jpsik):
+			continue
+		compute_ratio(bmm, jpsik)
+	
+	
+
+	
 ## Make plots
 sys.exit()
 
