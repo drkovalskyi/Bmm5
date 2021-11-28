@@ -30,6 +30,7 @@ path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/516/"
 split_channels = True
 output = "results/summary.json"
 recompute_results = False
+nbins = 60
 
 results = dict()
 if not os.path.exists('results'):
@@ -296,7 +297,6 @@ for name, info in sorted(studies.items()):
 		if chain == None:
 			chain = load_data()
 		f = ROOT.TFile.Open('results/' + file_name + ".root", "recreate")
-		nbins = 60
 		h_off = ROOT.TH1F("h_off","h_off", nbins, 0, nbins)
 		h_off.Sumw2()
 		chain.Draw("PV_npvsGood>>h_off", "%s" % (triggers[trigger]['cuts'] + extra_cut))
@@ -342,7 +342,7 @@ def compute_ratio(bmm, jpsik):
 	jpsik_rel_err = results[jpsik]['eff_err']/results[jpsik]['eff']
 	ratio = results[jpsik]['eff']/results[bmm]['eff']
 	ratio_err = sqrt(bmm_rel_err * bmm_rel_err + jpsik_rel_err * jpsik_rel_err) * ratio
-	print "%s / %s: \t%0.2f \pm %0.2f" % (jpsik, bmm, ratio, ratio_err)
+	print "%s / %s: \t%0.2f\pm%0.2f" % (jpsik, bmm, ratio, ratio_err)
 
 print "\nRatios"
 for bmm in sorted(results):
