@@ -1,21 +1,19 @@
-import os
+import os, re
 import ROOT
 import math 
 import sweights
 import tdrstyle
+from ROOT.RooFit import Binning
+from ROOT import RooRealVar
 
 # Set the TDR style
 tdrstyle.setTDRStyle()
 
 version = 516
 
-output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_binned/" % version;
-# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_sl3d.gt.25.and.sl3d.lt.35/" % version;
-# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_abs_eta.lt.0.9/" % version;
-# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_mva.gt.0.995/" % version;
-# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_mva.lt.0.99/" % version;
-# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_mva.lt.0.99/" % version;
-# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_test_nvtx.lt.20/" % version;
+# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_binned/" % version;
+output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/AN/bjpsik-splots_binned/";
+
 
 # bool silent_roofit = true;
 # bool store_projections = false;
@@ -33,81 +31,46 @@ trigger = ROOT.RooCategory("trigger", "trigger")
 trigger.defineType("failed", 0)
 trigger.defineType("passed", 1)
 
+# WARNING: variable ranges are effectively cuts!
+# Option: mass.setRange("signal",4.,6.);
+
 variables = [
-    ROOT.RooRealVar("mm_kin_pt", "", 0, 30),
-    ROOT.RooRealVar("mm_mu1_pt", "", 0, 30),
-    ROOT.RooRealVar("mm_mu2_pt", "", 0, 30),
-    ROOT.RooRealVar("mm_kin_eta", "", -1.5, 1.5),
-    ROOT.RooRealVar("mm_kin_alpha", "", 0, 0.05),
-    ROOT.RooRealVar("mm_kin_alphaSig", "", 0, 10),
-    ROOT.RooRealVar("mm_kin_alphaBS", "", 0, 0.05),
-    ROOT.RooRealVar("mm_kin_alphaBSSig", "", 0, 10),
-    ROOT.RooRealVar("mm_kin_spvip", "", 0, 10),
-    ROOT.RooRealVar("mm_kin_pvip", "", 0, 0.02),
-    ROOT.RooRealVar("mm_iso", "", 0, 1),
-    ROOT.RooRealVar("mm_m1iso", "", 0, 1),
-    ROOT.RooRealVar("mm_m2iso", "", 0, 1),
-    ROOT.RooRealVar("mm_kin_sl3d", "", 0, 100),
-    ROOT.RooRealVar("mm_mva", "", 0.9, 1.01),
-    ROOT.RooRealVar("mm_kin_vtx_chi2dof", "", 0, 5),
-    ROOT.RooRealVar("mm_nBMTrks", "", 0, 10),
-    ROOT.RooRealVar("mm_otherVtxMaxProb1", "", -0.01, 1.01),
-    ROOT.RooRealVar("mm_otherVtxMaxProb2", "", -0.01, 1.01),
-    ROOT.RooRealVar("trigger","", 0),
-    ROOT.RooRealVar("evt_nvtx","", 0, 100),
+    ( RooRealVar("trigger",             "", 0),                       None,                   None   ), 
+    ( RooRealVar("mm_kin_pt",           "p_{T}(#mu#mu)",              0, 100), Binning(40, 0, 40),     "Right" ),
+    ( RooRealVar("mm_mu1_pt",           "p_{T}(#mu_{1})",             0,  50), Binning(25, 0, 25),     "Right" ),
+    ( RooRealVar("mm_mu2_pt",           "p_{T}(#mu_{2})",             0,  50), Binning(25, 0, 25),     "Right" ),
+    ( RooRealVar("mm_kin_eta",          "#eta(#mu#mu)",            -1.5, 1.5), Binning(60, -1.5, 1.5), "TopRight" ),
+    ( RooRealVar("mm_kin_alpha",        "#alpha_{3D}",                0, 0.4), Binning(50, 0, 0.1),    "Right" ),
+    ( RooRealVar("mm_kin_alphaSig",     "#alpha_{3D}/#sigma_{#alpha}", 0, 10), Binning(40, 0, 4),      "Right" ),
+    ( RooRealVar("mm_kin_alphaBS",      "#alpha_{BS}",                0, 0.4), Binning(50, 0, 0.1),    "Right" ),
+    ( RooRealVar("mm_kin_alphaBSSig",   "#alpha_{BS}/#sigma_{#alpha}", 0, 10), Binning(40, 0, 4),      "Right" ),
+    ( RooRealVar("mm_kin_spvip",        "#delta_{3D}/#sigma_{#delta}", 0, 10), Binning(40, 0, 4),      "Right" ),
+    ( RooRealVar("mm_kin_pvip",         "#delta_{3D}",               0, 0.02), Binning(50, 0, 0.02),   "Right" ),
+    ( RooRealVar("mm_iso",              "iso(#mu#mu)",               0,  1.1), Binning(35, 0.4, 1.1),   "Left" ),
+    ( RooRealVar("mm_m1iso",            "iso(#mu_{1})",               0, 1.1), Binning(35, 0.4, 1.1),   "Left" ),
+    ( RooRealVar("mm_m2iso",            "iso(#mu_{2})",               0, 1.1), Binning(35, 0.4, 1.1),   "Left" ),
+    ( RooRealVar("mm_kin_sl3d",         "L_{3D}/#sigma_{L}",          0, 100), Binning(50, 0, 100),    "Right" ),
+    ( RooRealVar("mm_mva",              "MVA",                      0., 1.01), Binning(50, 0.9, 1.0),   "Left" ),
+    ( RooRealVar("mm_kin_vtx_chi2dof",  "#chi^{2}/dof",                 0, 5), Binning(50, 0, 5),      "Right" ),
+    # ( RooRealVar("mm_kin_vtx_prob",     "vtx prob",              0.025, 1.01), Binning(50, 0.025, 1),  "Left" ),
+    ( RooRealVar("mm_nBMTrks",          "N_{trk}",                     0, 10), Binning(10, 0, 10),     "Right" ),
+    ( RooRealVar("mm_otherVtxMaxProb1", "Other vetex probability 1", -0.01,1.01), Binning(51, -0.01,1.01), "Right" ),
+    ( RooRealVar("mm_otherVtxMaxProb2", "Other vetex probability 2", -0.01,1.01), Binning(51, -0.01,1.01), "Right" ),
+    ( RooRealVar("evt_nvtx",            "N_{PV}",                     0, 100), Binning(70, 0, 70),      "Right" ),
 ]
 
-
-
-# struct dataset{
-#   string name, mc_files, data_files, trigger;
-# };
+roovars = []
+for var in variables:
+    roovars.append(var[0])
 
 data_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/%u/bmm_mva_jpsik/" % version
-# mc_2018 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/*.root"
-# mc_2017 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v3+MINIAODSIM/*.root"
-# mc_2016 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCUEP8M1_13TeV-pythia8-evtgen+RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext1-v2+MINIAODSIM/*.root"
 mc_2018 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/*.root"
 mc_2017 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL17MiniAOD-106X_mc2017_realistic_v6-v2+MINIAODSIM/*.root"
 mc_2016BF = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL16MiniAODAPV-106X_mcRun2_asymptotic_preVFP_v8-v1+MINIAODSIM/*.root"
 mc_2016GH = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL16MiniAOD-106X_mcRun2_asymptotic_v13-v1+MINIAODSIM/*.root"
     
 datasets = {
-    # "Run2018A":{
-    #     "mc":   mc_2018,
-    #     "data": data_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2018B":{
-    #     "mc":   mc_2018,
-    #     "data": data_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2018C":{
-    #     "mc":   mc_2018,
-    #     "data": data_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2018D":{
-    #     "mc":   mc_2018,
-    #     "data": data_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root"
-    # },
-    # "Run2018":{
-    #     "mc":   mc_2018,
-    #     "data": [
-    #         data_path + "Charmonium+Run2018A-17Sep2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2018B-17Sep2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2018C-17Sep2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root",
-    #     ]
-    # },
-    # "Run2017":{
-    #     "mc":   mc_2017,
-    #     "data": [
-    #         data_path + "Charmonium+Run2017B-31Mar2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2017C-31Mar2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2017D-31Mar2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2017E-31Mar2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2017F-31Mar2018-v1+MINIAOD/*.root"
-    #     ]
-    # },
+
     "Run2018":{
         "mc":   mc_2018,
         "data": [
@@ -144,66 +107,6 @@ datasets = {
             data_path + "Charmonium+Run2016H-21Feb2020_UL2016-v1+MINIAOD/*.root",
         ]
     },
-    # "Run2016":{
-    #     "mc":   mc_2016,
-    #     "data": [
-    #         data_path + "Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2016C-17Jul2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2016D-17Jul2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2016E-17Jul2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2016F-17Jul2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2016G-17Jul2018-v1+MINIAOD/*.root",
-    #         data_path + "Charmonium+Run2016H-17Jul2018-v1+MINIAOD/*.root"
-    #     ]
-    # },
-    # "Run2017B":{
-    #     "mc":   mc_2017,
-    #     "data": data_path + "Charmonium+Run2017B-31Mar2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2017C":{
-    #     "mc":   mc_2017
-    #     "data": data_path + "Charmonium+Run2017C-31Mar2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2017D":{
-    #     "mc":   mc_2017,
-    #     "data": data_path + "Charmonium+Run2017D-31Mar2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2017E":{
-    #     "mc":   mc_2017,
-    #     "data": data_path + "Charmonium+Run2017E-31Mar2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2017F":{
-    #     "mc":   mc_2017,
-    #     "data": data_path + "Charmonium+Run2017F-31Mar2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2016B":{
-    #     "mc":   mc_2016,
-    #     "data": data_path + "Charmonium+Run2016B-17Jul2018_ver2-v1+MINIAOD/*.root"
-    # },
-    # "Run2016C":{
-    #     "mc":   mc_2016,
-    #     "data": data_path + "Charmonium+Run2016C-17Jul2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2016D":{
-    #     "mc":   mc_2016,
-    #     "data": data_path + "Charmonium+Run2016D-17Jul2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2016E":{
-    #     "mc":   mc_2016,
-    #     "data": data_path + "Charmonium+Run2016E-17Jul2018-v1+MINIAOD/*.root"
-    # }
-    # "Run2016F":{
-    #     "mc":   mc_2016,
-    #     "data": data_path + "Charmonium+Run2016F-17Jul2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2016G":{
-    #     "mc":   mc_2016,
-    #     "data": data_path + "Charmonium+Run2016G-17Jul2018-v1+MINIAOD/*.root"
-    # },
-    # "Run2016H":{
-    #     "mc":   mc_2016,
-    #     "data": data_path + "Charmonium+Run2016H-17Jul2018-v1+MINIAOD/*.root"
-    # }
 }
 
 def print_canvas(output_name_without_extention, path, canvas=ROOT.gPad):
@@ -211,184 +114,26 @@ def print_canvas(output_name_without_extention, path, canvas=ROOT.gPad):
         os.makedirs(path)
     canvas.Print("%s/%s.png" % (path, output_name_without_extention))
     canvas.Print("%s/%s.pdf" % (path, output_name_without_extention))
-    # canvas.Print("%s/%s.root" % (path, output_name_without_extention))
+    canvas.Print("%s/%s.root" % (path, output_name_without_extention))
     # canvas.Print("%s/%s.C" % (path, output_name_without_extention))
 
-# void add_data(TFile* f, TChain* mc_bkmm, TChain* data, const char* trigger){
-
-#   TCut mc_match;
-#   if (use_mc_truth_matching)
-#     // mc_match = "bkmm_gen_pdgId!=0";
-#     mc_match = "abs(1-bkmm_kaon_pt/genbmm_kaon1_pt[0])<0.1";
-
-#   TCut base_cut(trigger);
-#   // TCut base_cut("HLT_DoubleMu4_Jpsi_NoVertexing");
-#   base_cut += "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu1_index[bkmm_mm_index]]>4";
-#   base_cut += "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 && Muon_pt[mm_mu2_index[bkmm_mm_index]]>4";
-#   base_cut += "mm_kin_sl3d[bkmm_mm_index]>4 && mm_kin_vtx_chi2dof[bkmm_mm_index]<5";
-#   base_cut += "abs(bkmm_jpsimc_mass-5.4)<0.5 && bkmm_jpsimc_vtx_chi2dof<5";
-#   base_cut += "bkmm_kaon_pt<1.5";
-#   base_cut += "bkmm_jpsimc_alpha<0.2"; 
-#   base_cut += "Muon_softMva[mm_mu1_index[bkmm_mm_index]]>0.45 && Muon_softMva[mm_mu2_index[bkmm_mm_index]]>0.45";
-#   base_cut += "!TMath::IsNaN(bkmm_jpsimc_massErr)";
-
-#   // Monte Carlo
-  
-#   TH1D* h_mc_bkmm_base = new TH1D("h_mc_bkmm_base", "", 50, 5.17, 5.45);
-#   mc_bkmm->Draw("bkmm_jpsimc_mass>>h_mc_bkmm_base", base_cut + mc_match, "goff");
-#   h_mc_bkmm_base->Write();
-
-#   for (auto const& var : variables){
-#     string h_mass_name = "h_mc_bkmm_" + var.name + "_vs_mass";
-#     string h_npv_name  = "h_mc_bkmm_" + var.name + "_vs_npv";
-#     string command_mass = var.branch + ":bkmm_jpsimc_mass>>" + h_mass_name;
-#     string command_npv  = var.branch + ":PV_npvs>>" + h_npv_name;
-#     TH2D* h_mass = new TH2D(h_mass_name.c_str(), "", 50, 5.17, 5.45, var.nbins, var.xmin, var.xmax);
-#     TH2D* h_npv  = new TH2D(h_npv_name.c_str(),  "", 50,    0,  100, var.nbins, var.xmin, var.xmax);
-#     mc_bkmm->Draw(command_mass.c_str(), base_cut + mc_match, "goff");
-#     mc_bkmm->Draw(command_npv.c_str(),  base_cut + mc_match, "goff");
-#     h_mass->Write();
-#     h_npv->Write();
-#   }
-
-#   // Data
-
-#   TH1D* h_data_base = new TH1D("h_data_base", "", 50, 5.17, 5.45);
-#   data->Draw("bkmm_jpsimc_mass>>h_data_base", base_cut, "goff");
-#   h_data_base->Write();
-
-#   for (auto const& var : variables){
-#     string hist_name = "h_data_" + var.name + "_vs_mass";
-#     string draw_command = var.branch + ":bkmm_jpsimc_mass>>" + hist_name;
-#     TH2D* h_data = new TH2D(hist_name.c_str(), "", 
-# 			    50, 5.17, 5.45, 
-# 			    var.nbins, var.xmin, var.xmax);
-#     data->Draw(draw_command.c_str(), base_cut, "goff");
-#     h_data->Write();
-#   }
-
-#   TH1D* h_data_npv = new TH1D("h_data_npv", "", 50, 0, 100);
-#   data->Draw("PV_npvs>>h_data_npv", base_cut, "goff");
-#   h_data_npv->Write();
-
-# }
-
-# struct Result {
-#   double sig;
-#   double sig_err;
-#   double bkg;
-#   double bkg_err;
-#   Result(const RooRealVar& nsig, const RooRealVar& nbkg):
-#     sig(nsig.getVal()), sig_err(nsig.getError()),
-#     bkg(nbkg.getVal()), bkg_err(nbkg.getError()){}
-#   Result():
-#     sig(0), sig_err(0),
-#     bkg(0), bkg_err(0){}
-# };
-
-# void process_variables(TFile* f, string prefix){
-#   TH2* h_mc_bkmm_mva_vs_npv = (TH2*)f->Get("h_mc_bkmm_mva_vs_npv");
-#   TH1* h_mc_npv = h_mc_bkmm_mva_vs_npv->ProjectionX();
-#   TH1* h_data_npv = ((TH1*)f->Get("h_data_npv"));
-#   h_mc_npv->SetLineWidth(2);
-#   h_mc_npv->SetLineColor(kBlue);
-#   h_mc_npv->Draw();
-#   print_canvas(prefix + "-" + "mc_npv", output_path, gPad);
-
-#   h_data_npv->SetLineWidth(2);
-#   h_data_npv->SetLineColor(kBlue);
-#   h_data_npv->Draw();
-#   print_canvas(prefix + "-" + "data_npv", output_path, gPad);
-
-#   for (auto const& var: variables){
-#     unsigned int n = var.nbins;
-#     vector<Double_t> mc_eff;
-#     vector<Double_t> data_eff;
-#     vector<Double_t> data_over_mc_eff;
-#     vector<Double_t> mc_eff_reweighted;
-#     vector<Double_t> data_over_mc_eff_reweighted;
-#     double total_data(-1);
-#     double total_mc(-1);
-#     // vector<Double_t> mc_eff_err;
-#     // vector<Double_t> data_over_mc_eff_err;
-
-#     printf("processing %s\n", var.name.c_str());
-#     // Scan efficiency in MC and data as a function of the cut on the variable
-
-#     auto h_mc_x_vs_npv    = (TH2*)f->Get(("h_mc_bkmm_"   + var.name + "_vs_npv" ).c_str()); 
-#     auto h_mc_x_vs_mass   = (TH2*)f->Get(("h_mc_bkmm_"   + var.name + "_vs_mass").c_str()); 
-#     auto h_data_x_vs_mass = (TH2*)f->Get(("h_data_" + var.name + "_vs_mass").c_str());
-#     auto h_mc_x_reweighted = reweight_histogram(h_mc_x_vs_npv, h_mc_npv, h_data_npv);
-    
-#     for (unsigned int i=0; i <= n; ++i){
-#       auto mass_mc   = h_mc_x_vs_mass->ProjectionX(  "mass_mc",   i, n+1);
-#       auto mass_data = h_data_x_vs_mass->ProjectionX("mass_data", i, n+1);
-#       auto result = fitHistogram(mass_mc, mass_data);
-      
-#       if (store_projections)
-# 	print_canvas(prefix + "-" + var.name + "_proj" + to_string(i), output_path, gPad);
-
-#       if (i==0){
-# 	total_data = result.sig;
-# 	total_mc = mass_mc->Integral();
-#       }
-
-#       assert(total_data > 0);
-#       data_eff.push_back(result.sig / total_data);
-#       assert(total_mc>0);
-#       mc_eff.push_back(mass_mc->Integral() / total_mc);
-#       data_over_mc_eff.push_back(mc_eff.back()>0?data_eff.back()/mc_eff.back():0);
-
-#       mc_eff_reweighted.push_back(h_mc_x_reweighted->Integral(i,-1) / h_mc_x_reweighted->Integral(0,-1));
-#       data_over_mc_eff_reweighted.push_back(mc_eff_reweighted.back()>0?data_eff.back()/mc_eff_reweighted.back():0);
-#     }
-#     gPad->SetGridx();
-#     gPad->SetGridy();
-#     auto gr = new TGraph(n, &mc_eff[0], &data_over_mc_eff[0]);
-#     gr->SetMinimum(0);
-#     gr->SetMaximum(1.5);
-#     gr->GetXaxis()->SetLimits(0.,1.);
-#     gr->GetXaxis()->SetTitle("MC efficiency");
-#     gr->GetYaxis()->SetTitle("Data/MC efficiency ratio");
-#     gr->SetTitle(var.name.c_str());
-#     gr->Draw("AP*");
-
-#     print_canvas(prefix + "-" + var.name + "_eff", output_path, gPad);
-
-#     auto gr_reweighted = new TGraph(n, &mc_eff_reweighted[0], &data_over_mc_eff_reweighted[0]);
-#     gr_reweighted->SetMinimum(0);
-#     gr_reweighted->SetMaximum(1.5);
-#     gr_reweighted->GetXaxis()->SetLimits(0.,1.);
-#     gr_reweighted->GetXaxis()->SetTitle("MC efficiency");
-#     gr_reweighted->GetYaxis()->SetTitle("Data/MC efficiency ratio");
-#     gr_reweighted->SetTitle(var.name.c_str());
-#     gr_reweighted->Draw("AP*");
-#     print_canvas(prefix + "-" + var.name + "_eff_reweighted", output_path, gPad);
-#     gPad->SetGridx(0);
-#     gPad->SetGridy(0);
-#   }
-# }
 
 ROOT.gROOT.SetBatch(True)
-c1 = ROOT.TCanvas("c1","c1", 800, 600)
+# c2 = ROOT.TCanvas("c2","c2", 800, 800)
+# c2_1 = ROOT.TPad("c2_1", "", 0.0, 0.25, 1.0, 1.0)
+# c2_2 = ROOT.TPad("c2_2", "", 0.0, 0.0, 1.0, 0.25)
+c1 = ROOT.TCanvas("c1","c1", 800, 800)
 
 for dataset, info in datasets.items():
 
     name = dataset
     selection = "trigger>0"
-    # selection = "trigger>0&&evt_nvtx<20"
-    # selection = "trigger>0&&mm_mva<0.99"
     
     chain_mc = ROOT.TChain("mva")
     chain_mc.Add(info['mc'])
     print chain_mc.GetEntries()
-    # ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, "trigger>0")
-    # ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, "trigger>0&&mm_kin_alphaSig<1")
-    # ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, "trigger>0&&mm_kin_pvip>0.0030&&mm_kin_pvip<0.0040")
-    # ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, "trigger>0&&evt_nvtx>20&&evt_nvtx<30")
-    # ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, "trigger>0&&mm_mva>0.99&&mm_kin_pvip<0.002")
-    ds_mc = sweights.make_dataset(chain_mc, "mc", mass, variables, selection)
-    
+    ds_mc = sweights.make_dataset(chain_mc, "mc", mass, roovars, selection)
+
     # for i in range(10):
     #     ds_mc.get(i).Print("V")
     # break
@@ -396,13 +141,14 @@ for dataset, info in datasets.items():
     chain_data = ROOT.TChain("mva")
     for pattern in info['data']:
         chain_data.Add(pattern)
-    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0")
-    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0&&mm_kin_alphaSig<1")
-    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0&&mm_kin_pvip>0.0030&&mm_kin_pvip<0.0040")
-    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0&&evt_nvtx>20&&evt_nvtx<30")
-    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0&&mm_kin_alpha<0.005")
-    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, "trigger>0&&mm_mva>0.99&&mm_kin_pvip<0.002")
-    ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, variables, selection)
+
+    # get reference signal mass distribution
+    ref_hist = ROOT.TH1F("ref_hist", "", 120, 5.15, 5.45)
+    chain_mc.Draw("mm_kin_mass>>ref_hist", selection)
+
+    # ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, roovars, selection)
+    ws = sweights.get_workspace_with_weights_for_jpsik(chain_data, "data", mass, roovars,
+                                                       cuts=selection, ref_hist=ref_hist)
 
     ### Fit Validation
     
@@ -427,45 +173,49 @@ for dataset, info in datasets.items():
 
     ROOT.gStyle.SetOptFit(1)
     
-    for v in variables:
-        if v.GetName()=="trigger":
+    for var, binning, legend_position in variables:
+        c1.cd()
+        if var.GetName()=="trigger":
             continue
-        nbins = 50
-        if v.GetName() == 'mm_mva':
-            nbins = 11
-        h_data = ROOT.RooAbsData.createHistogram( dataw_sig, 'sig', v, ROOT.RooFit.Binning(nbins))
-        if v.GetName() == 'mm_kin_alphaSig':
+        # nbins = 50
+        # if v.GetName() == 'mm_mva':
+        #     nbins = 11
+        h_data = ROOT.RooAbsData.createHistogram(dataw_sig, 'sig', var, binning)
+        h_data.SetLineWidth(2)
+        # h_data.SetMarkerStyle(21)
+        if var.GetName() == 'mm_kin_alphaSig':
             h_data.Fit("gaus")
-        h_data.Draw()
-        # print_canvas(name + "_splot_" + v.GetName(), output_path)
-        print_canvas(v.GetName() + "_splot_" + name, output_path)
-        if v.GetName() == 'mm_kin_alphaSig':
+        h_data.Draw("e")
+        # print_canvas(name + "_splot_" + var.GetName(), output_path)
+        print_canvas(var.GetName() + "_splot_" + name, output_path)
+        if var.GetName() == 'mm_kin_alphaSig':
             h_data.GetListOfFunctions().Clear()
             
-        h_mc = ROOT.RooAbsData.createHistogram( ds_mc, 'mc', v, ROOT.RooFit.Binning(nbins))
+        h_mc = ROOT.RooAbsData.createHistogram( ds_mc, 'mc', var, binning)
         h_mc.SetMarkerColor(ROOT.kRed)
-        if v.GetName() == 'mm_kin_alphaSig':
+        h_mc.SetMarkerStyle(20)
+        if var.GetName() == 'mm_kin_alphaSig':
             h_mc.Fit("gaus")
         h_mc.Draw()
         # print_canvas(name + "_mc_" + v.GetName(), output_path)
-        print_canvas(v.GetName() + "_mc_" + name, output_path)
-        if v.GetName() == 'mm_kin_alphaSig':
+        print_canvas(var.GetName() + "_mc_" + name, output_path)
+        if var.GetName() == 'mm_kin_alphaSig':
             h_mc.GetListOfFunctions().Clear()
 
         max_value = h_data.GetMaximum()
         h_mc.Scale(h_data.Integral()/h_mc.Integral())
         if h_mc.GetMaximum() > max_value:
             max_value = h_mc.GetMaximum()
+        if re.search("Top", legend_position):
+            max_value *= 1.4
         h_data.SetMaximum(max_value * 1.1)
+        h_data.SetMinimum(0)
         h_mc.SetMaximum(max_value * 1.1)
-        h_data.Draw()
-        h_mc.Draw("same")
+        h_data.Draw("hist")
+        h_mc.Draw("e same")
 
         # right handside legend
-        if v.GetName() in ['mm_kin_alpha', 'mm_kin_alphaSig', 'mm_kin_alphaBS', 'mm_kin_alphaBSSig',
-                           'mm_kin_spvip', 'mm_kin_pvip', 'mm_kin_sl3d', 'mm_kin_vtx_chi2dof', 'mm_nBMTrks',
-                           'mm_otherVtxMaxProb2'
-                           ]:
+        if re.search("Right", legend_position):
             legend = ROOT.TLegend(0.60,0.75,0.85,0.87)
         else:
             legend = ROOT.TLegend(0.15,0.75,0.5,0.87)
@@ -478,13 +228,64 @@ for dataset, info in datasets.items():
         legend.Draw()
 
         # print_canvas(name + "_all_" + v.GetName(), output_path)
-        print_canvas(v.GetName() + "_all_" + name, output_path)
+        print_canvas(var.GetName() + "_all_" + name, output_path)
 
-        h_data.Divide(h_data, h_mc)
-        h_data.SetMinimum(0.5)
-        h_data.SetMaximum(1.5)
-        h_data.Draw()
+        ratio_plot = ROOT.TRatioPlot(h_data, h_mc)
+        # ratio_plot.SetH1DrawOpt("hist e")
+        ratio_plot.Draw()
+        ratio_plot.SetSeparationMargin(0.03)
+        ratio_plot.GetLowerRefGraph().SetMinimum(0.4)
+        ratio_plot.GetLowerRefGraph().SetMaximum(1.6)
+        # ratio_plot.GetXaxis().SetTitleSize()
+        # SetBottomMargin(2.0)
+        # c1.SetBottomMargin(2.0)
+        # rp->GetLowerRefYaxis()->SetRange(...)
+        # rp->SetH1DrawOpt("E");
+        ratio_plot.GetLowerRefYaxis().SetTitle("Data/MC")
+        
+        ratio_plot.GetLowerRefYaxis().SetTitleSize()
+        ratio_plot.GetLowerRefYaxis().SetTitleOffset(1.1)
+        ratio_plot.GetLowerRefYaxis().SetLabelSize(0.035)
+        ratio_plot.GetLowYaxis().SetNdivisions(503)
+        
+        ratio_plot.GetLowerRefXaxis().SetTitleSize()
+        ratio_plot.GetLowerRefXaxis().SetTitleOffset()
+        ratio_plot.GetLowerRefXaxis().SetLabelSize(0.035)
+        
+        ratio_plot.GetUpperRefYaxis().SetTitle("")
+        ratio_plot.GetUpperRefYaxis().SetTitleSize()
+        ratio_plot.GetUpperRefYaxis().SetTitleOffset()
+        ratio_plot.GetUpperRefYaxis().SetLabelSize(0.035)
+        
+        ratio_plot.GetUpperRefXaxis().SetTitleSize()
+        ratio_plot.GetUpperRefXaxis().SetTitleOffset(0)
+        ratio_plot.GetUpperRefXaxis().SetLabelSize(0.035)
+
+        c1.Update()
+        c1.cd()
+        legend.Draw()
+        print_canvas(var.GetName() + "_ratio_" + name, output_path)
+
+        
+        # c2_1.cd()
+        # h_data.Draw()
+        # h_mc.Draw("same")
+        # legend.Draw()
+        
+        # c2_2.cd()
+        # h_ratio = h_data.Clone("h_ratio")
+        # h_ratio.Divide(h_data, h_mc)
+        # h_ratio.SetMinimum(0.5)
+        # h_ratio.SetMaximum(1.5)
+        # h_ratio.Draw()
+        # c2.cd()
+        # c2_1.Draw()
+        # c2_2.Draw()
+
         # print_canvas(name + "_ratio_" + v.GetName(), output_path)
-        print_canvas(v.GetName() + "_ratio_" + name, output_path)
-    
+        print_canvas(var.GetName() + "_ratio_" + name, output_path)
+
+        
+        
+        
     ws.Delete() # Cleanup
