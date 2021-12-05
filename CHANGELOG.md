@@ -2,6 +2,10 @@
 
 ## New developments
 
+## [Current]
+### New
+	- Added HLT object and trigger matching for muons
+
 ## [NanoAODv8-V04] - 2021/11/05
 ### New
 	- Improved MVA matching between JpsiK and Bmm
