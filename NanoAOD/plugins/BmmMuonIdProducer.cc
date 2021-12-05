@@ -19,14 +19,15 @@
 #include <algorithm>
 
 #include "Bmm5/NanoAOD/interface/XGBooster.h"
+#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
 
 // 
 // BmmMuonIdProducer is designed for Bs/d->mumu analysis
 //
 
-typedef reco::Candidate::LorentzVector LorentzVector;
-typedef std::pair<const reco::MuonChamberMatch*, const reco::MuonSegmentMatch*> MatchPair;
 using namespace std;
+typedef reco::Candidate::LorentzVector LorentzVector;
+typedef pair<const reco::MuonChamberMatch*, const reco::MuonSegmentMatch*> MatchPair;
 
 ///////////////////////////////////////////////////////////////////////////
 ///                             P L U G I N
@@ -51,24 +52,30 @@ private:
   
   // ----------member data ---------------------------
     
-  edm::EDGetTokenT<std::vector<pat::Muon>> muonToken_;
-  edm::EDGetTokenT<std::vector<pat::PackedGenParticle> >   packedGenToken_;
-  const std::vector<pat::PackedGenParticle>* packedGenParticles_;
+  edm::EDGetTokenT<vector<pat::Muon>> muonToken_;
+  edm::EDGetTokenT<vector<pat::PackedGenParticle> >   packedGenToken_;
+  edm::EDGetTokenT<vector<pat::TriggerObjectStandAlone> > triggerInfoToken_;
+  const vector<pat::PackedGenParticle>* packedGenParticles_;
 
   bool isMC_;
+  string triggerCollection_;
+  vector<string> triggers_;
   XGBooster softMuonMva_;
 };
 
 BmmMuonIdProducer::BmmMuonIdProducer(const edm::ParameterSet &iConfig):
-muonToken_( consumes<std::vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
-packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( iConfig.getParameter<edm::InputTag>( "packedGenParticleCollection" ) ) ),
+muonToken_( consumes<vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
+packedGenToken_( consumes<vector<pat::PackedGenParticle>> ( iConfig.getParameter<edm::InputTag>( "packedGenParticleCollection" ) ) ),
+triggerInfoToken_( consumes<vector<pat::TriggerObjectStandAlone>>(iConfig.getParameter<edm::InputTag>("trigger") ) ),
 packedGenParticles_(nullptr),
-isMC_(             iConfig.getParameter<bool>( "isMC" ) ),
+isMC_( iConfig.getParameter<bool>( "isMC" ) ),
+triggerCollection_( iConfig.getParameter<string>( "triggerCollection" ) ),
+triggers_( iConfig.getParameter<vector<string>>( "triggers" ) ),
 softMuonMva_(iConfig.getParameter<edm::FileInPath>("softMuonMva").fullPath())
 {
     produces<pat::CompositeCandidateCollection>("muons");
     
-    std::vector<std::string> features = {"trkValidFrac", "glbTrackProbability", "nLostHitsInner",
+    vector<string> features = {"trkValidFrac", "glbTrackProbability", "nLostHitsInner",
       "nLostHitsOuter", "trkKink", "chi2LocalPosition", "match2_dX", "match2_pullX", "match1_dX", "match1_pullX",
       "nPixels", "nValidHits", "nLostHitsOn", "match2_dY", "match1_dY", "match2_pullY", "match1_pullY",
       "match2_pullDyDz", "match1_pullDyDz", "match2_pullDxDz", "match1_pullDxDz"};
@@ -109,10 +116,10 @@ void BmmMuonIdProducer::fillSoftMva(pat::CompositeCandidate& mu_cand){
 
 void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
-    edm::Handle<std::vector<pat::Muon> > muonHandle;
+    edm::Handle<vector<pat::Muon> > muonHandle;
     iEvent.getByToken(muonToken_, muonHandle);
     
-    edm::Handle<std::vector<pat::PackedGenParticle> > packedGenParticleHandle;
+    edm::Handle<vector<pat::PackedGenParticle> > packedGenParticleHandle;
     if ( isMC_ ) {
       iEvent.getByToken(packedGenToken_,packedGenParticleHandle);
       packedGenParticles_ = packedGenParticleHandle.product();
@@ -120,8 +127,11 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
       packedGenParticles_ = nullptr;
     }
 
+    edm::Handle<vector<pat::TriggerObjectStandAlone>> trigger_info;
+    iEvent.getByToken(triggerInfoToken_, trigger_info);
+    
     // Output collection
-    auto muons = std::make_unique<pat::CompositeCandidateCollection>();
+    auto muons = make_unique<pat::CompositeCandidateCollection>();
 
     for ( const auto& muon: *muonHandle.product()){
       pat::CompositeCandidate mu_cand;
@@ -178,10 +188,38 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 	mu_cand.addUserFloat("simProdRho", muon.simProdRho());
 	mu_cand.addUserFloat("simProdZ", muon.simProdZ());
       }
+
+      // Trigger info
+      const pat::TriggerObjectStandAlone* best_trigger_object(nullptr);
+      double best_dr(9999.);
+      for (const auto &trigger_object : *trigger_info) {
+	if (not trigger_object.hasTriggerObjectType(trigger::TriggerMuon)) continue;
+	  // Restict muon collection to L3 muons
+	  if (trigger_object.collection().find(triggerCollection_ + ":") == string::npos) continue;
+
+	  double dr = deltaR(trigger_object, muon);
+	  if (dr < best_dr){
+	    best_dr = dr;
+	    best_trigger_object = &trigger_object;
+	  }
+      }
+    
+      if (best_dr < 0.02){
+	mu_cand.addUserFloat("hlt_pt", best_trigger_object->pt());
+	mu_cand.addUserFloat("hlt_dr", best_dr);
+	for ( auto const &trigger: triggers_ )
+	  mu_cand.addUserInt(trigger, muon.triggered((trigger + "_v*").c_str()));
+      } else {
+	mu_cand.addUserFloat("hlt_pt", -1);
+	mu_cand.addUserFloat("hlt_dr", -1);
+	for ( auto const &trigger: triggers_ )
+	  mu_cand.addUserInt(trigger, 0);
+      }
+      
       muons->push_back(mu_cand);
     }
     
-    iEvent.put(std::move(muons), "muons");
+    iEvent.put(move(muons), "muons");
 }
 
 
@@ -215,7 +253,7 @@ float dX(const MatchPair& match){
 float pullX(const MatchPair& match){
   if (match.first and match.second->hasPhi())
     return dX(match) /
-      sqrt(std::pow(match.first->xErr, 2) + std::pow(match.second->xErr, 2));
+      sqrt(pow(match.first->xErr, 2) + pow(match.second->xErr, 2));
   else
     return 9999.;
 }
@@ -223,7 +261,7 @@ float pullX(const MatchPair& match){
 float pullDxDz(const MatchPair& match){
   if (match.first and match.second->hasPhi())
     return (match.first->dXdZ - match.second->dXdZ) /
-           sqrt(std::pow(match.first->dXdZErr, 2) + std::pow(match.second->dXdZErr, 2));
+           sqrt(pow(match.first->dXdZErr, 2) + pow(match.second->dXdZErr, 2));
   else
     return 9999.;
 }
@@ -238,7 +276,7 @@ float dY(const MatchPair& match){
 float pullY(const MatchPair& match){
   if (match.first and match.second->hasZed())
     return dY(match) /
-      sqrt(std::pow(match.first->yErr, 2) + std::pow(match.second->yErr, 2));
+      sqrt(pow(match.first->yErr, 2) + pow(match.second->yErr, 2));
   else
     return 9999.;
 }
@@ -246,7 +284,7 @@ float pullY(const MatchPair& match){
 float pullDyDz(const MatchPair& match){
   if (match.first and match.second->hasZed())
     return (match.first->dYdZ - match.second->dYdZ) /
-           sqrt(std::pow(match.first->dYdZErr, 2) + std::pow(match.second->dYdZErr, 2));
+           sqrt(pow(match.first->dYdZErr, 2) + pow(match.second->dYdZErr, 2));
   else
     return 9999.;
 }
@@ -266,9 +304,9 @@ void BmmMuonIdProducer::fillMatchInfo(pat::CompositeCandidate& cand,
 				      const pat::Muon& muon){
   // Initiate containter for results
   const int n_stations = 2;
-  std::vector<MatchPair> matches;
+  vector<MatchPair> matches;
   for (unsigned int i=0; i < n_stations; ++i)
-    matches.push_back(std::pair(nullptr, nullptr));
+    matches.push_back(pair(nullptr, nullptr));
 
   // Find best matches
   for (auto& chamberMatch : muon.matches()){

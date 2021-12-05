@@ -20,12 +20,33 @@ def merge_psets(*argv):
                 setattr(result,name,value)
     return result
 
-BmmMuonId = cms.EDProducer("BmmMuonIdProducer",
+triggers = [
+    'HLT_Dimuon0_LowMass_L1_0er1p5',
+    'HLT_DoubleMu4_3_Bs',
+    'HLT_DoubleMu4_3_Jpsi',
+    'HLT_DoubleMu4_3_Jpsi_Displaced',
+    'HLT_DoubleMu4_Jpsi_Displaced',
+    'HLT_DoubleMu4_Jpsi_NoVertexing',
+    'HLT_Dimuon6_Jpsi_NoVertexing',
+    'HLT_Dimuon0_LowMass',
+    'HLT_DoubleMu0'
+]
+
+BmmMuonId = cms.EDProducer(
+    "BmmMuonIdProducer",
     muonCollection = cms.InputTag("linkedObjects","muons"),
     prunedGenParticleCollection = cms.InputTag("prunedGenParticles"),
     packedGenParticleCollection = cms.InputTag("packedGenParticles"),
+    trigger = cms.InputTag("slimmedPatTrigger"),
     softMuonMva = cms.FileInPath('Bmm5/NanoAOD/data/muon_mva/Run2018-20210430-2004-Event0.model'),
-    isMC = cms.bool(False)
+    isMC = cms.bool(False),
+    triggers = cms.vstring(triggers),
+    triggerCollection = cms.string("hltIterL3MuonCandidates")
+)
+
+from Configuration.Eras.Modifier_run2_muon_2016_cff import run2_muon_2016
+run2_muon_2016.toModify(BmmMuonId,
+    triggerCollection = cms.string("hltL3MuonCandidates")
 )
 
 BmmMuonIdMc = BmmMuonId.clone( isMC = cms.bool(True) ) 
@@ -63,8 +84,13 @@ BmmMuonIdVariables = cms.PSet(
 
     highPurity          = Var("userInt('highPurity')",              int, doc = "High purity inner track"),
     newSoftMuonMva      = Var("userFloat('newSoftMuonMva')",      float, doc = "New softMuonMva"),
-
+    hlt_pt              = Var("userFloat('hlt_pt')",              float, doc = "HLT pt"),
+    hlt_dr              = Var("userFloat('hlt_dr')",              float, doc = "HLT dR"),
 )
+
+for trigger in triggers:
+    setattr(BmmMuonIdVariables, trigger, Var("userInt('%s')" % trigger, int, doc = "Used in trigger"))
+
 
 BmmMuonIdMcVariables = merge_psets(
     BmmMuonIdVariables,
