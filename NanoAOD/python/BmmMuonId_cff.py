@@ -29,7 +29,11 @@ triggers = [
     'HLT_DoubleMu4_Jpsi_NoVertexing',
     'HLT_Dimuon6_Jpsi_NoVertexing',
     'HLT_Dimuon0_LowMass',
-    'HLT_DoubleMu0'
+    'HLT_DoubleMu0',
+    'HLT_IsoMu24',
+    'HLT_IsoMu27',
+    'HLT_Mu8',
+    'HLT_Mu17'
 ]
 
 BmmMuonId = cms.EDProducer(
@@ -41,7 +45,8 @@ BmmMuonId = cms.EDProducer(
     softMuonMva = cms.FileInPath('Bmm5/NanoAOD/data/muon_mva/Run2018-20210430-2004-Event0.model'),
     isMC = cms.bool(False),
     triggers = cms.vstring(triggers),
-    triggerCollection = cms.string("hltIterL3MuonCandidates")
+    triggerCollection = cms.string("hltIterL3MuonCandidates"),
+    l1Src = cms.InputTag("gmtStage2Digis:Muon"),
 )
 
 from Configuration.Eras.Modifier_run2_muon_2016_cff import run2_muon_2016
@@ -86,6 +91,11 @@ BmmMuonIdVariables = cms.PSet(
     newSoftMuonMva      = Var("userFloat('newSoftMuonMva')",      float, doc = "New softMuonMva"),
     hlt_pt              = Var("userFloat('hlt_pt')",              float, doc = "HLT pt"),
     hlt_dr              = Var("userFloat('hlt_dr')",              float, doc = "HLT dR"),
+    l1_pt               = Var("userFloat('l1_pt')",               float, doc = "L1 pt"),
+    l1_mpt              = Var("userFloat('l1_mpt')",              float, doc = "L1 pt (cross-check)"),
+    l1_eta              = Var("userFloat('l1_eta')",              float, doc = "L1 eta"),
+    l1_phi              = Var("userFloat('l1_phi')",              float, doc = "L1 phi"),
+    l1_quality          = Var("userInt('l1_quality')",              int, doc = "L1 quality"),
 )
 
 for trigger in triggers:

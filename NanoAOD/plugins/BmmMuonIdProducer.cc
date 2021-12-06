@@ -20,6 +20,7 @@
 
 #include "Bmm5/NanoAOD/interface/XGBooster.h"
 #include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
+#include "DataFormats/L1Trigger/interface/Muon.h"
 
 // 
 // BmmMuonIdProducer is designed for Bs/d->mumu analysis
@@ -49,24 +50,28 @@ private:
   // const pat::PackedCandidate& track2);
   void fillMatchInfo(pat::CompositeCandidate& cand, const pat::Muon& muon);
   void fillSoftMva(pat::CompositeCandidate& mu_cand);
+  const l1t::Muon* getL1Muon( const reco::Candidate& cand );
   
   // ----------member data ---------------------------
     
-  edm::EDGetTokenT<vector<pat::Muon>> muonToken_;
+  edm::EDGetTokenT<vector<pat::Muon> > muonToken_;
   edm::EDGetTokenT<vector<pat::PackedGenParticle> >   packedGenToken_;
   edm::EDGetTokenT<vector<pat::TriggerObjectStandAlone> > triggerInfoToken_;
+  edm::EDGetTokenT<BXVector<l1t::Muon> > l1Token_;
+  
   const vector<pat::PackedGenParticle>* packedGenParticles_;
-
   bool isMC_;
   string triggerCollection_;
   vector<string> triggers_;
   XGBooster softMuonMva_;
+  edm::Handle<BXVector<l1t::Muon> >   l1Handle_;
 };
 
 BmmMuonIdProducer::BmmMuonIdProducer(const edm::ParameterSet &iConfig):
 muonToken_( consumes<vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
 packedGenToken_( consumes<vector<pat::PackedGenParticle>> ( iConfig.getParameter<edm::InputTag>( "packedGenParticleCollection" ) ) ),
 triggerInfoToken_( consumes<vector<pat::TriggerObjectStandAlone>>(iConfig.getParameter<edm::InputTag>("trigger") ) ),
+l1Token_(consumes<BXVector<l1t::Muon>>(iConfig.getParameter<edm::InputTag>("l1Src"))),
 packedGenParticles_(nullptr),
 isMC_( iConfig.getParameter<bool>( "isMC" ) ),
 triggerCollection_( iConfig.getParameter<string>( "triggerCollection" ) ),
@@ -113,6 +118,20 @@ void BmmMuonIdProducer::fillSoftMva(pat::CompositeCandidate& mu_cand){
   mu_cand.addUserFloat("newSoftMuonMva", softMuonMva_.predict());
 }
 
+const l1t::Muon* BmmMuonIdProducer::getL1Muon( const reco::Candidate& cand ){
+  const l1t::Muon* match = nullptr;
+  double best_dr = 999.;
+  // Loop over L1 candidates from BX 0 only
+  for (auto it = l1Handle_->begin(0); it != l1Handle_->end(0); it++){
+    double dr = deltaR(*it, cand);
+    if (match == nullptr or dr < best_dr){
+      best_dr = dr;
+      match = &*it;
+    }
+  }
+  return match;
+}
+
 
 void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
@@ -127,9 +146,11 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
       packedGenParticles_ = nullptr;
     }
 
-    edm::Handle<vector<pat::TriggerObjectStandAlone>> trigger_info;
+    edm::Handle<vector<pat::TriggerObjectStandAlone> > trigger_info;
     iEvent.getByToken(triggerInfoToken_, trigger_info);
-    
+
+    iEvent.getByToken(l1Token_, l1Handle_);
+
     // Output collection
     auto muons = make_unique<pat::CompositeCandidateCollection>();
 
@@ -189,7 +210,9 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 	mu_cand.addUserFloat("simProdZ", muon.simProdZ());
       }
 
-      // Trigger info
+      /////////////////// Trigger info
+
+      ////// HLT
       const pat::TriggerObjectStandAlone* best_trigger_object(nullptr);
       double best_dr(9999.);
       for (const auto &trigger_object : *trigger_info) {
@@ -214,6 +237,35 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 	mu_cand.addUserFloat("hlt_dr", -1);
 	for ( auto const &trigger: triggers_ )
 	  mu_cand.addUserInt(trigger, 0);
+      }
+
+      ///// L1
+
+      // We rely on the muon object matching, which takes care of
+      // propogating the muon trajectory to the muon detectors, where
+      // L1 objects are defined.
+
+      const l1t::Muon* l1_muon = nullptr;
+      if (muon.l1Object()){
+	mu_cand.addUserFloat("l1_pt", muon.l1Object()->pt());
+	mu_cand.addUserFloat("l1_eta", muon.l1Object()->eta());
+	mu_cand.addUserFloat("l1_phi", muon.l1Object()->phi());
+	l1_muon= getL1Muon(*muon.l1Object());
+	if (l1_muon){
+	  mu_cand.addUserInt("l1_quality", l1_muon->hwQual());
+	  mu_cand.addUserFloat("l1_mpt",   l1_muon->pt());
+	}
+      }
+      
+      // defaults
+      if (not muon.l1Object()){
+	mu_cand.addUserFloat("l1_pt", -1);
+	mu_cand.addUserFloat("l1_eta", 0);
+	mu_cand.addUserFloat("l1_phi", 0);
+      }
+      if (not l1_muon){
+	mu_cand.addUserInt("l1_quality", 0);
+	mu_cand.addUserFloat("l1_mpt",  -1);
       }
       
       muons->push_back(mu_cand);
