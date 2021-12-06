@@ -2,9 +2,10 @@
 
 ## New developments
 
-## [Current]
+## [NanoAODv8-V05]
 ### New
-	- Added HLT object and trigger matching for muons
+	- Added L1 and HLT objects matched to offline muons
+	- Added HLT filter information for matching objects
 
 ## [NanoAODv8-V04] - 2021/11/05
 ### New
