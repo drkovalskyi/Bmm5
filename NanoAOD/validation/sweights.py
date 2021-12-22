@@ -23,18 +23,32 @@ def make_dataset(tree, name, mass_var, other_vars, cuts=""):
 
     return data
 
-def get_workspace_with_weights_for_jpsik(tree, name, mass_var, other_vars, cuts=""):
+def get_workspace_with_weights_for_jpsik(tree, name, mass_var, other_vars, cuts="", ref_hist=None):
     data = make_dataset(tree, name, mass_var, other_vars, cuts)
 
     ### Build model
+
+    if not ref_hist:
+        # Build a simple Gaussian signal model
+        sigma = ROOT.RooRealVar("sigma", "sigma", 0.005, 0.001, 0.02)
+        mean  = ROOT.RooRealVar("mean", "mean", 5.28, 5.25, 5.30)
+        sig   = ROOT.RooGaussian("gaus", "", mass_var, mean, sigma)
+    else:
+        # Use MC shape as a reference
+        bias     = ROOT.RooRealVar("bias", "bias", 0, -0.1, 0.1) ;
+        sigma    = ROOT.RooRealVar("sigma", "sigma", 0.0001, 0., 0.01)
+        gaussM   = ROOT.RooGaussModel("gaussM", "signal pdf", mass_var, bias, sigma)
+        ref_data = ROOT.RooDataHist("ref_data", "", ROOT.RooArgList(mass_var), ref_hist);
+        ref_pdf  = ROOT.RooHistPdf("ref_pdf", "theoretical lineshape", ROOT.RooArgSet(mass_var), ref_data, 2);
+        mass_var.setBins(10000, "fft");
+        sig      = ROOT.RooFFTConvPdf("sig", "smeared distribution", mass_var, ref_pdf, gaussM);
+
+    # a0    = ROOT.RooRealVar("a0", "a0", 0.0, -1., 1.)
+    # bkg   = ROOT.RooChebychev("bkg", "Background", mass_var, ROOT.RooArgList(a0))
+
+    exp_c = ROOT.RooRealVar("exp_c","exp_c", -1, -1000., 0.)
+    bkg   = ROOT.RooExponential("bkg", "Background", mass_var, exp_c)
     
-    sigma = ROOT.RooRealVar("sigma", "sigma", 0.005, 0.001, 0.02)
-    mean  = ROOT.RooRealVar("mean", "mean", 5.28, 5.25, 5.30)
-    sig   = ROOT.RooGaussian("gaus", "", mass_var, mean, sigma)
-
-    a0    = ROOT.RooRealVar("a0", "a0", 0.0, -1., 1.)
-    bkg   = ROOT.RooChebychev("bkg", "Background", mass_var, ROOT.RooArgList(a0))
-
     Nsig  = ROOT.RooRealVar("Nsig", "Nsig", 1000, 0, 1e9)
     Nbkg  = ROOT.RooRealVar("Nbkg", "Nbkg", 0, 0, 1e9)
     model = ROOT.RooAddPdf("model", "", ROOT.RooArgList(sig,bkg), ROOT.RooArgList(Nsig,Nbkg))
@@ -60,7 +74,7 @@ def get_workspace_with_weights_for_jpsik(tree, name, mass_var, other_vars, cuts=
 if __name__ == '__main__':
     tree = ROOT.TChain("mva")
     # tree.Add("/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/512/bmm_mva_jpsik/Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root")
-    tree.Add("/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/512/bmm_mva_jpsik/Charmonium+Run2018D-PromptReco-v2+MINIAOD/0aa7acf37201fe007dfaa71f4cfb9eac.root")
+    tree.Add("/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/517/bmm_mva_jpsik/Charmonium+Run2018D-12Nov2019_UL2018-v1+MINIAOD/d319f9f04d0d12c731a20b5342d4c9ff.root")
     # tree.Add("/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/515/bmm_mva_jpsik/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCUEP8M1_13TeV-pythia8-evtgen+RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext1-v2+MINIAODSIM/2b4896bfe4572b22d81bc7e25f9666eb.root")
 
     mass = ROOT.RooRealVar("mm_kin_mass", "", 5.15, 5.45)
