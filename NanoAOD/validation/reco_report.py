@@ -1,3 +1,4 @@
+
 import ROOT
 
 samples = [
@@ -31,10 +32,10 @@ cuts = [
     {
         'cut':{
             'mm':'mm_mu1_index>=0 && mm_mu2_index>=0 && mm_gen_pdgId!=0 && mm_kin_mu1pt>4 && mm_kin_mu2pt>4 && abs(mm_kin_mu1eta)<1.4 && abs(mm_kin_mu2eta)<1.4',
-            'mmk':'mm_mu1_index[bkmm_mm_index]>=0 && mm_mu2_index[bkmm_mm_index]>=0 && bkmm_gen_pdgId!=0'
+            'mmk':'mm_mu1_index[bkmm_mm_index]>=0 && mm_mu2_index[bkmm_mm_index]>=0 && bkmm_gen_pdgId!=0 && bkmm_jpsimc_mass>0'
             + ' && Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 && Muon_pt[mm_mu2_index[bkmm_mm_index]]>4'
             + ' && abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 && abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4',
-            'mmkk':'mm_mu1_index[bkkmm_mm_index]>=0 && mm_mu2_index[bkkmm_mm_index]>=0 && bkkmm_gen_pdgId!=0'
+            'mmkk':'mm_mu1_index[bkkmm_mm_index]>=0 && mm_mu2_index[bkkmm_mm_index]>=0 && bkkmm_gen_pdgId!=0 && bkkmm_jpsikk_mass>0'
             + ' && Muon_pt[mm_mu1_index[bkkmm_mm_index]]>4 && Muon_pt[mm_mu2_index[bkkmm_mm_index]]>4'
             + ' && abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4 && abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4',
         },
@@ -107,6 +108,15 @@ cuts = [
         },
         'name':'vertex probability $> 0.025$'
     },
+    # {
+    #     'cut':{
+    #         'mm':'mm_kin_vtx_chi2dof<5',
+    #         'mmk':'bkmm_jpsimc_vtx_prob>0.025',
+    #         'mmkk':'bkkmm_jpsikk_vtx_prob>0.025',
+    #     },
+    #     'name':'vertex probability $> 0.025$'
+    # },
+
     {
         'cut':{
             'mmk':'bkmm_jpsimc_vtx_prob>0.1',
@@ -161,7 +171,8 @@ def get_final_cut(final_state, cut_to_exclude=None):
                 continue
             if cut != "":  cut += "&&"
             cut += entry['cut'][final_state]
-    return "mm_mu1_index>=0 && mm_mu2_index>=0 && " + cut
+    #return "mm_mu1_index>=0 && mm_mu2_index>=0 && " + cut
+    return cut
 
 for sample in samples:
     chain = ROOT.TChain("Events")
@@ -186,12 +197,17 @@ for entry in cuts:
                 current_cuts[i] += "&&"
                 baseline_cut = False
             current_cuts[i] += entry['cut'][sample['final_state']]
+            #print "cut ",current_cuts[i]
             n1 = sample['chain'].GetEntries(current_cuts[i])
             print "& %6.2f & %6.2f " % (100.0 * n1 / total_counts[i], 100.0 * n1 / current_counts[i]),
+            #print "& %6.2f & %6.2f & %6.2f" % (n1 , total_counts[i], current_counts[i]),
             current_counts[i] = n1
             if not baseline_cut:
                 n2 = sample['chain'].GetEntries(get_final_cut(sample['final_state'], entry['cut'][sample['final_state']]))
+                #print "cut ",get_final_cut(sample['final_state'], entry['cut'][sample['final_state']])
                 print "& %6.2f " % (100.0 * final_counts[i] / n2),
+                #print "& %6.2f & %6.2f " % ( final_counts[i] , n2),
+                
             else:
                 print "&        ",
         else:
