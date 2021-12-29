@@ -14,7 +14,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         'bkkmm': 'nbkkmm'
     }
 
-    triggers = [
+    triggers_to_store = [
         'HLT_DoubleMu4_3_Bs',
         'HLT_DoubleMu4_3_Jpsi',
         'HLT_DoubleMu4_Jpsi_Displaced',
@@ -25,8 +25,29 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         'HLT_DoubleMu4_PsiPrimeTrk_Displaced',   # Psi2S
         'HLT_Dimuon0_Upsilon_NoVertexing',       # Upsilon 2017-2018
         'HLT_Dimuon8_Upsilon_Barrel'             # Upsilon 2016
-        
     ]
+
+    goodruns = dict()
+
+
+    def _is_certified(self, type):
+        # load certification information
+        if type not in self.goodruns:
+            self.goodruns[type] = dict()
+            for f in os.listdir('certification/%s' % type):
+                self.goodruns[type].update(json.load(open('certification/%s/%s' % (type, f))))
+            print "Number of runs in the %s certification: %u" % (type, len(self.goodruns[type]))
+
+        # run number is a string for some reason
+        run = str(self.event.run)
+
+        if run not in self.goodruns[type]:
+            return False
+        
+        for min_lumi, max_lumi in self.goodruns[type][run]:
+            if self.event.luminosityBlock >= min_lumi and self.event.luminosityBlock <= max_lumi:
+                return True
+        return False
 
     def _validate_inputs(self):
         """Task specific input validation"""
@@ -36,13 +57,6 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             if parameter not in self.job_info:
                 raise Exception("Missing input '%s'" % parameter)
 
-    # def __get(self, name, index=None):
-    #     """Return branch value"""
-
-    #     var = self.branch_map[self.job_info['final_state']][name]
-
-    #     return eval(var.format(tree="self.event", cand=index))
-            
     def __select_candidates(self, candidates):
         """Select candidates to be stored"""
         
@@ -70,6 +84,17 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             self.event = event           
             candidates = []
 
+            # Trigger requirements
+            if 'triggers' in self.job_info and len(self.job_info['triggers']) > 0:
+                passed_trigger = False
+                for trigger in  self.job_info['triggers']:
+                    if hasattr(self.event, trigger):
+                        if getattr(self.event, trigger):
+                            passed_trigger = True
+                            break
+                if not passed_trigger:
+                    continue
+            
             # Find candidates the satisfy the selection requirements
             n = getattr(self.event, self.leaf_counts[self.job_info['final_state']])
             for cand in range(n):
@@ -97,9 +122,13 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         ## event info
         self.tree.addBranch('run',         'UInt_t', 0)
         self.tree.addBranch('evt',      'ULong64_t', 0)
+        self.tree.addBranch('npv',         'UInt_t', 0, "Number of good reconstructed primary vertices")
         self.tree.addBranch('ls',          'UInt_t', 0)
         self.tree.addBranch('npu',         'UInt_t', 0, "number of pileup interactions that have been added to the event in the current bunch crossing")
         self.tree.addBranch('npu_mean',   'Float_t', 0, "tru mean number of pileup interactions")
+        self.tree.addBranch('certified_muon',    'Int_t', 0, "Event passed Muon Certification")
+        self.tree.addBranch('certified_golden',  'Int_t', 0, "Event passed Golden Certification")
+        
         # ps
         # cw8
         self.tree.addBranch('bdt',        'Float_t', 0, "BDT score")
@@ -132,11 +161,30 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         self.tree.addBranch('m2bdt',      'Float_t', 0, "Muon BDT. 1 for hadrons")
 
         self.tree.addBranch('mc_match',     'Int_t', 0, "PdgId of the MC matched B meson")
+        self.tree.addBranch('mc_bhh',       'Int_t', 0, "PdgId of B meson in Btohh MC events")
 
-        for trigger in self.triggers:
+        for trigger in self.triggers_to_store:
             self.tree.addBranch(trigger, 'UInt_t', 0)
             self.tree.addBranch("%s_ps" % trigger, 'UInt_t', 999999, "Prescale. 0 - Off, 999999 - no information")
-        
+            self.tree.addBranch("%s_matched" % trigger, 'Int_t', 0,  "Muons are matched to the trigger objets")
+
+    def _tag_bhh(self):
+        """Determine B meson pdgId for Btohh mixed samples"""
+        for i, id in enumerate(self.event.GenPart_pdgId):
+            if abs(id) != 13: continue
+
+            mother_idx = self.event.GenPart_genPartIdxMother[i]
+            if mother_idx < 0: continue
+            if abs(self.event.GenPart_pdgId[mother_idx]) not in (211, 321): continue
+
+            grandmother_idx = self.event.GenPart_genPartIdxMother[mother_idx]
+            if grandmother_idx < 0: continue
+
+            grandmother_pdgId = self.event.GenPart_pdgId[grandmother_idx]
+            if abs(grandmother_pdgId) not in (511, 531): continue
+            return grandmother_pdgId
+        return 0
+
     def _fill_tree(self, cand):
         self.tree.reset()
 
@@ -144,9 +192,15 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         self.tree['run'] = self.event.run
         self.tree['ls']  = self.event.luminosityBlock
         self.tree['evt'] = self.event.event
+        self.tree['npv'] = self.event.PV_npvsGood
+        self.tree['certified_muon']   = self._is_certified("muon")
+        self.tree['certified_golden'] = self._is_certified("golden")
+        
+        ## MC info
         if hasattr(self.event, 'Pileup_nTrueInt'):
             self.tree['npu']      = self.event.Pileup_nPU
             self.tree['npu_mean'] = self.event.Pileup_nTrueInt
+            self.tree['mc_bhh']   = self._tag_bhh()
 
         if self.job_info['final_state'] == 'mm':
             # B to mm
@@ -287,11 +341,14 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         else:
             self.tree['chan'] = 1
 
-        for trigger in self.triggers:
+        for trigger in self.triggers_to_store:
             if hasattr(self.event, trigger):
                 self.tree[trigger] = getattr(self.event, trigger)
             if hasattr(self.event, "prescale_" + trigger):
                 self.tree[trigger + "_ps"] = getattr(self.event, "prescale_" + trigger)
+            if hasattr(self.event, "MuonId_" + trigger):
+                if mu1 >= 0 and mu2 >= 0:
+                    self.tree[trigger + "_matched"] = getattr(self.event, "MuonId_" + trigger)[mu1] and getattr(self.event, "MuonId_" + trigger)[mu2] 
 
         self.tree.fill()
 
@@ -301,7 +358,7 @@ if __name__ == "__main__":
 
     # job = {
     #     "input": [
-    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/515/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root",
+    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/517/BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v1+MINIAODSIM/06387049-7142-D749-A447-C97E700210BF.root",
     #         ],
     #     "signal_only" : True,
     #     "tree_name" : "bsmmMc",
@@ -319,29 +376,54 @@ if __name__ == "__main__":
     #     "final_state" : "mm",
     #     "best_candidate": "mm_kin_pt",
     #     # "best_candidate": "",
+    #   }
+
+    # job = {
+    #     "input": [
+    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/517/BTohh_hToMuNu_BsBdMixture_modHadLifetime_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v3+MINIAODSIM/04C35C04-7851-6A4C-A80A-6FC132E25025.root",
+    #         ],
+    #     "signal_only" : False,
+    #     "tree_name" : "btohhMcBg",
+    #     "blind" : False,
+    #     "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+    #             "Muon_softMvaId[mm_mu1_index] and "\
+    #             "abs(mm_kin_mu1eta)<1.4 and "\
+    #             "mm_kin_mu1pt>4 and "\
+    #             "Muon_softMvaId[mm_mu2_index] and "\
+    #             "abs(mm_kin_mu2eta)<1.4 and "\
+    #             "mm_kin_mu2pt>4 and "\
+    #             "abs(mm_kin_mass-5.4)<0.5 and "\
+    #             "mm_kin_sl3d>4 and "\
+    #             "mm_kin_vtx_chi2dof<5",
+    #     "final_state" : "mm",
+    #     "best_candidate": "mm_kin_pt",
+    #     # "best_candidate": "",
     #   }  
 
-    job = {
-        "input": [
-            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/516/Charmonium+Run2018D-12Nov2019_UL2018-v1+MINIAOD/BD514049-659A-F74F-A799-D485A4531390.root",
-            ],
-        "signal_only" : False,
-        "tree_name" : "bmmData",
-        "blind" : False,
-        "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-                "Muon_softMvaId[mm_mu1_index] and "\
-                "abs(mm_kin_mu1eta)<1.4 and "\
-                "mm_kin_mu1pt>4 and "\
-                "Muon_softMva[mm_mu2_index] > 0.45 and "\
-                "abs(mm_kin_mu2eta)<1.4 and "\
-                "mm_kin_mu2pt>4 and "\
-                "abs(mm_kin_mass-5.4)<0.5 and "\
-                "mm_kin_sl3d>6 and "\
-                "mm_kin_vtx_prob>0.025",
-        "final_state" : "mm",
-        # "best_candidate": "mm_kin_pt",
-        "best_candidate": "",
-      }  
+    # job = {
+    #     "input": [
+    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/518/Charmonium+Run2018D-12Nov2019_UL2018-v1+MINIAOD/BD514049-659A-F74F-A799-D485A4531390.root",
+    #         ],
+    #     "signal_only" : False,
+    #     "tree_name" : "bmmData",
+    #     "blind" : False,
+    #     "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+    #             "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] < 0 and "\
+    #             "Muon_softMva[mm_mu1_index] > 0.45 and "\
+    #             "abs(mm_kin_mu1eta)<1.4 and "\
+    #             "mm_kin_mu1pt>4 and "\
+    #             "Muon_softMva[mm_mu2_index] > 0.45 and "\
+    #             "abs(mm_kin_mu2eta)<1.4 and "\
+    #             "mm_kin_mu2pt>4 and "\
+    #             "abs(mm_kin_mass-5.4)<0.5 and "\
+    #             "mm_kin_sl3d>6 and "\
+    #             "mm_kin_vtx_prob>0.025 and "\
+    #             "HLT_DoubleMu4_3_Bs"
+    #             ,
+    #     "final_state" : "mm",
+    #     # "best_candidate": "mm_kin_pt",
+    #     "best_candidate": "",
+    #   }  
 
     # job = {
     #     "input": [
@@ -363,30 +445,32 @@ if __name__ == "__main__":
     #     # "best_candidate": "",
     #   }  
 
-    # job = {
-    #     "input": [
-    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/515/Charmonium+Run2018D-PromptReco-v2+MINIAOD/6E7D2677-4622-F047-86A2-91E4D847CD88.root",
-    #     ],
-    #     "signal_only" : False,
-    #     "tree_name" : "bupsikData",
-    #     "blind" : False,
-    #     "cut" :
-    #         "mm_mu1_index[bkmm_mm_index]>=0 and "\
-    #         "mm_mu2_index[bkmm_mm_index]>=0 and "\
-    #         "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 and "\
-    #         "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 and "\
-    #         "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 and "\
-    #         "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 and "\
-    #         "mm_kin_pt[bkmm_mm_index]>7.0 and "\
-    #         "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "\
-    #         "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and "\
-    #         "bkmm_jpsimc_vtx_prob>0.1 and "\
-    #         "mm_kin_sl3d[bkmm_mm_index]>4 and "\
-    #         "abs(bkmm_jpsimc_mass-5.4)<0.5",
-    #     "final_state" : "bkmm",
-    #     # "best_candidate": "bkmm_jpsimc_pt",
-    #     "best_candidate": "",
-    #   }  
+    job = {
+        "input": [
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/518/Charmonium+Run2018D-12Nov2019_UL2018-v1+MINIAOD/BD514049-659A-F74F-A799-D485A4531390.root",
+        ],
+        "signal_only" : False,
+        "tree_name" : "bupsikData",
+        "blind" : False,
+        "cut" :
+        "mm_mu1_index[bkmm_mm_index]>=0 and "\
+        "mm_mu2_index[bkmm_mm_index]>=0 and "\
+        "Muon_charge[mm_mu1_index[bkmm_mm_index]] * Muon_charge[mm_mu2_index[bkmm_mm_index]] < 0 and "\
+        "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 and "\
+        "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 and "\
+        "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 and "\
+        "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 and "\
+        "mm_kin_pt[bkmm_mm_index]>7.0 and "\
+        "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "\
+        "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and "\
+        "bkmm_jpsimc_vtx_prob>0.025 and "\
+        "mm_kin_sl3d[bkmm_mm_index]>4 and "\
+        "abs(bkmm_jpsimc_mass-5.4)<0.5",
+        "final_state" : "bkmm",
+        'triggers': ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        # "best_candidate": "bkmm_jpsimc_pt",
+        "best_candidate": "",
+      }  
 
     # job = {
     #     "input": [
