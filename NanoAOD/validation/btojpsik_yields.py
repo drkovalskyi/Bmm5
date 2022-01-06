@@ -23,12 +23,11 @@ from ROOT import RooRealVar
 # Set the TDR style
 tdrstyle.setTDRStyle()
 
-version = 517
+version = 518
 
-# output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_binned/" % version;
 output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/Bmm/AN/bjpsik-yields/";
 
-recompute_results = False
+recompute_results = True
 result_file = output_path + "/results.json"
 results = dict()
 if os.path.exists(result_file):
@@ -194,8 +193,8 @@ def make_dataset(input_tree, name, mass_var, other_vars, cuts="", weight=""):
     else:
         data = ROOT.RooDataSet(name, "", var_set, ROOT.RooFit.Import(tree), ROOT.RooFit.WeightVar(weight))
         
-    if cuts != "":
-        data = data.reduce(cuts)
+    # if cuts != "":
+    #    data = data.reduce(cuts)
 
     # data.Print("V")
     print "Input tree has ", tree.GetEntries(), "entries. The derived dataset has ", data.sumEntries()
@@ -260,7 +259,7 @@ for dataset, info in datasets.items():
         continue
     
     results[name] = dict()
-    selection = "%s>0 && m1q != m2q && m1bdt>0.45 && m2bdt>0.45 && m>%s && m<%s" % (info['trigger'], min_mass, max_mass)
+    selection = "%s>0 && m1q != m2q && (run == 1 || certified_muon) && m1bdt>0.45 && m2bdt>0.45 && m>%s && m<%s" % (info['trigger'], min_mass, max_mass)
     
     print "Processing", name
 
@@ -354,6 +353,8 @@ for dataset, info in datasets.items():
         model.plotOn(frame, ROOT.RooFit.Components(bkgs),  ROOT.RooFit.LineColor(ROOT.kRed))
         model.plotOn(frame, ROOT.RooFit.Components("bkg"), ROOT.RooFit.LineStyle(ROOT.kDashed))
         model.plotOn(frame)
+        print "chiSquare: ", frame.chiSquare(6)
+        print "chiSquare: ", frame.chiSquare("model","data", 6)
 
         model.paramOn(frame, ROOT.RooFit.Layout(0.7, 0.95, 0.92))
         frame.getAttText().SetTextSize(0.02)
