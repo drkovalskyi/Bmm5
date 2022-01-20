@@ -32,12 +32,14 @@ import numpy
 # - flat - use flat ntuples made for the study
 # - nano - use NanoAOD
 
-mode = "flat"
-recompute_results = True
+# mode = "flat"
+mode = "nano"
+recompute_results = False
 
-path_skim = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/NanoAOD-skims/516/mm/"
-path_flat = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing-NEW/FlatNtuples/518/trig-info/"
-path_nano = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/518/"
+path_skim1 = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/NanoAOD-skims/516/mm/"
+path_skim2 = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing-NEW/NanoAOD-skims/518/trig/"
+path_flat  = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing-NEW/FlatNtuples/518/trig-info/"
+path_nano  = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/518/"
 
 split_channels = True
 # split_channels = False
@@ -47,9 +49,11 @@ nbins = 60
 if mode == "flat":
 	path1 = path_flat
 	path2 = path_flat
+	path3 = path_flat
 else:
 	path1 = path_nano
-	path2 = path_skim
+	path2 = path_skim1
+	path3 = path_skim2
 
 results = dict()
 if not os.path.exists('results'):
@@ -136,10 +140,31 @@ samples = {
         path1 + "/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL16MiniAOD-106X_mcRun2_asymptotic_v13-v1+MINIAODSIM/*.root",
 	],
 	'Charmonium - 2018':[
-		path2 + "/Charmonium+Run2018A-12Nov2019_UL2018_rsb-v1+MINIAOD/*.root",
-		path2 + "/Charmonium+Run2018B-12Nov2019_UL2018-v1+MINIAOD/*.root",
-		path2 + "/Charmonium+Run2018C-12Nov2019_UL2018_rsb_v3-v1+MINIAOD/*.root",
-		path2 + "/Charmonium+Run2018D-12Nov2019_UL2018-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2018A-12Nov2019_UL2018_rsb-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2018B-12Nov2019_UL2018-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2018C-12Nov2019_UL2018_rsb_v3-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2018D-12Nov2019_UL2018-v1+MINIAOD/*.root",
+	],
+	'Charmonium - 2017':[
+		path3 + "/Charmonium+Run2017B-09Aug2019_UL2017-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2017C-09Aug2019_UL2017-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2017D-09Aug2019_UL2017-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2017E-09Aug2019_UL2017-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2017F-09Aug2019_UL2017-v1+MINIAOD/*.root",
+	],
+	'Charmonium - 2016BF':[
+		path3 + "/Charmonium+Run2016B-21Feb2020_ver2_UL2016_HIPM-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2016C-21Feb2020_UL2016_HIPM-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2016D-21Feb2020_UL2016_HIPM-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2016E-21Feb2020_UL2016_HIPM-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2016F-21Feb2020_UL2016_HIPM-v1+MINIAOD/*.root",
+	],
+	'Charmonium - 2016GH':[
+		path3 + "/Charmonium+Run2016G-21Feb2020_UL2016-v1+MINIAOD/*.root",
+		path3 + "/Charmonium+Run2016H-21Feb2020_UL2016-v1+MINIAOD/*.root",
+	],
+	'DoubleMuon - 2016H':[
+		path3 + "/DoubleMuon+Run2016H-21Feb2020_UL2016-v1+MINIAOD/*.root",
 	],
 	
 		
@@ -162,7 +187,7 @@ if mode == "nano":
 		'abs(mm_kin_mass-3.1)<0.1'
 
 	cuts['HLT_DoubleMu4_3_Jpsi_Displaced'] = cuts['HLT_DoubleMu4_3_Jpsi'] + ' &&' + \
-		'mm_kin_slxy > 4.0',
+		'mm_kin_slxy > 4.0'
 else:
 	cuts['HLT_DoubleMu4_3_Bs'] = "good_for_HLT_DoubleMu4_3_Bs"
 	cuts['HLT_DoubleMu4_3_Jpsi'] = "good_for_HLT_DoubleMu4_3_Jpsi"
@@ -218,7 +243,8 @@ studies = {
 	# 'HLT_DoubleMu4_3_Jpsi - 2018 MC':{
 	# 	'samples':'BuToJpsiK - 2018',
 	# 	'trigger':'HLT_DoubleMu4_3_Jpsi',
-	# 	'cut':cuts['HLT_DoubleMu4_3_Jpsi'],
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2018-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2018-SM-charm_Bs'],
+	# 	'cut':cuts['HLT_DoubleMu4_3_Jpsi'] + "&& L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
 	# },
 	
 	# 'HLT_DoubleMu4_3_Jpsi - 2018':{
@@ -247,17 +273,20 @@ studies = {
 	# 'HLT_DoubleMu4_3_Jpsi_Displaced - 2017 MC':{
 	# 	'samples':'BuToJpsiK - 2017',
 	# 	'trigger':'HLT_DoubleMu4_3_Jpsi_Displaced',
-	# 	'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2017-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2017-SM-charm_Bs'],
+	# 	'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'] + "&& L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
 	# },
 	# 'HLT_DoubleMu4_3_Jpsi_Displaced - 2016BF MC':{
 	# 	'samples':'BuToJpsiK - 2016BF',
 	# 	'trigger':'HLT_DoubleMu4_3_Jpsi_Displaced',
-	# 	'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2016BF-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2016BF-SM-charm_Bs'],
+	# 	'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'] + "&& L1_DoubleMu0er1p6_dEta_Max1p8_OS && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
 	# },
 	# 'HLT_DoubleMu4_3_Jpsi_Displaced - 2016GH MC':{
 	# 	'samples':'BuToJpsiK - 2016GH',
 	# 	'trigger':'HLT_DoubleMu4_3_Jpsi_Displaced',
-	# 	'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2016GH-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2016GH-SM-charm_Bs'],
+	# 	'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'] + "&& L1_DoubleMu0er1p6_dEta_Max1p8_OS && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
 	# },
 
 	# ======= HLT_DoubleMu4_Jpsi_NoVertexing ==========
@@ -292,18 +321,112 @@ studies = {
 	# 	'cut':'HLT_DoubleMu4_Jpsi_NoVertexing && ' + cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
 	# },
 
-	# 'HLT_Dimuon0_LowMass_L1_0er1p5 - Jpsi - 2018':{
-	# 	'samples':'Charmonium - 2018',
-	# 	'trigger':'HLT_DoubleMu4_3_Jpsi',
-	# 	'cut':'HLT_Dimuon0_LowMass_L1_0er1p5 && ' + cuts['HLT_DoubleMu4_3_Jpsi'],
-	# },
+	'HLT_DoubleMu4_3_Jpsi wrt HLT_Dimuon0_LowMass_L1_0er1p5 trig eff for Jpsi - 2018':{
+		'samples':'Charmonium - 2018',
+		'trigger':'HLT_DoubleMu4_3_Jpsi',
+		'cut':'HLT_Dimuon0_LowMass_L1_0er1p5 && L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 &&' + cuts['HLT_DoubleMu4_3_Jpsi'],
+	},
 	
-	# 'HLT_Dimuon0_LowMass_L1_0er1p5 trig eff for Jpsi - 2018 MC 2':{
-	# 	'samples':'BuToJpsiK - 2018',
-	# 	'trigger':'HLT_Dimuon0_LowMass_L1_0er1p5',
-	# 	'cut':cuts['HLT_DoubleMu4_3_Jpsi_Match'],
-	# },
+	'HLT_DoubleMu4_3_Jpsi wrt HLT_Dimuon0_LowMass_L1_0er1p5 trig eff for Jpsi - 2018 MC':{
+		'samples':'BuToJpsiK - 2018',
+		'trigger':'HLT_DoubleMu4_3_Jpsi',
+		'cut':'HLT_Dimuon0_LowMass_L1_0er1p5 && L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 &&' + cuts['HLT_DoubleMu4_3_Jpsi'],
+	},
 
+	'HLT_DoubleMu4_3_Jpsi wrt HLT_Dimuon0_LowMass_L1_0er1p5 displaced trig eff for Jpsi - 2018':{
+		'samples':'Charmonium - 2018',
+		'trigger':'HLT_DoubleMu4_3_Jpsi',
+		'cut':'HLT_Dimuon0_LowMass_L1_0er1p5 && L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 &&' + cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	
+	'HLT_DoubleMu4_3_Jpsi wrt HLT_Dimuon0_LowMass_L1_0er1p5 displaced trig eff for Jpsi - 2018 MC':{
+		'samples':'BuToJpsiK - 2018',
+		'trigger':'HLT_DoubleMu4_3_Jpsi',
+		'cut':'HLT_Dimuon0_LowMass_L1_0er1p5 && L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 &&' + cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+
+	
+	'HLT_DoubleMu4_3_Bs wrt HLT_Dimuon0_LowMass_L1_0er1p5 trig eff for Bs - 2018':{
+		'samples':'Charmonium - 2018',
+		'trigger':'HLT_DoubleMu4_3_Bs',
+		'cut':'HLT_Dimuon0_LowMass_L1_0er1p5 && L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 &&' + cuts['HLT_DoubleMu4_3_Bs'],
+	},
+	
+	'HLT_DoubleMu4_3_Bs wrt HLT_Dimuon0_LowMass_L1_0er1p5 trig eff for Bs - 2018 MC':{
+		'samples':'BsToMuMu - 2018',
+		'trigger':'HLT_DoubleMu4_3_Bs',
+		'cut':'HLT_Dimuon0_LowMass_L1_0er1p5 && L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 &&' + cuts['HLT_DoubleMu4_3_Bs'],
+	},
+
+	'HLT_DoubleMu4_3_Jpsi_Displaced wrt HLT_Dimuon0_LowMass_L1_0er1p5 trig eff for Jpsi - 2017':{
+		'samples':'Charmonium - 2017',
+		'trigger':'HLT_DoubleMu4_3_Jpsi_Displaced',
+		'cut':'HLT_Dimuon0_LowMass_L1_0er1p5 && L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 &&' + cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	
+	'HLT_DoubleMu4_3_Jpsi_Displaced wrt HLT_Dimuon0_LowMass_L1_0er1p5 trig eff for Jpsi - 2017 MC':{
+		'samples':'BuToJpsiK - 2017',
+		'trigger':'HLT_DoubleMu4_3_Jpsi_Displaced',
+		'cut':'HLT_Dimuon0_LowMass_L1_0er1p5 && L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 &&' + cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	
+	'HLT_DoubleMu4_3_Bs wrt HLT_Dimuon0_LowMass_L1_0er1p5 trig eff for Bs - 2017':{
+		'samples':'Charmonium - 2017',
+		'trigger':'HLT_DoubleMu4_3_Bs',
+		'cut':'HLT_Dimuon0_LowMass_L1_0er1p5 && L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 &&' + cuts['HLT_DoubleMu4_3_Bs'],
+	},
+	
+	'HLT_DoubleMu4_3_Bs wrt HLT_Dimuon0_LowMass_L1_0er1p5 trig eff for Bs - 2017 MC':{
+		'samples':'BsToMuMu - 2017',
+		'trigger':'HLT_DoubleMu4_3_Bs',
+		'cut':'HLT_Dimuon0_LowMass_L1_0er1p5 && L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 &&' + cuts['HLT_DoubleMu4_3_Bs'],
+	},
+
+	'HLT_DoubleMu4_3_Jpsi_Displaced wrt HLT_Dimuon0er16_Jpsi_NoOS_NoVertexing trig eff for Jpsi - 2016BF':{
+		'samples':'Charmonium - 2016BF',
+		'trigger':'HLT_DoubleMu4_3_Jpsi_Displaced',
+		'cut':'HLT_Dimuon0er16_Jpsi_NoOS_NoVertexing && L1_DoubleMu0er1p6_dEta_Max1p8 &&' + cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	
+	'HLT_DoubleMu4_3_Jpsi_Displaced wrt HLT_Dimuon0er16_Jpsi_NoOS_NoVertexing trig eff for Jpsi - 2016BF MC':{
+		'samples':'BuToJpsiK - 2016BF',
+		'trigger':'HLT_DoubleMu4_3_Jpsi_Displaced',
+		'cut':'HLT_Dimuon0er16_Jpsi_NoOS_NoVertexing && L1_DoubleMu0er1p6_dEta_Max1p8 &&' + cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	'HLT_DoubleMu4_3_Jpsi_Displaced wrt HLT_Dimuon0er16_Jpsi_NoOS_NoVertexing trig eff for Jpsi - 2016GH':{
+		'samples':'Charmonium - 2016GH',
+		'trigger':'HLT_DoubleMu4_3_Jpsi_Displaced',
+		'cut':'HLT_Dimuon0er16_Jpsi_NoOS_NoVertexing && L1_DoubleMu0er1p6_dEta_Max1p8 &&' + cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	
+	'HLT_DoubleMu4_3_Jpsi_Displaced wrt HLT_Dimuon0er16_Jpsi_NoOS_NoVertexing trig eff for Jpsi - 2016GH MC':{
+		'samples':'BuToJpsiK - 2016GH',
+		'trigger':'HLT_DoubleMu4_3_Jpsi_Displaced',
+		'cut':'HLT_Dimuon0er16_Jpsi_NoOS_NoVertexing && L1_DoubleMu0er1p6_dEta_Max1p8 &&' + cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	'HLT_DoubleMu4_3_Jpsi_Displaced wrt HLT_DoubleMu0 trig eff for Jpsi - 2016H':{
+		'samples':'DoubleMuon - 2016H',
+		'trigger':'HLT_DoubleMu4_3_Jpsi_Displaced',
+		'cut':' HLT_DoubleMu0 && L1_DoubleMu0er1p6_dEta_Max1p8 &&' + cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	
+	'HLT_DoubleMu4_3_Jpsi_Displaced wrt HLT_DoubleMu0 trig eff for Jpsi - 2016H MC':{
+		'samples':'BuToJpsiK - 2016GH',
+		'trigger':'HLT_DoubleMu4_3_Jpsi_Displaced',
+		'cut':'HLT_DoubleMu0 && L1_DoubleMu0er1p6_dEta_Max1p8 &&' + cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	'HLT_DoubleMu4_3_Bs wrt HLT_DoubleMu0 trig eff for Bs - 2016H':{
+		'samples':'DoubleMuon - 2016H',
+		'trigger':'HLT_DoubleMu4_3_Bs',
+		'cut':' HLT_DoubleMu0 && L1_DoubleMu0er1p6_dEta_Max1p8 &&' + cuts['HLT_DoubleMu4_3_Bs'],
+	},
+	
+	'HLT_DoubleMu4_3_Bs wrt HLT_DoubleMu0 trig eff for Bs - 2016H MC':{
+		'samples':'BsToMuMu - 2016GH',
+		'trigger':'HLT_DoubleMu4_3_Bs',
+		'cut':'HLT_DoubleMu0 && L1_DoubleMu0er1p6_dEta_Max1p8 &&' + cuts['HLT_DoubleMu4_3_Bs'],
+	},
+	
 	# 'HLT_Dimuon0_LowMass_L1_0er1p5 trig eff for Bs - 2018 MC':{
 	# 	'samples':'BsToMuMu - 2018',
 	# 	'trigger':'HLT_Dimuon0_LowMass_L1_0er1p5',
@@ -316,12 +439,95 @@ studies = {
 	# 	'cut':cuts['HLT_DoubleMu4_3_Jpsi_Match'],
 	# },
 
-	# 'L1_DoubleMu0er1p5_SQ trig eff for Bs - 2018 MC':{
-	# 	'samples':'BsToMuMu - 2018',
-	# 	'trigger':'L1_DoubleMu0er1p5_SQ',
-	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'],
-	# },
+	'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4 trig eff for Bs - 2018 MC':{
+		'samples':'BsToMuMu - 2018',
+		'trigger':'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4',
+		'cut':cuts['HLT_DoubleMu4_3_Bs'],
+	},
+	'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4 trig eff for Bs - 2018':{
+		'samples':'Data - 2018',
+		'trigger':'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4',
+		'cut':cuts['HLT_DoubleMu4_3_Bs'],
+	},
 
+	'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4 trig eff for Jpsi - 2018 MC':{
+		'samples':'BuToJpsiK - 2018',
+		'trigger':'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4',
+		'cut':cuts['HLT_DoubleMu4_3_Jpsi'],
+	},
+	'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4 trig eff for Jpsi - 2018':{
+		'samples':'Data - 2018',
+		'trigger':'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4',
+		'cut':cuts['HLT_DoubleMu4_3_Jpsi'],
+	},
+
+	'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4 trig eff for Bs - 2017 MC':{
+		'samples':'BsToMuMu - 2017',
+		'trigger':'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4',
+		'cut':cuts['HLT_DoubleMu4_3_Bs'],
+	},
+	'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4 trig eff for Bs - 2017':{
+		'samples':'Data - 2017',
+		'trigger':'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4',
+		'cut':cuts['HLT_DoubleMu4_3_Bs'],
+	},
+
+	'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4 trig eff for Jpsi - 2017 MC':{
+		'samples':'BuToJpsiK - 2017',
+		'trigger':'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4',
+		'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4 trig eff for Jpsi - 2017':{
+		'samples':'Data - 2017',
+		'trigger':'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4',
+		'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+
+
+	'L1_DoubleMu0er1p6_dEta_Max1p8_OS trig eff for Bs - 2016BF MC':{
+		'samples':'BsToMuMu - 2016BF',
+		'trigger':'L1_DoubleMu0er1p6_dEta_Max1p8_OS',
+		'cut':cuts['HLT_DoubleMu4_3_Bs'],
+	},
+	'L1_DoubleMu0er1p6_dEta_Max1p8_OS trig eff for Bs - 2016BF':{
+		'samples':'Data - 2016BF',
+		'trigger':'L1_DoubleMu0er1p6_dEta_Max1p8_OS',
+		'cut':cuts['HLT_DoubleMu4_3_Bs'],
+	},
+
+	'L1_DoubleMu0er1p6_dEta_Max1p8_OS trig eff for Jpsi - 2016BF MC':{
+		'samples':'BuToJpsiK - 2016BF',
+		'trigger':'L1_DoubleMu0er1p6_dEta_Max1p8_OS',
+		'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	'L1_DoubleMu0er1p6_dEta_Max1p8_OS trig eff for Jpsi - 2016BF':{
+		'samples':'Data - 2016BF',
+		'trigger':'L1_DoubleMu0er1p6_dEta_Max1p8_OS',
+		'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+
+	'L1_DoubleMu0er1p6_dEta_Max1p8_OS trig eff for Bs - 2016GH MC':{
+		'samples':'BsToMuMu - 2016GH',
+		'trigger':'L1_DoubleMu0er1p6_dEta_Max1p8_OS',
+		'cut':cuts['HLT_DoubleMu4_3_Bs'],
+	},
+	'L1_DoubleMu0er1p6_dEta_Max1p8_OS trig eff for Bs - 2016GH':{
+		'samples':'Data - 2016GH',
+		'trigger':'L1_DoubleMu0er1p6_dEta_Max1p8_OS',
+		'cut':cuts['HLT_DoubleMu4_3_Bs'],
+	},
+
+	'L1_DoubleMu0er1p6_dEta_Max1p8_OS trig eff for Jpsi - 2016GH MC':{
+		'samples':'BuToJpsiK - 2016GH',
+		'trigger':'L1_DoubleMu0er1p6_dEta_Max1p8_OS',
+		'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	'L1_DoubleMu0er1p6_dEta_Max1p8_OS trig eff for Jpsi - 2016GH':{
+		'samples':'Data - 2016GH',
+		'trigger':'L1_DoubleMu0er1p6_dEta_Max1p8_OS',
+		'cut':cuts['HLT_DoubleMu4_3_Jpsi_Displaced'],
+	},
+	
 
 	# 'L1_DoubleMu0er1p5_SQ_OS trig eff for Jpsi - 2018 MC 2':{
 	# 	'samples':'BuToJpsiK - 2018',
@@ -329,61 +535,63 @@ studies = {
 	# 	'cut':cuts['HLT_DoubleMu4_3_Jpsi_Match'],
 	# },
 
-	# 'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2018 MC':{
-	# 	'samples':'BsToMuMu - 2018',
-	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2018', 'trigger_object_efficiency_Run2018'],
-	# 	'trigger':'HLT_DoubleMu4_3_Bs',
-	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4",
-	# },
-
-	'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2018':{
-		'samples':'Data - 2018',
-		'trigger':'HLT_DoubleMu4_3_Bs',
-		'efficiency': ['trigger_object_efficiency_Bsmm-2017-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2017-SM-charm_Bs'],
-		'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
-	},
-
-	'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2017':{
-		'samples':'Data - 2017',
-		'trigger':'HLT_DoubleMu4_3_Bs',
-		'efficiency': ['trigger_object_efficiency_Bsmm-2017-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2017-SM-charm_Bs'],
-		'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
-	},
-	
-	# 'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2017 MC':{
-	# 	'samples':'BsToMuMu - 2017',
-	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2017', 'trigger_object_efficiency_Run2017'],
-	# 	'trigger':'HLT_DoubleMu4_3_Bs',
-	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0",
-	# },
-	
-	'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2016BF':{
-		'samples':'Data - 2016BF',
-		'trigger':'HLT_DoubleMu4_3_Bs',
-		'efficiency': ['trigger_object_efficiency_Bsmm-2016BF-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2016BF-SM-charm_Bs'],
-		'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p6_dEta_Max1p8_OS && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
-	},
-	
 	# 'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2016BF MC':{
 	# 	'samples':'BsToMuMu - 2016BF',
-	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2016BF', 'trigger_object_efficiency_Run2016BF'],
 	# 	'trigger':'HLT_DoubleMu4_3_Bs',
-	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p6_dEta_Max1p8_OS",
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2016BF-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2016BF-SM-charm_Bs'],
+	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p6_dEta_Max1p8_OS && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
 	# },
-
-	'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2016GH':{
-		'samples':'Data - 2016GH',
-		'trigger':'HLT_DoubleMu4_3_Bs',
-		'efficiency': ['trigger_object_efficiency_Bsmm-2016GH-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2016GH-SM-charm_Bs'],
-		'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p6_dEta_Max1p8_OS && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
-	},
 	
 	# 'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2016GH MC':{
 	# 	'samples':'BsToMuMu - 2016GH',
-	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2016GH', 'trigger_object_efficiency_Run2016GH'],
 	# 	'trigger':'HLT_DoubleMu4_3_Bs',
-	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p6_dEta_Max1p8_OS",
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2016GH-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2016GH-SM-charm_Bs'],
+	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p6_dEta_Max1p8_OS && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
 	# },
+	
+	# 'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2017 MC':{
+	# 	'samples':'BsToMuMu - 2017',
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2017-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2017-SM-charm_Bs'],
+	# 	'trigger':'HLT_DoubleMu4_3_Bs',
+	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
+	# },
+	
+	# 'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2018 MC':{
+	# 	'samples':'BsToMuMu - 2018',
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2018-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2018-SM-charm_Bs'],
+	# 	'trigger':'HLT_DoubleMu4_3_Bs',
+	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
+	# },
+
+	
+	# 'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2018':{
+	# 	'samples':'Data - 2018',
+	# 	'trigger':'HLT_DoubleMu4_3_Bs',
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2018-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2018-SM-charm_Bs'],
+	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
+	# },
+
+	# 'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2017':{
+	# 	'samples':'Data - 2017',
+	# 	'trigger':'HLT_DoubleMu4_3_Bs',
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2017-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2017-SM-charm_Bs'],
+	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4 && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
+	# },
+	
+	# 'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2016GH':{
+	# 	'samples':'Data - 2016GH',
+	# 	'trigger':'HLT_DoubleMu4_3_Bs',
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2016GH-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2016GH-SM-charm_Bs'],
+	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p6_dEta_Max1p8_OS && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
+	# },
+	
+	# 'HLT_DoubleMu4_3_Bs trig eff wrt L1 - 2016BF':{
+	# 	'samples':'Data - 2016BF',
+	# 	'trigger':'HLT_DoubleMu4_3_Bs',
+	# 	'efficiency': ['trigger_object_efficiency_Bsmm-2016BF-MC-charm_SM_Bs', 'trigger_object_efficiency_Run2016BF-SM-charm_Bs'],
+	# 	'cut':cuts['HLT_DoubleMu4_3_Bs'] + "&& L1_DoubleMu0er1p6_dEta_Max1p8_OS && nl1==2 && m1_l1_pt>0 && m2_l1_pt>0 && m1pt<20 && m2pt<20",
+	# },
+	
 	
 	# 'HLT_Dimuon0_LowMass_L1_0er1p5 - Bs - 2018':{
 	# 	'samples':'Charmonium - 2018',
@@ -585,6 +793,7 @@ for name, info in sorted(studies.items()):
 
 		if study_name in results and not recompute_results:
 			print "Results are already available. Skip the study"
+			print "%s efficiency: %0.2f \pm %0.2f %%" % (trigger, 100. * results[study_name]['eff'], 100. * results[study_name]['eff_err'])
 			continue
 
 		if chain == None:
@@ -593,7 +802,7 @@ for name, info in sorted(studies.items()):
 		prescale = ""
 		if hasattr(chain, 'prescale_%s' % trigger):
 			prescale = "*prescale_%s" % trigger
-				
+
 		if mode == "nano":
 			f = ROOT.TFile.Open('results/' + file_name + ".root", "recreate")
 			h_off = ROOT.TH1F("h_off","h_off", nbins, 0, nbins)
@@ -626,39 +835,49 @@ for name, info in sorted(studies.items()):
 
 			chain.Draw("pt>>h_off_trig3", "(%s)%s" % (cut + "&& m1_hlt_pt>0 && m2_hlt_pt>0 &&" + trigger, prescale))
 
+		if h_off_trig.Integral(0,nbins + 1) > 2 * h_off_trig.GetEntries():
+			# prescaled case - use standard error estimation
 			
-		err_off = ROOT.Double(0)
-		n_off = h_off.IntegralAndError(0, nbins + 1, err_off)
+			err_off = ROOT.Double(0)
+			n_off = h_off.IntegralAndError(0, nbins + 1, err_off)
 
-		err_off_trig = ROOT.Double(0)
-		n_off_trig = h_off_trig.IntegralAndError(0, nbins + 1, err_off_trig)
+			err_off_trig = ROOT.Double(0)
+			n_off_trig = h_off_trig.IntegralAndError(0, nbins + 1, err_off_trig)
 
-		err_off_trig2 = ROOT.Double(0)
-		n_off_trig2 = h_off_trig2.IntegralAndError(0, nbins + 1, err_off_trig2)
+			eff = float(n_off_trig) / n_off
+			eff_err = eff * sqrt((err_off/n_off)**2 + (err_off_trig/n_off_trig)**2)
+		else:
+			# unprescaled case - use binomial error estimation
 
-		err_off_trig3 = ROOT.Double(0)
-		n_off_trig3 = h_off_trig3.IntegralAndError(0, nbins + 1, err_off_trig3)
+			n_off = h_off.Integral(0, nbins + 1)
+			n_off_trig = h_off_trig.Integral(0, nbins + 1)
 
-		eff = float(n_off_trig) / n_off
-		eff_err = eff * sqrt((err_off/n_off)**2 + (err_off_trig/n_off_trig)**2)
-		print "%s efficiency: %0.1f +/- %0.1f %%" % (trigger,
-													 100. * eff,
-													 100. * eff_err)
+			eff = float(n_off_trig) / n_off
+			eff_err = sqrt(eff * (1 - eff) / n_off)
+			
+		print "%s efficiency: %0.2f \pm %0.2f %%" % (trigger, 100. * eff, 100. * eff_err)
 
-		eff2 = float(n_off_trig2) / n_off
-		eff_err2 = eff2 * sqrt((err_off/n_off)**2 + (err_off_trig2/n_off_trig)**2)
-		print "%s efficiency: %0.1f +/- %0.1f %%" % ("m1_hlt_pt>0 && m2_hlt_pt>0",
-													 100. * eff2,
-													 100. * eff_err2)
+		# err_off_trig2 = ROOT.Double(0)
+		# n_off_trig2 = h_off_trig2.IntegralAndError(0, nbins + 1, err_off_trig2)
 
-		eff3 = float(n_off_trig3) / n_off
-		eff_err3 = eff3 * sqrt((err_off/n_off)**2 + (err_off_trig3/n_off_trig)**2)
-		print "%s efficiency: %0.1f +/- %0.1f %%" % ("m1_hlt_pt>0 && m2_hlt_pt>0 && " + trigger,
-													 100. * eff3,
-													 100. * eff_err3)
-		
-		for to_eff in info['efficiency']:
-		 	apply_trigger_object_efficiency(chain, cut, to_eff)
+		# err_off_trig3 = ROOT.Double(0)
+		# n_off_trig3 = h_off_trig3.IntegralAndError(0, nbins + 1, err_off_trig3)
+
+		# eff2 = float(n_off_trig2) / n_off
+		# eff_err2 = eff2 * sqrt((err_off/n_off)**2 + (err_off_trig2/n_off_trig)**2)
+		# print "%s efficiency: %0.1f +/- %0.1f %%" % ("m1_hlt_pt>0 && m2_hlt_pt>0",
+		# 											 100. * eff2,
+		# 											 100. * eff_err2)
+
+		# eff3 = float(n_off_trig3) / n_off
+		# eff_err3 = eff3 * sqrt((err_off/n_off)**2 + (err_off_trig3/n_off_trig)**2)
+		# print "%s efficiency: %0.1f +/- %0.1f %%" % ("m1_hlt_pt>0 && m2_hlt_pt>0 && " + trigger,
+		# 											 100. * eff3,
+		# 											 100. * eff_err3)
+
+		if 'efficiency' in info:
+			for to_eff in info['efficiency']:
+				apply_trigger_object_efficiency(chain, cut, to_eff)
 
 		results[study_name] = {
 			'eff':eff,
