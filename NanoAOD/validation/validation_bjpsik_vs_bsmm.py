@@ -3,7 +3,7 @@ import os, re, ROOT, sys, time, subprocess
 from ROOT import TFile,TTree,TH1,TROOT,TDirectory,TPad,TCanvas,TColor
 from array import array
 
-output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-516/mc_bjpsik_vs_bsmm"
+output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-516/mc_bjpsik_vs_bsmm-newmva"
 quick_check = False # quick check uses only the first file for each sample
 
 mm_cuts = [
@@ -69,11 +69,11 @@ for i,f in enumerate(subprocess.check_output("find %s/ -type f -name '*.root'" %
     if i >= n_max: break
     if f: samples['BsToMuMu']['files'].append(f)
     
-bjpsik_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/516/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/"
-for i,f in enumerate(subprocess.check_output("find %s/ -type f -name '*.root'" % (bjpsik_path), shell=True).split("\n")):
-    if i >= n_max: break
-    if f: samples['BuToJpsiK']['files'].append(f)
-
+# bjpsik_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/516/BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/"
+# for i,f in enumerate(subprocess.check_output("find %s/ -type f -name '*.root'" % (bjpsik_path), shell=True).split("\n")):
+#     if i >= n_max: break
+#     if f: samples['BuToJpsiK']['files'].append(f)
+samples['BuToJpsiK']['files'].append('/eos/cms/store/group/phys_muon/dmytro/tmp/RunIISummer20UL18MiniAOD_BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen-test-MVA-emulation.root')
 
 # read list of files from a file instead
 
@@ -221,8 +221,8 @@ selections = {
 # * bkmm_jpsimc_vtx_chi2dof
 # * bkmm_jpsimc_sl3d
 
-# plot_generic_1D(selections, "#mu#mu;P_{T}, [GeV]", "01_mm_pt",
-#                 {'bmm':'mm_kin_pt', 'bjpsik':'mm_kin_pt[bkmm_mm_index]'}, 100, 0, 100)
+plot_generic_1D(selections, "#mu#mu;P_{T}, [GeV]", "01_mm_pt",
+                {'bmm':'mm_kin_pt', 'bjpsik':'mm_kin_pt[bkmm_mm_index]'}, 100, 0, 100)
 
 plot_generic_1D(selections, "#mu#mu vertex displacement significance;#sigma", "02_mm_sl3d",
                 {'bmm':'mm_kin_sl3d', 'bjpsik':'mm_kin_sl3d[bkmm_mm_index]'}, 100, 0, 100)
@@ -278,6 +278,6 @@ plot_generic_1D(selections,"MVA Matched", "09_mva_matched_zoomed",
 plot_generic_1D(selections,"MVA Raw", "09_mva_raw",
                 {'bmm':'mm_mva', 'bjpsik':'mm_mva[bkmm_mm_index]'}, 110, 0, 1.1)
 
-# plot_integral_1D(selections,"MVA Matched Efficiency", "09_mva_matched_eff",
-#                 {'bmm':'mm_mva', 'bjpsik':'bkmm_bmm_mva'}, 110, 0, 1.1)
+plot_integral_1D(selections,"MVA Matched Efficiency", "09_mva_matched_eff",
+                {'bmm':'mm_mva', 'bjpsik':'bkmm_bmm_mva'}, 110, 0, 1.1)
 
