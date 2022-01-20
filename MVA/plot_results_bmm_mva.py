@@ -143,6 +143,10 @@ files_2016 = [
     data_path + "Charmonium+Run2016D-21Feb2020_UL2016_HIPM-v1+MINIAOD/",
     data_path + "Charmonium+Run2016E-21Feb2020_UL2016_HIPM-v1+MINIAOD/",
     data_path + "Charmonium+Run2016F-21Feb2020_UL2016_HIPM-v1+MINIAOD/",
+    data_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL16MiniAOD-106X_mcRun2_asymptotic_v13-v1+MINIAODSIM/",
+    data_path + "Charmonium+Run2016F-21Feb2020_UL2016-v1+MINIAOD/",
+    data_path + "Charmonium+Run2016G-21Feb2020_UL2016-v1+MINIAOD/",
+    data_path + "Charmonium+Run2016H-21Feb2020_UL2016-v1+MINIAOD/",
 ]
 
 setup()
@@ -158,8 +162,8 @@ setup()
 # add_old_soft_mva_roc_curve_without_preselection(model)
 # add_standard_selectors(model)
 
-model = load_model(files_2017 + files_2018, "results/bmm_mva/Run2017-2018-20210907-1241", 3, 0)
-add_roc_curve(model, "Run2017-2018-20210907-1241")
+model = load_model(files_2016, "results/bmm_mva/Run2016-20210907-1416", 3, 0)
+add_roc_curve(model, "Run2016-20210907-1416")
 
 feature_map = {'mm_kin_alphaXY':
                {
@@ -167,9 +171,9 @@ feature_map = {'mm_kin_alphaXY':
                    'func':np.cos
                }
                }
-model = load_model(files_2017 + files_2018, "../NanoAOD/data/Run2017-2018-20200515-1144", 3, 0, feature_map)
+model = load_model(files_2016, "../NanoAOD/data/Run2017-2018-20200515-1144", 3, 0, feature_map)
 add_roc_curve(model, "Run2017-2018-20200515-1144")
-save_result(model, "performance_bmm_mva_bkg_vs_sig_2017-2018")
+save_result(model, "performance_bmm_mva_bkg_vs_sig_2016")
 
 # model = load_model(files, "results/muon_mva/Run2017-20210422-1123", 3, 0)
 # add_roc_curve(model, "Run2017-20210422-1123")
