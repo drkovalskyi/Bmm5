@@ -3,6 +3,9 @@
 The script extracts MC efficiency as a function of nPV. It can also
 compute weighted efficiency for any nPV distribution.
 
+The script is fairly slow (~3h), so you may want to use a subset of
+data for quicker checks.
+
 """
 
 import sys, os, subprocess, re, json
