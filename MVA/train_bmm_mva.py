@@ -56,16 +56,22 @@ class BmmMVA(ModelHandler):
         # parameters['max_depth'] = 3
         # parameters['eta'] = 1
 
-        ## Best
-        parameters['min_child_weight'] = 0.00001
-        parameters['max_depth'] = 10
+        ## Best 2017-2018
+        # parameters['min_child_weight'] = 0.00001
+        # parameters['max_depth'] = 10
+        # parameters['eta'] = 0.01
+
+        ## Best 2016
+        parameters['min_child_weight'] = 0.01
+        parameters['max_depth'] = 5
         parameters['eta'] = 0.01
+
         # parameters['nthread'] = 30 
 
         parameters['tree_method'] = 'hist' 
         return parameters
 
-def train_model(files, name):
+def train_model(files, name, target_s_over_b=None):
     
     model = BmmMVA("results/bmm_mva", feature_names, "mva", "evt_event")
     model.load_datasets(files)
@@ -104,10 +110,24 @@ if __name__ == "__main__":
         data_path + "Charmonium+Run2017E-09Aug2019_UL2017-v1+MINIAOD/",
         data_path + "Charmonium+Run2017F-09Aug2019_UL2017-v1+MINIAOD/",
     ]
+    files_Run2016_HIPM = [
+        data_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL16MiniAODAPV-106X_mcRun2_asymptotic_preVFP_v8-v1+MINIAODSIM/",
+        data_path + "Charmonium+Run2016B-21Feb2020_ver2_UL2016_HIPM-v1+MINIAOD/",
+        data_path + "Charmonium+Run2016C-21Feb2020_UL2016_HIPM-v1+MINIAOD/",
+        data_path + "Charmonium+Run2016D-21Feb2020_UL2016_HIPM-v1+MINIAOD/",
+        data_path + "Charmonium+Run2016E-21Feb2020_UL2016_HIPM-v1+MINIAOD/",
+        data_path + "Charmonium+Run2016F-21Feb2020_UL2016_HIPM-v1+MINIAOD/",
+    ]
+    files_Run2016 = [
+        data_path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL16MiniAOD-106X_mcRun2_asymptotic_v13-v1+MINIAODSIM/",
+        data_path + "Charmonium+Run2016F-21Feb2020_UL2016-v1+MINIAOD/",
+        data_path + "Charmonium+Run2016G-21Feb2020_UL2016-v1+MINIAOD/",
+        data_path + "Charmonium+Run2016H-21Feb2020_UL2016-v1+MINIAOD/",
+    ]
 
     # train_model(files_Run2018, "Run2018")
-
-    train_model(files_Run2017 + files_Run2018, "Run2017-2018")
+    # train_model(files_Run2017 + files_Run2018, "Run2017-2018")
+    train_model(files_Run2016 + files_Run2016_HIPM, "Run2016", 1e-4)
 
     
     # files_Run2017 = [
