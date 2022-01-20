@@ -9,10 +9,10 @@ from ROOT import RooRealVar
 # Set the TDR style
 tdrstyle.setTDRStyle()
 
-version = 516
+version = 517
 
 # output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/bmm5_NanoAODv8-%u/bjpsik-splots_binned/" % version;
-output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/AN/bjpsik-splots_binned/";
+output_path = "/afs/cern.ch/user/d/dmytro/www/public_html/plots/AN/bjpsik-splots_binned_loose_vtx/";
 
 
 # bool silent_roofit = true;
@@ -36,6 +36,8 @@ trigger.defineType("passed", 1)
 
 variables = [
     ( RooRealVar("trigger",             "", 0),                       None,                   None   ), 
+    ( RooRealVar("HLT_DoubleMu4_Jpsi_NoVertexing","", 0),                       None,                   None   ), 
+    ( RooRealVar("HLT_Dimuon6_Jpsi_NoVertexing","", 0),                       None,                   None   ), 
     ( RooRealVar("mm_kin_pt",           "p_{T}(#mu#mu)",              0, 100), Binning(40, 0, 40),     "Right" ),
     ( RooRealVar("mm_mu1_pt",           "p_{T}(#mu_{1})",             0,  50), Binning(25, 0, 25),     "Right" ),
     ( RooRealVar("mm_mu2_pt",           "p_{T}(#mu_{2})",             0,  50), Binning(25, 0, 25),     "Right" ),
@@ -52,7 +54,7 @@ variables = [
     ( RooRealVar("mm_kin_sl3d",         "L_{3D}/#sigma_{L}",          0, 100), Binning(50, 0, 100),    "Right" ),
     ( RooRealVar("mm_mva",              "MVA",                      0., 1.01), Binning(50, 0.9, 1.0),   "Left" ),
     ( RooRealVar("mm_kin_vtx_chi2dof",  "#chi^{2}/dof",                 0, 5), Binning(50, 0, 5),      "Right" ),
-    # ( RooRealVar("mm_kin_vtx_prob",     "vtx prob",              0.025, 1.01), Binning(50, 0.025, 1),  "Left" ),
+    ( RooRealVar("mm_kin_vtx_prob",     "vtx prob",              0.025, 1.01), Binning(40, 0., 1),  "Right" ),
     ( RooRealVar("mm_nBMTrks",          "N_{trk}",                     0, 10), Binning(10, 0, 10),     "Right" ),
     ( RooRealVar("mm_otherVtxMaxProb1", "Other vetex probability 1", -0.01,1.01), Binning(51, -0.01,1.01), "Right" ),
     ( RooRealVar("mm_otherVtxMaxProb2", "Other vetex probability 2", -0.01,1.01), Binning(51, -0.01,1.01), "Right" ),
@@ -63,7 +65,8 @@ roovars = []
 for var in variables:
     roovars.append(var[0])
 
-data_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/%u/bmm_mva_jpsik/" % version
+# data_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/%u/bmm_mva_jpsik/" % version
+data_path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/%u/bmm_mva_jpsik_loose_vtx/" % version
 mc_2018 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/*.root"
 mc_2017 = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL17MiniAOD-106X_mc2017_realistic_v6-v2+MINIAODSIM/*.root"
 mc_2016BF = data_path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL16MiniAODAPV-106X_mcRun2_asymptotic_preVFP_v8-v1+MINIAODSIM/*.root"
@@ -125,13 +128,14 @@ ROOT.gROOT.SetBatch(True)
 c1 = ROOT.TCanvas("c1","c1", 800, 800)
 
 for dataset, info in datasets.items():
-
     name = dataset
-    selection = "trigger>0"
+    # selection = "trigger>0"
+    selection = "HLT_DoubleMu4_Jpsi_NoVertexing>0 || HLT_Dimuon6_Jpsi_NoVertexing>0"
     
+    print "Processing", name
     chain_mc = ROOT.TChain("mva")
     chain_mc.Add(info['mc'])
-    print chain_mc.GetEntries()
+    print "Number of MC events:", chain_mc.GetEntries()
     ds_mc = sweights.make_dataset(chain_mc, "mc", mass, roovars, selection)
 
     # for i in range(10):
@@ -141,6 +145,7 @@ for dataset, info in datasets.items():
     chain_data = ROOT.TChain("mva")
     for pattern in info['data']:
         chain_data.Add(pattern)
+    print "Number of Data events:", chain_data.GetEntries()
 
     # get reference signal mass distribution
     ref_hist = ROOT.TH1F("ref_hist", "", 120, 5.15, 5.45)
@@ -175,7 +180,7 @@ for dataset, info in datasets.items():
     
     for var, binning, legend_position in variables:
         c1.cd()
-        if var.GetName()=="trigger":
+        if var.GetName() in ["trigger", "HLT_DoubleMu4_Jpsi_NoVertexing", "HLT_Dimuon6_Jpsi_NoVertexing"]:
             continue
         # nbins = 50
         # if v.GetName() == 'mm_mva':
@@ -192,8 +197,9 @@ for dataset, info in datasets.items():
             h_data.GetListOfFunctions().Clear()
             
         h_mc = ROOT.RooAbsData.createHistogram( ds_mc, 'mc', var, binning)
+        h_mc.SetLineColor(ROOT.kRed)
         h_mc.SetMarkerColor(ROOT.kRed)
-        h_mc.SetMarkerStyle(20)
+        h_mc.SetLineWidth(2)
         if var.GetName() == 'mm_kin_alphaSig':
             h_mc.Fit("gaus")
         h_mc.Draw()
@@ -208,11 +214,12 @@ for dataset, info in datasets.items():
             max_value = h_mc.GetMaximum()
         if re.search("Top", legend_position):
             max_value *= 1.4
-        h_data.SetMaximum(max_value * 1.1)
+        h_data.SetMaximum(max_value * 1.2)
         h_data.SetMinimum(0)
-        h_mc.SetMaximum(max_value * 1.1)
-        h_data.Draw("hist")
-        h_mc.Draw("e same")
+        h_mc.SetMaximum(max_value * 1.2)
+        h_mc.SetMarkerStyle(20)
+        h_data.Draw("e")
+        h_mc.Draw("hist same")
 
         # right handside legend
         if re.search("Right", legend_position):
@@ -232,6 +239,8 @@ for dataset, info in datasets.items():
 
         ratio_plot = ROOT.TRatioPlot(h_data, h_mc)
         # ratio_plot.SetH1DrawOpt("hist e")
+        ratio_plot.SetH1DrawOpt("e")
+        ratio_plot.SetH2DrawOpt("hist")
         ratio_plot.Draw()
         ratio_plot.SetSeparationMargin(0.03)
         ratio_plot.GetLowerRefGraph().SetMinimum(0.4)
