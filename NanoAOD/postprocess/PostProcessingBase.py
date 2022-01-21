@@ -208,11 +208,13 @@ class FlatNtupleBase(Processor):
         return output_filename, nevents
 
     def get_cut(self):
-        """Parse cut for keywords and added placeholders for tree and index"""
+        """Parse cut for keywords and add placeholders for tree and index"""
 
         # load branch info
         branches = dict()
 
+        # collect branch names, corresponding leafs and their event
+        # counter for arrays
         for br in self.input_tree.GetListOfBranches():
             name = br.GetName()
             leaf = br.GetLeaf(name)
@@ -224,18 +226,22 @@ class FlatNtupleBase(Processor):
         # process cut
 
         cut = self.job_info['cut']
+
+        # replace ROOT style AND with the one that is acceptable for python
         cut = re.sub('\&\&', ' and ', cut)
 
+        # tokenize the cut string into elements so that we can add the tree and element index
         cut_list = re.split('([^\w\_]+)', cut)
 
         parsed_cut = ""
         for i in range(len(cut_list)):
             if not re.search('^[\w\_]+$', cut_list[i]) or cut_list[i] not in branches:
+                # element is not a branch name, store and move on
                 parsed_cut += cut_list[i]
             else:
-                # processing a keyword
+                # element is a branch name
 
-                # make an index formater for vectors
+                # make an index formater for arrays
                 index = branches[cut_list[i]]
                 if index != "":
                     index = "[{" + index + "}]"
