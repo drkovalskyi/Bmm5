@@ -8,6 +8,8 @@ from FlatNtupleForBmmMva  import FlatNtupleForBmmMva
 from FlatNtupleForBmmMvaJpsiK import FlatNtupleForBmmMvaJpsiK
 from FlatNtupleForMLFit   import FlatNtupleForMLFit
 from FlatNtupleForMuonMVA import FlatNtupleForMuonMVA
+from FlatNtupleForTrigEfficiency import FlatNtupleForTrigEfficiency
+from FlatNtupleForTrigInfo import FlatNtupleForTrigInfo
 from Skimmer import Skimmer
 import sys
 
