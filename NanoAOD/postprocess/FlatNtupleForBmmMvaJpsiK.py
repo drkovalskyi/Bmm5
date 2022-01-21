@@ -10,6 +10,15 @@ from ROOT import TFile, TTree
 class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
     """Produce flat ROOT ntuples for Bmm5 MVA training using JpsiK events reconstructed like Bmm"""
 
+    triggers = [
+        'HLT_DoubleMu4_3_Jpsi',
+        'HLT_DoubleMu4_Jpsi_Displaced',
+        'HLT_DoubleMu4_Jpsi_NoVertexing',
+        'HLT_DoubleMu4_3_Jpsi_Displaced',
+        'HLT_Dimuon0_LowMass',
+        'HLT_Dimuon6_Jpsi_NoVertexing'
+    ]
+    
     def _validate_inputs(self):
         """Task specific input validation"""
         # check for missing information
@@ -43,7 +52,10 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
             selection.append( ('mass_cut',  abs(self.event.bkmm_jpsimc_mass[i] - 5.4) < 0.5) )
             selection.append( ('valid_fit', self.event.bkmm_jpsimc_valid[i]) )
             # selection.append( ('kaon_impact_parameter_significance', self.event.bkmm_kaon_sdxy_bs[i] > 15) )
-            selection.append( ('mm_vtx_prob', self.event.mm_kin_vtx_prob[self.event.bkmm_mm_index[i]] > 0.1) )
+            if 'loose_vtx' in self.job_info and self.job_info['loose_vtx']:
+                selection.append( ('mm_vtx_prob', self.event.mm_kin_vtx_prob[self.event.bkmm_mm_index[i]] > 0.025) )
+            else:
+                selection.append( ('mm_vtx_prob', self.event.mm_kin_vtx_prob[self.event.bkmm_mm_index[i]] > 0.1) )
             selection.append( ('mmk_vtx_prob', self.event.bkmm_jpsimc_vtx_prob[i] > 0.025) )
             # trigger driven, but tighter for purity
             selection.append( ('decay_length_significance', self.event.bkmm_jpsimc_sl3d[i] > 4.0) )
@@ -101,15 +113,23 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree.addBranch('mm_kin_pvip',        'Float_t', 0, "Impact parameter wrt Primary Vertex in 3D")
         self.tree.addBranch('mm_iso',             'Float_t', 0, "B isolation the way it's done in Bmm4")
         self.tree.addBranch('mm_kin_vtx_chi2dof', 'Float_t', 0, "Normalized chi2 of the dimuon vertex kinematic fit")
+        self.tree.addBranch('mm_kin_vtx_prob',    'Float_t', 0, "Probability for the dimuon vertex kinematic fit")
         self.tree.addBranch('mm_otherVtxMaxProb1','Float_t', 0, "Max vertexing probability of one of the muons with a random track with minPt=1.0GeV")
         self.tree.addBranch('mm_otherVtxMaxProb2','Float_t', 0, "Max vertexing probability of one of the muons with a random track with minPt=2.0GeV")
         self.tree.addBranch('mm_m1iso',           'Float_t', 0, "Muon isolation the way it's done in Bmm4")
         self.tree.addBranch('mm_m2iso',           'Float_t', 0, "Muon isolation the way it's done in Bmm4")
         self.tree.addBranch('mm_nBMTrks',         'UInt_t',  0, "Number of tracks more compatible with the mm vertex than with PV by doca significance")
+        self.tree.addBranch('mm_kin_tau',         'Float_t', 0, "Lifetime")
+        self.tree.addBranch('mm_kin_taue',        'Float_t', 0, "Lifetime uncertainty")
+        self.tree.addBranch('mm_gen_tau',         'Float_t', 0, "Generated lifetime")
 
         self.tree.addBranch('trigger',            'UInt_t',  0, "Main analysis trigger")
         self.tree.addBranch('mm_mva',             'Float_t', 0, "MVA")
         self.tree.addBranch('bhad_pt',            'Float_t', 0, "B hadron pt for MC matched decays")
+        
+        for trigger in self.triggers:
+            self.tree.addBranch(trigger, 'UInt_t', 0)
+            self.tree.addBranch("%s_ps" % trigger, 'UInt_t', 999999, "Prescale. 0 - Off, 999999 - no information")
   
     def _fill_tree(self, cand):
         self.tree.reset()
@@ -145,6 +165,7 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree['mm_kin_pvip']    = self.event.bkmm_jpsimc_pvip[cand]
         self.tree['mm_iso']         = self.event.bkmm_bmm_iso[cand]
         self.tree['mm_kin_vtx_chi2dof'] = self.event.mm_kin_vtx_chi2dof[self.event.bkmm_mm_index[cand]]
+        self.tree['mm_kin_vtx_prob']    = self.event.mm_kin_vtx_prob[self.event.bkmm_mm_index[cand]]
         self.tree['mm_otherVtxMaxProb1'] = self.event.bkmm_bmm_otherVtxMaxProb1[cand]
         self.tree['mm_otherVtxMaxProb2'] = self.event.bkmm_bmm_otherVtxMaxProb2[cand]
         self.tree['mm_m1iso']       = self.event.bkmm_bmm_m1iso[cand]
@@ -152,6 +173,10 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         self.tree['mm_nBMTrks']     = self.event.bkmm_bmm_nBMTrks[cand]
         self.tree['mm_mva']         = self.event.bkmm_bmm_mva[cand]
         
+        self.tree['mm_kin_tau']     = self.event.bkmm_jpsimc_tau[cand]
+        self.tree['mm_kin_taue']    = self.event.bkmm_jpsimc_taue[cand]
+        if hasattr(self.event, 'bkmm_gen_tau'):
+            self.tree['mm_gen_tau'] = self.event.bkmm_gen_tau[cand]
 
         trigger_2018 = 0
         if hasattr(self.event, 'HLT_DoubleMu4_3_Jpsi'):
@@ -168,6 +193,12 @@ class FlatNtupleForBmmMvaJpsiK(FlatNtupleBase):
         if hasattr(self.event, 'bkmm_gen_pdgId'):
             if self.job_info['signal_only'] and self.event.bkmm_gen_pdgId[cand]!=0:
                 self.tree['bhad_pt'] = self.event.bkmm_gen_pt[cand]
+
+        for trigger in self.triggers:
+            if hasattr(self.event, trigger):
+                self.tree[trigger] = getattr(self.event, trigger)
+            if hasattr(self.event, "prescale_" + trigger):
+                self.tree[trigger + "_ps"] = getattr(self.event, "prescale_" + trigger)
         
         self.tree.fill()
 
@@ -185,6 +216,7 @@ def unit_test():
             path + "BuToJpsiK_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/3161083A-28F2-244D-AEE2-0DD084D47E23.root"
         ],
         "signal_only": True,
+        "loose_vtx": True,
         "tree_name": "mva",
     }
 
