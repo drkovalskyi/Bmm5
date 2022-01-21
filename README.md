@@ -5,8 +5,8 @@ Production configuration for Run NanoAODv8 with the new B-jet
 reggression and Bmm5 NanoAODv8-V04 analysis code
 
 ## Build Instructions 
-* scram p CMSSW CMSSW_10_6_19_patch2
-* cd CMSSW_10_6_19_patch2/src/
+* scram p CMSSW CMSSW_10_6_26
+* cd CMSSW_10_6_26/src/
 * cmsenv
 * git cms-addpkg PhysicsTools/NanoAOD
 * git cms-merge-topic drkovalskyi:Bmm5-CMSSW_10_6_19_patch2-V01
