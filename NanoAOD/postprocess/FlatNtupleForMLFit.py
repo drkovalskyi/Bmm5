@@ -114,8 +114,9 @@ class FlatNtupleForMLFit(FlatNtupleBase):
                 candidates.append(cand)
 
             # Find canidates to be stored
-            for cand in self.__select_candidates(candidates):
-                self._fill_tree(cand)
+            cands = self.__select_candidates(candidates)
+            for cand in cands:
+                self._fill_tree(cand, len(cands))
             
 
     def _configure_output_tree(self):
@@ -124,6 +125,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         self.tree.addBranch('evt',      'ULong64_t', 0)
         self.tree.addBranch('npv',         'UInt_t', 0, "Number of good reconstructed primary vertices")
         self.tree.addBranch('ls',          'UInt_t', 0)
+        self.tree.addBranch('n',           'UInt_t', 0, "Number of candidates")
         self.tree.addBranch('npu',         'UInt_t', 0, "number of pileup interactions that have been added to the event in the current bunch crossing")
         self.tree.addBranch('npu_mean',   'Float_t', 0, "tru mean number of pileup interactions")
         self.tree.addBranch('certified_muon',    'Int_t', 0, "Event passed Muon Certification")
@@ -160,6 +162,8 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         self.tree.addBranch('m2mc',         'Int_t', 0, "PDG id of the mother of the MC matched muon")
         self.tree.addBranch('m2bdt',      'Float_t', 0, "Muon BDT. 1 for hadrons")
 
+        self.tree.addBranch('kk_mass',    'Float_t', 0, "Mass of two kaons in kkmm final state")
+        
         self.tree.addBranch('mc_match',     'Int_t', 0, "PdgId of the MC matched B meson")
         self.tree.addBranch('mc_bhh',       'Int_t', 0, "PdgId of B meson in Btohh MC events")
 
@@ -185,7 +189,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             return grandmother_pdgId
         return 0
 
-    def _fill_tree(self, cand):
+    def _fill_tree(self, cand, ncands):
         self.tree.reset()
 
         ## event info
@@ -195,6 +199,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         self.tree['npv'] = self.event.PV_npvsGood
         self.tree['certified_muon']   = self._is_certified("muon")
         self.tree['certified_golden'] = self._is_certified("golden")
+        self.tree['n']   = ncands
         
         ## MC info
         if hasattr(self.event, 'Pileup_nTrueInt'):
@@ -299,6 +304,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             self.tree['phi']    = self.event.bkkmm_jpsikk_phi[cand]
             self.tree['m']      = self.event.bkkmm_jpsikk_mass[cand]
             self.tree['me']     = self.event.bkkmm_jpsikk_massErr[cand]
+            self.tree['kk_mass'] = self.event.bkkmm_jpsikk_kk_mass[cand]
 
             self.tree['tau']    = self.event.bkkmm_jpsikk_tau[cand]
             self.tree['taue']   = self.event.bkkmm_jpsikk_taue[cand]
@@ -445,32 +451,32 @@ if __name__ == "__main__":
     #     # "best_candidate": "",
     #   }  
 
-    job = {
-        "input": [
-            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/518/Charmonium+Run2018D-12Nov2019_UL2018-v1+MINIAOD/BD514049-659A-F74F-A799-D485A4531390.root",
-        ],
-        "signal_only" : False,
-        "tree_name" : "bupsikData",
-        "blind" : False,
-        "cut" :
-        "mm_mu1_index[bkmm_mm_index]>=0 and "\
-        "mm_mu2_index[bkmm_mm_index]>=0 and "\
-        "Muon_charge[mm_mu1_index[bkmm_mm_index]] * Muon_charge[mm_mu2_index[bkmm_mm_index]] < 0 and "\
-        "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 and "\
-        "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 and "\
-        "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 and "\
-        "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 and "\
-        "mm_kin_pt[bkmm_mm_index]>7.0 and "\
-        "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "\
-        "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and "\
-        "bkmm_jpsimc_vtx_prob>0.025 and "\
-        "mm_kin_sl3d[bkmm_mm_index]>4 and "\
-        "abs(bkmm_jpsimc_mass-5.4)<0.5",
-        "final_state" : "bkmm",
-        'triggers': ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
-        # "best_candidate": "bkmm_jpsimc_pt",
-        "best_candidate": "",
-      }  
+    # job = {
+    #     "input": [
+    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/518/Charmonium+Run2018D-12Nov2019_UL2018-v1+MINIAOD/BD514049-659A-F74F-A799-D485A4531390.root",
+    #     ],
+    #     "signal_only" : False,
+    #     "tree_name" : "bupsikData",
+    #     "blind" : False,
+    #     "cut" :
+    #     "mm_mu1_index[bkmm_mm_index]>=0 and "\
+    #     "mm_mu2_index[bkmm_mm_index]>=0 and "\
+    #     "Muon_charge[mm_mu1_index[bkmm_mm_index]] * Muon_charge[mm_mu2_index[bkmm_mm_index]] < 0 and "\
+    #     "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 and "\
+    #     "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 and "\
+    #     "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 and "\
+    #     "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 and "\
+    #     "mm_kin_pt[bkmm_mm_index]>7.0 and "\
+    #     "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "\
+    #     "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and "\
+    #     "bkmm_jpsimc_vtx_prob>0.025 and "\
+    #     "mm_kin_sl3d[bkmm_mm_index]>4 and "\
+    #     "abs(bkmm_jpsimc_mass-5.4)<0.5",
+    #     "final_state" : "bkmm",
+    #     'triggers': ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+    #     # "best_candidate": "bkmm_jpsimc_pt",
+    #     "best_candidate": "",
+    #   }  
 
     # job = {
     #     "input": [
@@ -500,34 +506,34 @@ if __name__ == "__main__":
     #   }  
 
     
-    # job = {
-    #     "input": [
-    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/BsToJpsiPhi_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/3BF074E4-960E-4E4D-80FA-D0B67D2EFC7F.root"
-    #     ],
-    #     "signal_only" : True,
-    #     "tree_name" : "bspsiphiMc",
-    #     "blind" : False,
-    #     "cut" :
-    #         "mm_mu1_index[bkkmm_mm_index]>=0 and "\
-    #         "mm_mu2_index[bkkmm_mm_index]>=0 and "\
-    #         "Muon_softMvaId[mm_mu1_index[bkkmm_mm_index]] and "\
-    #         "abs(Muon_eta[mm_mu1_index[bkkmm_mm_index]])<1.4 and "\
-    #         "Muon_pt[mm_mu1_index[bkkmm_mm_index]]>4 and "\
-    #         "Muon_softMvaId[mm_mu2_index[bkkmm_mm_index]] and "\
-    #         "abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4 and "\
-    #         "Muon_pt[mm_mu2_index[bkkmm_mm_index]]>4 and "\
-    #         "abs(bkkmm_jpsikk_mass-5.3)<0.5 and "\
-    #         "bkkmm_jpsikk_sl3d>4 and "\
-    #         "bkkmm_jpsikk_vtx_chi2dof<5",
-    #     "final_state" : "bkkmm",
-    #     # "best_candidate": "bkkmm_jpsikk_pt",
-    #     "best_candidate": "",
-    #   }  
+    job = {
+        "input": [
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/518/BsToJPsiPhi_JPsiToMuMu_PhiToKK_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/482F89A1-6DF1-BF49-A7A1-41DAA184DDD7.root"
+        ],
+        "signal_only" : True,
+        "tree_name" : "bspsiphiMc",
+        "blind" : False,
+        "cut" :
+            "mm_mu1_index[bkkmm_mm_index]>=0 and "\
+            "mm_mu2_index[bkkmm_mm_index]>=0 and "\
+            "Muon_softMvaId[mm_mu1_index[bkkmm_mm_index]] and "\
+            "abs(Muon_eta[mm_mu1_index[bkkmm_mm_index]])<1.4 and "\
+            "Muon_pt[mm_mu1_index[bkkmm_mm_index]]>4 and "\
+            "Muon_softMvaId[mm_mu2_index[bkkmm_mm_index]] and "\
+            "abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4 and "\
+            "Muon_pt[mm_mu2_index[bkkmm_mm_index]]>4 and "\
+            "abs(bkkmm_jpsikk_mass-5.3)<0.5 and "\
+            "bkkmm_jpsikk_sl3d>4 and "\
+            "bkkmm_jpsikk_vtx_chi2dof<5",
+        "final_state" : "bkkmm",
+        # "best_candidate": "bkkmm_jpsikk_pt",
+        "best_candidate": "",
+      }  
     
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
 
-    # p = FlatNtupleForMLFit("/tmp/dmytro/9081fd38604b24f4c6035628a89e18ed.job")
+    # p = FlatNtupleForMLFit("/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/518/fit-bkkmm/BsToJPsiPhi_JPsiToMuMu_PhiToKK_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/3ce6cf95a912f9ea0fbad11004884b04.job")
     p = FlatNtupleForMLFit(file_name)
     print p.__dict__
         
