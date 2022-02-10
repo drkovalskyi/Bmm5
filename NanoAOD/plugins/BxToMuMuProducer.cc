@@ -494,7 +494,7 @@ private:
 		   bool applyJpsiMassConstraint);
 
   KinematicFitResult
-  fitBToMuMuKNew( RefCountedKinematicTree jpsi,
+  fitBToKMuMu( RefCountedKinematicTree jpsi,
 		  const pat::PackedCandidate& kaon,
 		  float mass_constraint=-1.0);
 
@@ -1176,7 +1176,7 @@ void BxToMuMuProducer::fillBtoMuMuKInfo(pat::CompositeCandidate& btokmmCand,
   KinematicFitResult bToKJPsiMuMu_MassConstraint;
   DisplacementInformationIn3D bToKJPsiMuMu_MassConstraint_displacement;
   if (fabs(kinematicMuMuVertexFit.mass()-3.1) < 0.2) {
-    bToKJPsiMuMu_MassConstraint = fitBToMuMuKNew(kinematicMuMuVertexFit.refitTree, kaon, JPsiMass_);
+    bToKJPsiMuMu_MassConstraint = fitBToKMuMu(kinematicMuMuVertexFit.refitTree, kaon, JPsiMass_);
     bToKJPsiMuMu_MassConstraint.postprocess(*beamSpot_);
     bToKJPsiMuMu_MassConstraint_displacement = compute3dDisplacement(bToKJPsiMuMu_MassConstraint, *pvHandle_.product(),true);
   }
@@ -1186,7 +1186,7 @@ void BxToMuMuProducer::fillBtoMuMuKInfo(pat::CompositeCandidate& btokmmCand,
   KinematicFitResult bToKPsi2SMuMu_MassConstraint;
   DisplacementInformationIn3D bToKPsi2SMuMu_MassConstraint_displacement;
   if (fabs(kinematicMuMuVertexFit.mass()-3.7) < 0.2) {
-    bToKPsi2SMuMu_MassConstraint = fitBToMuMuKNew(kinematicMuMuVertexFit.refitTree, kaon, Psi2SMass_);
+    bToKPsi2SMuMu_MassConstraint = fitBToKMuMu(kinematicMuMuVertexFit.refitTree, kaon, Psi2SMass_);
     bToKPsi2SMuMu_MassConstraint.postprocess(*beamSpot_);
     bToKPsi2SMuMu_MassConstraint_displacement = compute3dDisplacement(bToKPsi2SMuMu_MassConstraint, *pvHandle_.product(),true);
   }
@@ -1845,7 +1845,7 @@ BxToMuMuProducer::fitBToKJPsiMuMu( RefCountedKinematicParticle refitMuMu,
 }
 
 KinematicFitResult
-BxToMuMuProducer::fitBToMuMuKNew( RefCountedKinematicTree tree,
+BxToMuMuProducer::fitBToKMuMu( RefCountedKinematicTree tree,
 				  const pat::PackedCandidate& kaon,
 				  float mass_constraint)
 {
