@@ -1,16 +1,18 @@
 # Bmm5
-## Bx to mumu analysis code based on MiniAOD input data in CMS experiment at CERN
+## B to mumu analysis code for data produced by the CMS experiment at CERN
 
-Production configuration for Run NanoAODv8 with the new B-jet
-reggression and Bmm5 NanoAODv8-V04 analysis code
+The code is based on the **NanoAODv9** campaign for using RunII UltraLegacy processing 
+of **MiniAODv2**. The setup produces standard NanoAOD output with additional branches
+specific to the analysis. The samples can be used as a replacement for the standard
+NanoAOD samples produced by the CMS Central Production infrastructure.
 
 ## Build Instructions 
 * scram p CMSSW CMSSW_10_6_26
 * cd CMSSW_10_6_26/src/
 * cmsenv
 * git cms-addpkg PhysicsTools/NanoAOD
-* git cms-merge-topic drkovalskyi:Bmm5-CMSSW_10_6_19_patch2-V01
-* git clone git@github.com:drkovalskyi/Bmm5.git --branch NanoAODv8-V04
+* git cms-merge-topic drkovalskyi:Bmm5-CMSSW_10_6_26
+* git clone git@github.com:drkovalskyi/Bmm5.git --branch NanoAODv9-V01
 * scram setup Bmm5/NanoAOD/external-tools/rabit.xml
 * scram setup Bmm5/NanoAOD/external-tools/xgboost.xml
 * scram b -j 8
