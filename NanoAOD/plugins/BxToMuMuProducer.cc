@@ -9,11 +9,13 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 
 #include "DataFormats/PatCandidates/interface/Muon.h"
+#include "DataFormats/PatCandidates/interface/Photon.h"
 #include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
 #include "DataFormats/PatCandidates/interface/CompositeCandidate.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
+#include "DataFormats/EgammaCandidates/interface/Photon.h"
 
 #include "TrackingTools/Records/interface/TransientTrackRecord.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrack.h"
@@ -288,23 +290,26 @@ LorentzVector makeLorentzVectorFromPxPyPzM(double px, double py, double pz, doub
 }
 
 struct GenMatchInfo{
-  int mu1_pdgId, mu1_motherPdgId, mu2_pdgId, mu2_motherPdgId, kaon1_pdgId, kaon1_motherPdgId,
-    kaon2_pdgId, kaon2_motherPdgId, mm_pdgId, mm_motherPdgId, kmm_pdgId, kkmm_pdgId;
-  float mu1_pt, mu2_pt, kaon1_pt, kaon2_pt, mm_mass, mm_pt, kmm_mass, kkmm_mass, kmm_pt, kkmm_pt;
-  math::XYZPoint mm_prod_vtx, mm_vtx, kmm_prod_vtx, kkmm_prod_vtx;
+  int mu1_pdgId, mu1_motherPdgId, mu2_pdgId, mu2_motherPdgId,
+    kaon1_pdgId, kaon1_motherPdgId, kaon2_pdgId, kaon2_motherPdgId, photon_pdgId, photon_motherPdgId,
+    mm_pdgId, mm_motherPdgId, kmm_pdgId, kkmm_pdgId, mmg_pdgId;
+  float mu1_pt, mu2_pt, kaon1_pt, kaon2_pt, photon_pt, mm_mass, mm_pt, kmm_mass, kkmm_mass, mmg_mass,
+    kmm_pt, kkmm_pt, mmg_pt;
+  math::XYZPoint mm_prod_vtx, mm_vtx, kmm_prod_vtx, kkmm_prod_vtx, mmg_prod_vtx;
   const reco::Candidate* mc_mu1;
   const reco::Candidate* mc_mu2;
   const reco::Candidate* mc_kaon1;
   const reco::Candidate* mc_kaon2;
+  const reco::Candidate* mc_photon;
   const reco::Candidate* match;
   const reco::Candidate* common_mother;
   GenMatchInfo():mu1_pdgId(0), mu1_motherPdgId(0), mu2_pdgId(0), mu2_motherPdgId(0), 
 		 kaon1_pdgId(0), kaon1_motherPdgId(0), kaon2_pdgId(0), kaon2_motherPdgId(0),
-		 mm_pdgId(0), mm_motherPdgId(0), 
-		 kmm_pdgId(0), kkmm_pdgId(0), mu1_pt(0), mu2_pt(0), 
-		 kaon1_pt(0), kaon2_pt(0), mm_mass(0), mm_pt(0), 
-		 kmm_mass(0), kkmm_mass(0), kmm_pt(0), kkmm_pt(0),
-		 mc_mu1(0), mc_mu2(0), mc_kaon1(0), mc_kaon2(0),
+		 photon_pdgId(0), photon_motherPdgId(0), mm_pdgId(0), mm_motherPdgId(0), 
+		 kmm_pdgId(0), kkmm_pdgId(0), mmg_pdgId(0), mu1_pt(0), mu2_pt(0), 
+		 kaon1_pt(0), kaon2_pt(0), photon_pt(0), mm_mass(0), mm_pt(0), 
+		 kmm_mass(0), kkmm_mass(0), mmg_mass(0), kmm_pt(0), kkmm_pt(0), mmg_pt(0),
+		 mc_mu1(0), mc_mu2(0), mc_kaon1(0), mc_kaon2(0), mc_photon(0),
 		 match(0), common_mother(0)
   {}
   const reco::GenParticle* gen_mu1(){
@@ -514,7 +519,9 @@ private:
   GenMatchInfo getGenMatchInfo( const pat::Muon& muon1,
 				const pat::Muon& muon2,
 				const pat::PackedCandidate* kaon1 = 0,
-				const pat::PackedCandidate* kaon2 = 0 );
+				const pat::PackedCandidate* kaon2 = 0,
+				const pat::Photon* photon = 0);
+  
   const reco::Candidate* getGenParticle(const reco::Candidate* cand);
 
   // Two track DOCA
@@ -581,8 +588,14 @@ private:
 		     const pat::Muon& muon1,
 		     const pat::Muon& muon2,
 		     const pat::PackedCandidate & kaon1,
-		     const pat::PackedCandidate & kaon2
-		    ); 
+		     const pat::PackedCandidate & kaon2); 
+  void
+  fillMuMuGammaInfo(pat::CompositeCandidate& mmgCand,
+		    const edm::Event& iEvent,
+		    const KinematicFitResult& kinematicMuMuVertexFit,
+		    const pat::Muon& muon1,
+		    const pat::Muon& muon2,
+		    const pat::Photon & photon);
   
   void 
   fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCandidate& btokmmCand,
@@ -617,6 +630,7 @@ private:
 
   edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
   edm::EDGetTokenT<std::vector<pat::Muon>> muonToken_;
+  edm::EDGetTokenT<std::vector<pat::Photon>> photonToken_;
   edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandToken_;
   edm::EDGetTokenT<std::vector<reco::GenParticle> >   prunedGenToken_;
   edm::EDGetTokenT<std::vector<pat::PackedGenParticle> >   packedGenToken_;
@@ -641,11 +655,14 @@ private:
   bool   diMuonCharge_;
   double minBKmmMass_;
   double maxBKmmMass_;
+  double minMuMuGammaMass_;
+  double maxMuMuGammaMass_;
   double minBKKmmMass_;
   double maxBKKmmMass_;
   double maxTwoTrackDOCA_;
   bool   injectMatchedBtohh_;
   bool   injectBtohh_;
+  bool   recoMuMuGamma_;
   double minBhhPt_;
   double minBhhMass_;
   double maxBhhMass_;
@@ -665,6 +682,7 @@ beamSpotToken_( consumes<reco::BeamSpot> ( iConfig.getParameter<edm::InputTag>( 
 beamSpot_(nullptr),
 vertexToken_( consumes<reco::VertexCollection> ( iConfig.getParameter<edm::InputTag>( "vertexCollection" ) ) ),
 muonToken_( consumes<std::vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
+photonToken_( consumes<std::vector<pat::Photon>> ( iConfig.getParameter<edm::InputTag>( "photonCollection" ) ) ),
 pfCandToken_( consumes<edm::View<pat::PackedCandidate>> ( iConfig.getParameter<edm::InputTag>( "PFCandCollection" ) ) ),
 prunedGenToken_( consumes<std::vector<reco::GenParticle>> ( iConfig.getParameter<edm::InputTag>( "prunedGenParticleCollection" ) ) ),
 packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( edm::InputTag( "packedGenParticles" ) ) ),
@@ -680,11 +698,14 @@ DCASigMinKaon_(   iConfig.getParameter<double>( "KaonMinDCASig" ) ),
 diMuonCharge_(    iConfig.getParameter<bool>(   "DiMuonChargeCheck" ) ),
 minBKmmMass_(     iConfig.getParameter<double>( "minBKmmMass" ) ),
 maxBKmmMass_(     iConfig.getParameter<double>( "maxBKmmMass" ) ),
+minMuMuGammaMass_(     iConfig.getParameter<double>( "minMuMuGammaMass" ) ),
+maxMuMuGammaMass_(     iConfig.getParameter<double>( "maxMuMuGammaMass" ) ),
 minBKKmmMass_(    iConfig.getParameter<double>( "minBKKmmMass" ) ),
 maxBKKmmMass_(    iConfig.getParameter<double>( "maxBKKmmMass" ) ),
 maxTwoTrackDOCA_( iConfig.getParameter<double>( "maxTwoTrackDOCA" ) ),
 injectMatchedBtohh_( iConfig.getParameter<bool>( "injectMatchedBtohh" ) ),
 injectBtohh_(        iConfig.getParameter<bool>( "injectBtohh" ) ),
+recoMuMuGamma_(      iConfig.getParameter<bool>( "recoMuMuGamma" ) ),
 minBhhPt_(        iConfig.getParameter<double>( "minBhhHadronPt" ) ),
 minBhhMass_(      iConfig.getParameter<double>( "minBhhMass" ) ),
 maxBhhMass_(      iConfig.getParameter<double>( "maxBhhMass" ) ),
@@ -698,6 +719,7 @@ bdtReader2_("!Color:Silent")
     produces<pat::CompositeCandidateCollection>("DiMuon");
     produces<pat::CompositeCandidateCollection>("BToKmumu");
     produces<pat::CompositeCandidateCollection>("BToKKmumu");
+    produces<pat::CompositeCandidateCollection>("BToMuMuGamma");
     setupTmvaReader(bdtReader0_,(iConfig.getParameter<edm::FileInPath>("bdtEvent0")).fullPath());
     setupTmvaReader(bdtReader1_,(iConfig.getParameter<edm::FileInPath>("bdtEvent1")).fullPath());
     setupTmvaReader(bdtReader2_,(iConfig.getParameter<edm::FileInPath>("bdtEvent2")).fullPath());
@@ -1251,6 +1273,33 @@ void BxToMuMuProducer::fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
   bCand.addUserFloat("jpsikk_kk_mass",    bToKKJPsiMuMu.refit_mass(1,2));
 }
 
+void BxToMuMuProducer::fillMuMuGammaInfo(pat::CompositeCandidate& mmgCand,
+					 const edm::Event& iEvent,
+					 const KinematicFitResult& kinematicMuMuVertexFit,
+					 const pat::Muon& muon1,
+					 const pat::Muon& muon2,
+					 const pat::Photon & photon) 
+{
+  mmgCand.addUserFloat("ph_pt",     photon.pt());
+  mmgCand.addUserFloat("ph_eta",    photon.eta());
+  mmgCand.addUserFloat("ph_phi",    photon.phi());
+  if (isMC_){
+    auto gen_mmg = getGenMatchInfo(muon1,muon2,nullptr,nullptr,&photon);
+    mmgCand.addUserInt(  "gen_ph_pdgId",    gen_mmg.photon_pdgId);
+    mmgCand.addUserInt(  "gen_ph_mpdgId",   gen_mmg.photon_motherPdgId);
+    mmgCand.addUserFloat("gen_ph_pt",       gen_mmg.photon_pt);
+    mmgCand.addUserFloat("gen_mass",        gen_mmg.mmg_mass);
+    mmgCand.addUserFloat("gen_pt",          gen_mmg.mmg_pt);
+    mmgCand.addUserInt(  "gen_pdgId",       gen_mmg.mmg_pdgId);
+    mmgCand.addUserFloat("gen_prod_x",      gen_mmg.mmg_prod_vtx.x());
+    mmgCand.addUserFloat("gen_prod_y",      gen_mmg.mmg_prod_vtx.y());
+    mmgCand.addUserFloat("gen_prod_z",      gen_mmg.mmg_prod_vtx.z());
+    mmgCand.addUserFloat("gen_l3d",         (gen_mmg.mmg_prod_vtx-gen_mmg.mm_vtx).r());
+    mmgCand.addUserFloat("gen_lxy",         (gen_mmg.mmg_prod_vtx-gen_mmg.mm_vtx).rho());
+    mmgCand.addUserFloat("gen_tau",         computeDecayTime(gen_mmg));
+    mmgCand.addUserFloat("gen_cpdgId",      gen_mmg.common_mother?gen_mmg.common_mother->pdgId():0);
+  }
+}
 
 void 
 BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCandidate& mmK,
@@ -1259,8 +1308,7 @@ BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCan
 							       const KinematicFitResult& kinematicMuMuVertexFit,
 							       const pat::Muon& muon1,
 							       const pat::Muon& muon2,
-							       const pat::PackedCandidate & kaon
-					) 
+							       const pat::PackedCandidate & kaon) 
 {
   ///////
   //// Treat B->JpsiK as B->mm for signal studies in data
@@ -1320,9 +1368,82 @@ BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCan
   xgBoosters_.at(xg_index).set("mm_kin_sl3d",        mm.userFloat("kin_sl3d")*1.6);
 
   mmK.addUserFloat("bmm_mva", xgBoosters_.at(xg_index).predict());
-
-
 }
+
+
+// // FIXME: need to add info similar to addFitInfo for mmg
+// void 
+// BxToMuMuProducer::fillMvaInfoForMuMuGamma(pat::CompositeCandidate& mmg,
+// 					  const pat::CompositeCandidate& mm,
+// 					  const edm::Event& iEvent,
+// 					  const KinematicFitResult& kinematicMuMuVertexFit,
+// 					  const pat::Muon& muon1,
+// 					  const pat::Muon& muon2,
+// 					  const pat::Photon & photon) 
+// {
+//   // Treat mmGamma as B->mm 
+//   std::vector<const pat::PackedCandidate*> ignoreTracks;
+//   for (auto const& pfCand: *pfCandHandle_){
+//     if (pfCand.charge() == 0) continue;
+//     if (deltaR(pfCand, photon) > 0.01) continue;
+//     ignoreTracks.push_back(&pfCand);
+//   }
+
+//   int pvIndex = mmK.userInt("jpsimc_pvIndex");
+
+//   // Look for additional tracks compatible with the dimuon vertex
+//   auto closeTracks = findTracksCompatibleWithTheVertex(muon1,muon2,kinematicMuMuVertexFit,0.03,ignoreTracks);
+//   closeTracks.fillCandInfo(mmK, pvIndex, "bmm");
+
+//   mmK.addUserFloat( "bmm_m1iso",     computeTrkMuonIsolation(muon1,muon2,pvIndex,0.5,0.5,ignoreTracks));
+//   mmK.addUserFloat( "bmm_m2iso",     computeTrkMuonIsolation(muon2,muon1,pvIndex,0.5,0.5,ignoreTracks));
+//   mmK.addUserFloat( "bmm_iso",       computeTrkMuMuIsolation(muon2,muon1,pvIndex,0.9,0.7,ignoreTracks));
+//   mmK.addUserFloat( "bmm_otherVtxMaxProb",  otherVertexMaxProb(muon1,muon2,0.5,0.1,ignoreTracks));
+//   mmK.addUserFloat( "bmm_otherVtxMaxProb1", otherVertexMaxProb(muon1,muon2,1.0,0.1,ignoreTracks));
+//   mmK.addUserFloat( "bmm_otherVtxMaxProb2", otherVertexMaxProb(muon1,muon2,2.0,0.1,ignoreTracks));
+
+//   // BDT
+//   bdtData_.fls3d    = mm.userFloat("kin_sl3d");
+//   bdtData_.alpha    = mmK.userFloat("jpsimc_alpha");
+//   bdtData_.pvips    = mmK.userFloat("jpsimc_pvipErr")>0?mmK.userFloat("jpsimc_pvip")/mmK.userFloat("jpsimc_pvipErr"):999;
+//   // One can use bkmm without mass constraint, but it doesn't help
+//   // bdtData_.alpha    = mmK.userFloat("nomc_alpha");
+//   // bdtData_.pvips    = mmK.userFloat("nomc_pvip")/mmK.userFloat("nomc_pvipErr");
+//   bdtData_.iso      = mmK.userFloat("bmm_iso");
+//   bdtData_.chi2dof  = mm.userFloat("kin_vtx_chi2dof");
+//   bdtData_.docatrk  = mmK.userFloat("bmm_docatrk");
+//   bdtData_.closetrk = mmK.userInt(  "bmm_closetrk");
+//   bdtData_.m1iso    = mmK.userFloat("bmm_m1iso");
+//   bdtData_.m2iso    = mmK.userFloat("bmm_m2iso");
+//   bdtData_.eta      = mmK.userFloat("jpsimc_eta");	  
+//   bdtData_.m        = mmK.userFloat("jpsimc_mass");	  
+
+//   mmK.addUserFloat("bmm_bdt",computeAnalysisBDT(iEvent.eventAuxiliary().event()%3));
+
+//   // XGBoost
+//   unsigned int xg_index = iEvent.eventAuxiliary().event()%3;
+//   // Pointing angle - mmK
+//   xgBoosters_.at(xg_index).set("mm_kin_alpha",       mmK.userFloat("jpsimc_alpha"));
+//   xgBoosters_.at(xg_index).set("mm_kin_alphaXY",     cos(mmK.userFloat("jpsimc_alphaBS"))); // FIXME - need new training
+//   // PV matching - mmK
+//   xgBoosters_.at(xg_index).set("mm_kin_spvip",       mmK.userFloat("jpsimc_spvip"));
+//   xgBoosters_.at(xg_index).set("mm_kin_pvip",        mmK.userFloat("jpsimc_pvip"));
+//   // Isolation and extra track variables need to be recomputed ignoring kaon
+//   xgBoosters_.at(xg_index).set("mm_iso",             mmK.userFloat("bmm_iso"));
+//   xgBoosters_.at(xg_index).set("mm_m1iso",           mmK.userFloat("bmm_m1iso"));
+//   xgBoosters_.at(xg_index).set("mm_m2iso",           mmK.userFloat("bmm_m2iso"));
+//   xgBoosters_.at(xg_index).set("mm_nBMTrks",         mmK.userInt(  "bmm_nBMTrks"));
+//   xgBoosters_.at(xg_index).set("mm_otherVtxMaxProb1", mmK.userFloat(  "bmm_otherVtxMaxProb1"));
+//   xgBoosters_.at(xg_index).set("mm_otherVtxMaxProb2", mmK.userFloat(  "bmm_otherVtxMaxProb2"));
+//   // Vertexing - mm
+//   xgBoosters_.at(xg_index).set("mm_kin_vtx_chi2dof", mm.userFloat("kin_vtx_chi2dof"));
+//   // Flight length significance - mm
+//   xgBoosters_.at(xg_index).set("mm_kin_sl3d",        mm.userFloat("kin_sl3d")*1.6);
+
+//   mmK.addUserFloat("bmm_mva", xgBoosters_.at(xg_index).predict());
+// }
+
+
 namespace {
   bool isAncestor(const reco::Candidate* ancestor, const reco::Candidate* candidate){
     if (ancestor == candidate) return true;
@@ -1453,9 +1574,11 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
     // const reco::Vertex & primaryVertex = vertexHandle->front();
 
     edm::Handle<std::vector<pat::Muon>> muonHandle;
+    edm::Handle<std::vector<pat::Photon>> photonHandle;
     edm::Handle<edm::View<pat::PackedCandidate>> lostTrackHandle;
     
     iEvent.getByToken(muonToken_, muonHandle);
+    iEvent.getByToken(photonToken_, photonHandle);
     iEvent.getByToken(pfCandToken_, pfCandHandle_);
     
     edm::Handle<std::vector<reco::GenParticle> > prunedGenParticleHandle;
@@ -1470,13 +1593,15 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
       packedGenParticles_ = nullptr;
     }
 
-    auto nMuons = muonHandle->size();
+    auto nMuons   = muonHandle->size();
+    auto nPhotons = photonHandle->size();
     auto nPFCands = pfCandHandle_->size();
     // unsigned int lostTrackNumber = useLostTracks_ ? lostTrackHandle->size() : 0;
     
     // Output collection
     auto dimuon  = std::make_unique<pat::CompositeCandidateCollection>();
     auto btokmm  = std::make_unique<pat::CompositeCandidateCollection>();
+    auto btommg  = std::make_unique<pat::CompositeCandidateCollection>();
     auto btokkmm = std::make_unique<pat::CompositeCandidateCollection>();
     AddFourMomenta addP4;
 
@@ -1560,9 +1685,38 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 	      if (kinematicMuMuVertexFit.sigLxy < minBhhSigLxy_) continue;
 	    }
 
-	  
+	  // dimuon
 	  if (muon1.index() >= 0 and muon2.index() >= 0){
 	    auto imm = dimuon->size();
+	    
+	    // MuMuGamma
+	    if (recoMuMuGamma_ && kinematicMuMuVertexFit.valid()){
+	      for (unsigned int k=0; k < nPhotons; ++k){
+		auto photon(photonHandle->at(k));
+		const auto & vtx_point = kinematicMuMuVertexFit.refitVertex->vertexState().position();
+		photon.setVertex(reco::Photon::Point(vtx_point.x(), vtx_point.y(), vtx_point.z()));
+		auto dimuon_p4(makeLorentzVectorFromPxPyPzM(kinematicMuMuVertexFit.p3().x(),
+							    kinematicMuMuVertexFit.p3().y(),
+							    kinematicMuMuVertexFit.p3().z(),
+							    kinematicMuMuVertexFit.mass()));
+		double mmg_mass = (dimuon_p4 + photon.p4()).mass();
+		if (mmg_mass >= minMuMuGammaMass_ and mmg_mass <= maxMuMuGammaMass_){
+		  // fill BtoMuMuPhoton candidate info
+	    
+		  pat::CompositeCandidate mmgCand;
+		  mmgCand.addUserInt("mm_index", imm);
+		  mmgCand.addUserInt("ph_index", k);
+		  mmgCand.addUserFloat("mass", mmg_mass);
+		  
+		  fillMuMuGammaInfo(mmgCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,photon);
+		  // fillMvaInfoForMuMuGamma(mmgCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,photon);
+
+		  btommg->push_back(mmgCand);
+		}
+	      }
+	    }
+
+	    // mmK and mmKK
 	    for (unsigned int k = 0; k < nPFCands; ++k) {
 	      pat::PackedCandidate kaonCand1((*pfCandHandle_)[k]);
 	      kaonCand1.setMass(KaonMass_);
@@ -1652,6 +1806,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
     
     iEvent.put(std::move(dimuon), "DiMuon");
     iEvent.put(std::move(btokmm), "BToKmumu");
+    iEvent.put(std::move(btommg), "BToMuMuGamma");
     iEvent.put(std::move(btokkmm),"BToKKmumu");
     
 }
@@ -2151,7 +2306,8 @@ const reco::Candidate* BxToMuMuProducer::getGenParticle(const reco::Candidate* c
 GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const pat::Muon& muon1,
 						const pat::Muon& muon2,
 						const pat::PackedCandidate* kaon1,
-						const pat::PackedCandidate* kaon2 )
+						const pat::PackedCandidate* kaon2,
+						const pat::Photon* photon)
 {
   auto result = GenMatchInfo();
   const reco::Candidate*   mm_mother(0);
@@ -2241,6 +2397,32 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const pat::Muon& muon1,
       }
     }
   }
+  
+  if (photon){
+    for (auto const & genParticle: *packedGenParticles_){
+      if (dr_match(photon->p4(),genParticle.p4())){
+	result.mc_photon = &genParticle;
+	daughters.push_back(result.mc_photon);
+	result.photon_pdgId = genParticle.pdgId();
+	result.photon_pt    = genParticle.pt();
+	if (genParticle.mother(0)){
+	  result.photon_motherPdgId = genParticle.mother(0)->pdgId();
+	}
+	break;
+      }
+    }
+    if (daughters.size()==3){
+      const auto* mother = find_common_ancestor(daughters);
+      if (mother){
+	result.match        = mother;
+	result.mmg_pdgId    = mother->pdgId();
+	result.mmg_mass     = mother->mass();
+	result.mmg_pt       = mother->pt();
+	result.mmg_prod_vtx = getProductionVertex(mother);
+      }
+    }
+  }
+
   if (daughters.size() > 1){
     const auto* mother = find_common_ancestor(daughters); 
     if (mother){ 

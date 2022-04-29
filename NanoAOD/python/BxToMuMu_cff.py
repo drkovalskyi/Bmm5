@@ -50,17 +50,20 @@ BxToMuMu = cms.EDProducer(
     beamSpot=cms.InputTag("offlineBeamSpot"),
     vertexCollection=cms.InputTag("offlineSlimmedPrimaryVertices"),
     muonCollection = cms.InputTag("linkedObjects","muons"),
-    PFCandCollection=cms.InputTag("packedPFCandidates"),
+    photonCollection = cms.InputTag("linkedObjects","photons"),
+    PFCandCollection = cms.InputTag("packedPFCandidates"),
     prunedGenParticleCollection = cms.InputTag("prunedGenParticles"),
-    MuonMinPt=cms.double(1.),
-    MuonMaxEta=cms.double(2.4),
-    KaonMinPt=cms.double(1.0),
+    MuonMinPt = cms.double(1.),
+    MuonMaxEta = cms.double(2.4),
+    KaonMinPt = cms.double(1.0),
     # KaonMinPt=cms.double(-1),
-    KaonMaxEta=cms.double(2.4),
+    KaonMaxEta = cms.double(2.4),
     KaonMinDCASig=cms.double(-1.),
     DiMuonChargeCheck=cms.bool(False),
     minBKmmMass = cms.double(4.5),
     maxBKmmMass = cms.double(6.0),
+    minMuMuGammaMass = cms.double(3.0),
+    maxMuMuGammaMass = cms.double(6.0),
     minBKKmmMass = cms.double(4.5),
     maxBKKmmMass = cms.double(6.0),
     maxTwoTrackDOCA = cms.double(0.1),
@@ -74,6 +77,7 @@ BxToMuMu = cms.EDProducer(
     # injectMatchedBtohh = cms.bool(True),
     injectMatchedBtohh = cms.bool(False),
     injectBtohh = cms.bool(True),
+    recoMuMuGamma = cms.bool(True),
     minBhhHadronPt = cms.double(4.0),
     maxBhhHadronEta = cms.double(1.4),
     minBhhMass   = cms.double(4.9),
@@ -402,6 +406,59 @@ BxToMuMuBToKKmumuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProd
 
 ##################################################################################
 ###
+###                              B to Mu Mu Gamma
+###
+##################################################################################
+
+BxToMuMuBToMuMuGammaTableVariables =  merge_psets(
+    # copy_pset(kinematic_pset,{"kin_":"jpsikk_"}),
+    cms.PSet(
+        mm_index        = Var("userInt('mm_index')",           int,   doc = "Index of dimuon pair"),
+        ph_index        = Var("userInt('ph_index')",           int,   doc = "Index of photon"),
+        mass            = Var("userFloat('mass')" ,          float,   doc = "Mass - no fit"),
+    )
+)
+
+BxToMuMuBToMuMuGammaMcTableVariables = merge_psets(
+    BxToMuMuBToMuMuGammaTableVariables,
+    cms.PSet(
+        gen_ph_pdgId  = Var("userInt('gen_ph_pdgId')",      int,   doc = "Gen match: photon pdg Id"),
+        gen_ph_mpdgId = Var("userInt('gen_ph_mpdgId')",     int,   doc = "Gen match: photon mother pdg Id"),
+        gen_ph_pt     = Var("userFloat('gen_ph_pt')",       float, doc = "Gen match: photon pt"),
+        gen_pdgId     = Var("userInt('gen_pdgId')",         int,   doc = "Gen match: mmg pdg Id"),
+        gen_mass      = Var("userFloat('gen_mass')",        float, doc = "Gen match: mmg mass"),
+        gen_pt        = Var("userFloat('gen_pt')",          float, doc = "Gen match: mmg pt"),
+        gen_prod_x    = Var("userFloat('gen_prod_x')",      float, doc = "Gen match: mmg mother production vertex x"),
+        gen_prod_y    = Var("userFloat('gen_prod_y')",      float, doc = "Gen match: mmg mother production vertex y"),
+        gen_prod_z    = Var("userFloat('gen_prod_z')",      float, doc = "Gen match: mmg mother production vertex z"),
+        gen_l3d       = Var("userFloat('gen_l3d')",         float, doc = "Gen match: mmg decay legnth 3D"),
+        gen_lxy       = Var("userFloat('gen_lxy')",         float, doc = "Gen match: mmg decay legnth XY"),
+        gen_tau       = Var("userFloat('gen_tau')",         float, doc = "Gen match: mmg decay time 3D"),
+    )
+)
+
+BxToMuMuBToMuMuGammaTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("BxToMuMu","BToMuMuGamma"),
+    cut=cms.string(""),
+    name=cms.string("mmg"),
+    doc=cms.string("BToMuMuGamma Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = BxToMuMuBToMuMuGammaTableVariables
+)
+
+BxToMuMuBToMuMuGammaMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("BxToMuMuMc","BToMuMuGamma"),
+    cut=cms.string(""),
+    name=cms.string("mmg"),
+    doc=cms.string("BToMuMuGamma Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = BxToMuMuBToMuMuGammaMcTableVariables
+)
+
+##################################################################################
+###
 ###                              Gen Summary Info
 ###
 ##################################################################################
@@ -503,5 +560,5 @@ prescaleTable = cms.EDProducer("TriggerPrescaleProducer",
 
 BxToMuMuSequence   = cms.Sequence(BxToMuMu)
 BxToMuMuMcSequence = cms.Sequence(BxToMuMuMc * BxToMuMuGen )
-BxToMuMuTables     = cms.Sequence(BxToMuMuDiMuonTable   * BxToMuMuBToKmumuTable * BxToMuMuBToKKmumuTable * prescaleTable)
-BxToMuMuMcTables   = cms.Sequence(BxToMuMuDiMuonMcTable * BxToMuMuBToKmumuMcTable * BxToMuMuBToKKmumuMcTable * BxToMuMuGenTable * BxToMuMuGenSummaryTable * prescaleTable)
+BxToMuMuTables     = cms.Sequence(BxToMuMuDiMuonTable   * BxToMuMuBToKmumuTable * BxToMuMuBToKKmumuTable * BxToMuMuBToMuMuGammaTable *prescaleTable)
+BxToMuMuMcTables   = cms.Sequence(BxToMuMuDiMuonMcTable * BxToMuMuBToKmumuMcTable * BxToMuMuBToKKmumuMcTable * BxToMuMuBToMuMuGammaMcTable * BxToMuMuGenTable * BxToMuMuGenSummaryTable * prescaleTable)
