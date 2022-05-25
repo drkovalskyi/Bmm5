@@ -265,7 +265,7 @@ struct DisplacementInformationIn3D{
     longitudinalImpactParameter, longitudinalImpactParameterErr, longitudinalImpactParameterSig,
     longitudinalImpactParameter2, longitudinalImpactParameter2Err,longitudinalImpactParameter2Sig,
     decayTime, decayTimeError, decayTimeXY, decayTimeXYError,
-    alpha, alphaErr, alphaXY, alphaXYErr;
+    alpha, alphaErr, alphaXY, alphaXYErr, decayTime2, alpha2, alpha2Err;
   const reco::Vertex *pv,*pv2;
   int pvIndex,pv2Index;
   DisplacementInformationIn3D():decayLength(-1.0), decayLengthErr(0.), decayLength2(-1.0), decayLength2Err(0.),
@@ -277,6 +277,7 @@ struct DisplacementInformationIn3D{
 				decayTimeXY(-999.), decayTimeXYError(-999.),
 				alpha(-999.), alphaErr(-999.),
 				alphaXY(-999.), alphaXYErr(-999.),
+				decayTime2(-999.), alpha2(-999.), alpha2Err(-999.),
 				pv(0), pv2(0),
 				pvIndex(-1), pv2Index(-1)
   {};
@@ -289,7 +290,7 @@ LorentzVector makeLorentzVectorFromPxPyPzM(double px, double py, double pz, doub
 
 struct GenMatchInfo{
   int mu1_pdgId, mu1_motherPdgId, mu2_pdgId, mu2_motherPdgId, kaon1_pdgId, kaon1_motherPdgId,
-    kaon2_pdgId, kaon2_motherPdgId, mm_pdgId, mm_motherPdgId, kmm_pdgId, kkmm_pdgId;
+    kaon2_pdgId, kaon2_motherPdgId, mm_pdgId, mm_motherPdgId, kmm_pdgId, kkmm_pdgId, mm_pvIndex;
   float mu1_pt, mu2_pt, kaon1_pt, kaon2_pt, mm_mass, mm_pt, kmm_mass, kkmm_mass, kmm_pt, kkmm_pt;
   math::XYZPoint mm_prod_vtx, mm_vtx, kmm_prod_vtx, kkmm_prod_vtx;
   const reco::Candidate* mc_mu1;
@@ -301,7 +302,8 @@ struct GenMatchInfo{
   GenMatchInfo():mu1_pdgId(0), mu1_motherPdgId(0), mu2_pdgId(0), mu2_motherPdgId(0), 
 		 kaon1_pdgId(0), kaon1_motherPdgId(0), kaon2_pdgId(0), kaon2_motherPdgId(0),
 		 mm_pdgId(0), mm_motherPdgId(0), 
-		 kmm_pdgId(0), kkmm_pdgId(0), mu1_pt(0), mu2_pt(0), 
+		 kmm_pdgId(0), kkmm_pdgId(0), mm_pvIndex(-1),
+		 mu1_pt(0), mu2_pt(0), 
 		 kaon1_pt(0), kaon2_pt(0), mm_mass(0), mm_pt(0), 
 		 kmm_mass(0), kkmm_mass(0), kmm_pt(0), kkmm_pt(0),
 		 mc_mu1(0), mc_mu2(0), mc_kaon1(0), mc_kaon2(0),
@@ -609,6 +611,7 @@ private:
   
   void setupTmvaReader(TMVA::Reader& reader, std::string file);
 
+  int getGenMatchedPV(const math::XYZPoint& production_vertex);
 
   // ----------member data ---------------------------
     
@@ -737,7 +740,9 @@ namespace {
     cand.addUserFloat( name+"_lxy",         fit.lxy );
     cand.addUserFloat( name+"_sigLxy",      fit.sigLxy );
     cand.addUserFloat( name+"_alpha",       displacement3d.alpha);
+    cand.addUserFloat( name+"_alpha2",      displacement3d.alpha2);
     cand.addUserFloat( name+"_alphaErr",    displacement3d.alphaErr);
+    cand.addUserFloat( name+"_alpha2Err",   displacement3d.alpha2Err);
     cand.addUserFloat( name+"_alphaBS",     fit.alphaBS);
     cand.addUserFloat( name+"_alphaBSErr",  fit.alphaBSErr);
     cand.addUserFloat( name+"_vtx_x",       fit.valid()?fit.refitVertex->position().x():0 );
@@ -768,12 +773,14 @@ namespace {
     cand.addUserFloat( name+"_pv2lipSig",   displacement3d.longitudinalImpactParameter2Sig);
     cand.addUserFloat( name+"_pv2lipErr",   displacement3d.longitudinalImpactParameter2Err);
     cand.addUserInt(   name+"_pvIndex",     displacement3d.pvIndex);
+    cand.addUserInt(   name+"_pv2Index",    displacement3d.pv2Index);
 
     // DecayTime
     cand.addUserFloat( name+"_tau",         displacement3d.decayTime);
     cand.addUserFloat( name+"_taue",        displacement3d.decayTimeError);
     cand.addUserFloat( name+"_tauxy",       displacement3d.decayTimeXY);
     cand.addUserFloat( name+"_tauxye",      displacement3d.decayTimeXYError);
+    cand.addUserFloat( name+"_tau2",        displacement3d.decayTime2);
 
     // Refitted daughter information
     if (firstMuonDaughterIndex>=0){
@@ -983,7 +990,23 @@ namespace {
   }
 }
 
-KinematicFitResult 
+int
+BxToMuMuProducer::getGenMatchedPV(const math::XYZPoint& production_vertex){
+  int pvIndex = -1;
+  double min_distance = 9999.;
+  const auto& vertices = *pvHandle_.product();
+  for ( unsigned int i = 0; i < vertices.size(); ++i ){
+    const auto & vertex = vertices.at(i);
+    float d = (vertex.position() - production_vertex).r();
+    if (d < min_distance){
+      min_distance = d;
+      pvIndex = i;
+    }
+  }
+  return pvIndex;
+}
+
+  KinematicFitResult 
 BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
 			       const edm::Event& iEvent,
 			       const pat::Muon& muon1,
@@ -1016,6 +1039,7 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
     dimuonCand.addUserInt(  "gen_pdgId",       gen_mm.mm_pdgId);
     dimuonCand.addUserInt(  "gen_mpdgId",      gen_mm.mm_motherPdgId);
     dimuonCand.addUserInt(  "gen_cpdgId",      gen_mm.common_mother?gen_mm.common_mother->pdgId():0);
+    dimuonCand.addUserInt(  "gen_pvIndex",     gen_mm.mm_pvIndex);
     dimuonCand.addUserFloat("gen_prod_x",      gen_mm.mm_prod_vtx.x());
     dimuonCand.addUserFloat("gen_prod_y",      gen_mm.mm_prod_vtx.y());
     dimuonCand.addUserFloat("gen_prod_z",      gen_mm.mm_prod_vtx.z());
@@ -2190,6 +2214,7 @@ GenMatchInfo BxToMuMuProducer::getGenMatchInfo( const pat::Muon& muon1,
       result.mm_pdgId     = mm_mother->pdgId();
       if (mm_mother->mother()) result.mm_motherPdgId = mm_mother->mother()->pdgId();
       result.mm_prod_vtx = getProductionVertex(mm_mother);
+      result.mm_pvIndex  = getGenMatchedPV(result.mm_prod_vtx);
     }
   }
   
@@ -2474,30 +2499,6 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
   VertexDistanceXY distanceXY;
   auto distXY = distanceXY.distance(*bestVertex, fit.refitVertex->vertexState() );
 
-  if (bestVertex2){
-    auto impactParameter3D2 = IPTools::absoluteImpactParameter3D(candTransientTrack, *bestVertex2);
-    auto impactParameterZ2  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), *bestVertex2);
-    result.pv2 = bestVertex2;
-    result.pv2Index = bestVertexIndex2;
-    if (impactParameterZ2.first) {
-      result.longitudinalImpactParameter2    = impactParameterZ2.second.value();
-      result.longitudinalImpactParameter2Sig = impactParameterZ2.second.significance();
-      result.longitudinalImpactParameter2Err = impactParameterZ2.second.error();
-    }
-    if (impactParameter3D2.first) {
-      result.distaceOfClosestApproach2       = impactParameter3D2.second.value();
-      result.distaceOfClosestApproach2Sig    = impactParameter3D2.second.value();
-      result.distaceOfClosestApproach2Err    = impactParameter3D2.second.error();
-    }
-
-    // compute decay length
-    VertexDistance3D distance3D;
-    auto dist = distance3D.distance(*bestVertex2, fit.refitVertex->vertexState() );
-    result.decayLength2    = dist.value();
-    result.decayLength2Err = dist.error();
-
-  }
-
   //
   // Pointing angle
   //
@@ -2540,6 +2541,40 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
 
   result.decayTimeXY = distXY.value() / plab.Perp() * cos(result.alphaXY) * massOverC;
   result.decayTimeXYError = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac2d)) * massOverC;
+
+  if (bestVertex2){
+    auto impactParameter3D2 = IPTools::absoluteImpactParameter3D(candTransientTrack, *bestVertex2);
+    auto impactParameterZ2  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), *bestVertex2);
+    result.pv2 = bestVertex2;
+    result.pv2Index = bestVertexIndex2;
+    if (impactParameterZ2.first) {
+      result.longitudinalImpactParameter2    = impactParameterZ2.second.value();
+      result.longitudinalImpactParameter2Sig = impactParameterZ2.second.significance();
+      result.longitudinalImpactParameter2Err = impactParameterZ2.second.error();
+    }
+    if (impactParameter3D2.first) {
+      result.distaceOfClosestApproach2       = impactParameter3D2.second.value();
+      result.distaceOfClosestApproach2Sig    = impactParameter3D2.second.value();
+      result.distaceOfClosestApproach2Err    = impactParameter3D2.second.error();
+    }
+
+    // compute decay length
+    VertexDistance3D distance3D;
+    auto dist2 = distance3D.distance(*bestVertex2, fit.refitVertex->vertexState() );
+    result.decayLength2    = dist2.value();
+    result.decayLength2Err = dist2.error();
+    
+    auto alpha2 = getAlpha(fit.refitVertex->vertexState().position(),
+			   fit.refitVertex->vertexState().error(),
+			   GlobalPoint(Basic3DVector<float>(bestVertex2->position())),
+			   GlobalError(bestVertex2->covariance()),
+			   fit.refitMother->currentState().globalMomentum());
+    result.alpha2    = alpha2.first;
+    result.alpha2Err = alpha2.second;
+    result.decayTime2 = dist2.value() / plab.Mag() * cos(result.alpha2) * massOverC;
+
+  }
+
     
   return result;
 }
