@@ -1,4 +1,11 @@
-<use name="xgboost"/>
+<use   name="xgboost"/>
+<use   name="DataFormats/EgammaCandidates"/>
+<use   name="TrackingTools/TrajectoryState"/>
+<use   name="MagneticField/Engine"/>
+<use   name="RecoVertex/KinematicFitPrimitives"/>
+<use   name="RecoVertex/KinematicFit"/>
+<use   name="boost"/>
+<use   name="clhep"/>
 <export>
   <lib   name="1"/>
 </export>

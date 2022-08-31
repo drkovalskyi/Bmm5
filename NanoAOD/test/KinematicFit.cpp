@@ -1,36 +1,39 @@
-#include "RecoVertex/KinematicFitPrimitives/interface/TrackKinematicStatePropagator.h"
-#include "RecoVertex/KinematicFitPrimitives/interface/KinematicState.h"
-#include "RecoVertex/KinematicFitPrimitives/interface/Matrices.h"
+#include "Bmm5/NanoAOD/interface/KinFitUtils.h"
+// #include "RecoVertex/KinematicFitPrimitives/interface/TrackKinematicStatePropagator.h"
+// #include "RecoVertex/KinematicFitPrimitives/interface/KinematicState.h"
+// #include "RecoVertex/KinematicFitPrimitives/interface/Matrices.h"
 
-#include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
-#include "TrackingTools/TrajectoryState/interface/TrajectoryStateAccessor.h"
-#include "DataFormats/GeometrySurface/interface/Surface.h" 
-#include "DataFormats/GeometrySurface/interface/BoundPlane.h"
-#include "MagneticField/Engine/interface/MagneticField.h"
+// #include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
+// #include "TrackingTools/TrajectoryState/interface/TrajectoryStateAccessor.h"
+// #include "DataFormats/GeometrySurface/interface/Surface.h" 
+// #include "DataFormats/GeometrySurface/interface/BoundPlane.h"
+// #include "MagneticField/Engine/interface/MagneticField.h"
 
-#include "TrackingTools/TrajectoryState/interface/BasicSingleTrajectoryState.h"
-#include "TrackingTools/TrajectoryState/interface/FreeTrajectoryState.h"
-#include "TrackingTools/AnalyticalJacobians/interface/JacobianCurvilinearToCartesian.h"
-#include "TrackingTools/AnalyticalJacobians/interface/JacobianCartesianToCurvilinear.h"
-#include "TrackingTools/TrajectoryState/interface/PerigeeConversions.h"
+// #include "TrackingTools/TrajectoryState/interface/BasicSingleTrajectoryState.h"
+// #include "TrackingTools/TrajectoryState/interface/FreeTrajectoryState.h"
+// #include "TrackingTools/AnalyticalJacobians/interface/JacobianCurvilinearToCartesian.h"
+// #include "TrackingTools/AnalyticalJacobians/interface/JacobianCartesianToCurvilinear.h"
+// #include "TrackingTools/TrajectoryState/interface/PerigeeConversions.h"
 
-#include "DataFormats/TrackReco/interface/Track.h"
-#include "RecoVertex/KinematicFitPrimitives/interface/TransientTrackKinematicParticle.h"
-#include "RecoVertex/KinematicFitPrimitives/interface/KinematicParticleFactoryFromTransientTrack.h"
-#include "RecoVertex/KinematicFit/interface/KinematicParticleVertexFitter.h"
-#include "RecoVertex/KinematicFit/interface/KinematicParticleFitter.h"
-#include "RecoVertex/KinematicFit/interface/MassKinematicConstraint.h"
-#include "RecoVertex/KinematicFit/interface/PointingKinematicConstraint.h"
-#include "RecoVertex/KinematicFit/interface/KinematicConstrainedVertexFitter.h"
-#include "TMath.h"
-#include "DataFormats/EgammaCandidates/interface/Photon.h"
+// #include "DataFormats/TrackReco/interface/Track.h"
+// #include "RecoVertex/KinematicFitPrimitives/interface/TransientTrackKinematicParticle.h"
+// #include "RecoVertex/KinematicFitPrimitives/interface/KinematicParticleFactoryFromTransientTrack.h"
+// #include "RecoVertex/KinematicFit/interface/KinematicParticleVertexFitter.h"
+// #include "RecoVertex/KinematicFit/interface/KinematicParticleFitter.h"
+// #include "RecoVertex/KinematicFit/interface/MassKinematicConstraint.h"
+// #include "RecoVertex/KinematicFit/interface/PointingKinematicConstraint.h"
+// #include "RecoVertex/KinematicFit/interface/KinematicConstrainedVertexFitter.h"
+// #include "TMath.h"
+// #include "DataFormats/EgammaCandidates/interface/Photon.h"
 
-#include <iostream>
+// #include <iostream>
 
-typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzM4D<double>> LorentzVectorM;
-typedef ROOT::Math::SMatrix<double, 6, 6, ROOT::Math::MatRepSym<double, 6> > Matrix6S;
-typedef ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3> > Matrix3S;
-typedef ROOT::Math::SMatrix<double, 3, 3> Matrix33;
+// typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzM4D<double>> LorentzVectorM;
+// typedef ROOT::Math::SMatrix<double, 6, 6, ROOT::Math::MatRepSym<double, 6> > Matrix6S;
+// typedef ROOT::Math::SMatrix<double, 3, 3, ROOT::Math::MatRepSym<double, 3> > Matrix3S;
+// typedef ROOT::Math::SMatrix<double, 3, 3> Matrix33;
+
+using namespace bmm;
 
 class ConstMagneticField : public MagneticField {
 public:
@@ -72,21 +75,6 @@ void dump_result( const RefCountedKinematicTree& fit ){
   std::cout << "================" << std::endl;
   fit->movePointerToTheTop();
 
-}
-
-Matrix33 jacobianSphToCart(const reco::Candidate::LorentzVector& p4){
-  Matrix33 jac;
-  jac(0,0) =   p4.Px() / p4.P();
-  jac(0,1) =   p4.Py() / p4.P();
-  jac(0,2) =   p4.Pz() / p4.P();
-  jac(1,0) =   p4.Px() * p4.Pz() / p4.Pt() / p4.P() / p4.P();
-  jac(1,1) =   p4.Py() * p4.Pz() / p4.Pt() / p4.P() / p4.P();
-  jac(1,2) = - p4.Pt() / p4.P() / p4.P();
-  jac(2,0) = - p4.Py() / p4.Pt() / p4.Pt();
-  jac(2,1) =   p4.Px() / p4.Pt() / p4.Pt();
-  jac(2,2) =   0;
-  
-  return jac;
 }
 
 int main() {
@@ -148,74 +136,9 @@ int main() {
   // Build KinematicParticle for the Photon
   //
   
-  GlobalTrajectoryParameters photon_gtp(GlobalPoint(photon.caloPosition().x(),
-						    photon.caloPosition().y(),
-						    photon.caloPosition().z()),
-					GlobalVector(photon.px(),
-						     photon.py(),
-						     photon.pz()),
-					0, field);
-
-  Matrix3S ph_cov;
-  ph_cov(0,0) = pow(0.18,2);
-  ph_cov(1,1) = 1;
-  ph_cov(2,2) = 1;
-  for (unsigned int i = 0; i < 3; ++i){
-      for (unsigned int j = 0; j < 3; ++j)
-        std::cout << ph_cov(i,j) << "\t";
-      std::cout << std::endl;
-  }
-
-  auto jac = jacobianSphToCart(photon.p4());
-
-  AlgebraicSymMatrix66 photon_catesian_cov;
-  photon_catesian_cov(0,0) = 1.0; // cm
-  photon_catesian_cov(1,1) = 1.0; // cm
-  photon_catesian_cov(2,2) = 1.0; // cm
-  
-  Matrix3S ph_cov2 = ROOT::Math::Similarity(jac, ph_cov);
-  for (unsigned int i = 0; i < 3; ++i){
-    for (unsigned int j = 0; j < 3; ++j){
-        std::cout << ph_cov2(i,j) << "\t";
-	photon_catesian_cov(3 + i, 3 + j) = ph_cov2(i,j);
-    }
-    std::cout << std::endl;
-  }
-
-  // CurvilinearTrajectoryError photon_cte;
-  // photon_cte.matrix()(0,0) = 1e-6;
-  // photon_cte.matrix()(1,1) = 1;
-  // photon_cte.matrix()(2,2) = 1;
-  // photon_cte.matrix()(3,3) = 1;
-  // photon_cte.matrix()(4,4) = 1;
-  // // for (unsigned int i = 0; i < 5; ++i){
-  // //     for (unsigned int j = 0; j < 5; ++j)
-  // //       std::cout << photon_cte.matrix()(i,j) << "\t";
-  // //     std::cout << std::endl;
-  // // }
-  FreeTrajectoryState photon_fts(photon_gtp, CartesianTrajectoryError(photon_catesian_cov));
-
-  std::cout << photon_fts << std::endl;
-  
-  auto photon_ce = photon_fts.cartesianError();
-  for (unsigned int i = 0; i < 6; ++i){
-      for (unsigned int j = 0; j < 6; ++j)
-        std::cout << photon_ce.matrix()(i,j) << "\t";
-      std::cout << std::endl;
-  }
-  
-  // FreeTrajectoryState photon_fts(photon_gtp);
-
-  // Get KinematicState
-  // not sure what to put for mass uncertainty
-  
-  KinematicState photon_kinstate(photon_fts, 0, 1e-6);
-  KinematicConstraint* lastConstraint(nullptr);
-  ReferenceCountingPointer<KinematicParticle> previousParticle(nullptr);
   float photon_chi2(1);
   float photon_ndf(1);
-  ReferenceCountingPointer<KinematicParticle> photon_kp(new VirtualKinematicParticle(photon_kinstate,
-                      photon_chi2, photon_ndf, lastConstraint, previousParticle, nullptr));
+  KinematicParticleRef photon_kp(build_particle(photon, 0.18, field, photon_chi2, photon_ndf));
 
   std::cout << "Unfitted mass: " << (mu1_p4 + mu2_p4 + photon.p4()).mass() << std::endl;
 
