@@ -1,0 +1,10 @@
+<use   name="DataFormats/GeometrySurface"/>
+<use name="DataFormats/TrackReco"/>
+<use   name="TrackingTools/TrajectoryState"/>
+<use   name="MagneticField/Engine"/>
+<use   name="RecoVertex/KinematicFitPrimitives"/>
+<use   name="RecoVertex/KinematicFit"/>
+<use   name="boost"/>
+<use   name="clhep"/>
+<bin   file="KinematicFit.cpp">
+</bin>
