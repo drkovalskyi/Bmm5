@@ -55,136 +55,136 @@ namespace {
   const float pion_mass_     = 0.139570;
   const float jpsi_mass_     = 3.0969;
   const float proton_mass_   = 0.9382;
-};
 
-struct KinematicFitResult{
-  bool treeIsValid;
-  bool vertexIsValid;
-  RefCountedKinematicVertex      refitVertex;
-  RefCountedKinematicParticle    refitMother;
-  RefCountedKinematicTree        refitTree;
-  std::vector<RefCountedKinematicParticle> refitDaughters;
-  float lxy, lxyErr, sigLxy, cosAlpha, ipSigBS, ipSigPV;
-  KinematicFitResult():treeIsValid(false),vertexIsValid(false),
-		       lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0), cosAlpha(-999.),
-		       ipSigBS(999.), ipSigPV(999.)
-  {}
-
-  bool valid() const {
-    return treeIsValid and vertexIsValid;
-  }
-
-  void postprocess(const reco::BeamSpot& beamSpot,
-		   const reco::VertexCollection& vertices)
-  {
-    if ( not valid() ) return;
-    // displacement information
-    TVector v(2);
-    v[0] = refitVertex->position().x()-beamSpot.position().x();
-    v[1] = refitVertex->position().y()-beamSpot.position().y();
-
-    TMatrix errVtx(2,2);
-    errVtx(0,0) = refitVertex->error().cxx();
-    errVtx(0,1) = refitVertex->error().matrix()(0,1);
-    errVtx(1,0) = errVtx(0,1);
-    errVtx(1,1) = refitVertex->error().cyy();
-
-    TMatrix errBS(2,2);
-    errBS(0,0) = beamSpot.covariance()(0,0);
-    errBS(0,1) = beamSpot.covariance()(0,1);
-    errBS(1,0) = beamSpot.covariance()(1,0);
-    errBS(1,1) = beamSpot.covariance()(1,1);
+  struct KinematicFitResult{
+    bool treeIsValid;
+    bool vertexIsValid;
+    RefCountedKinematicVertex      refitVertex;
+    RefCountedKinematicParticle    refitMother;
+    RefCountedKinematicTree        refitTree;
+    std::vector<RefCountedKinematicParticle> refitDaughters;
+    float lxy, lxyErr, sigLxy, cosAlpha, ipSigBS, ipSigPV;
+    KinematicFitResult():treeIsValid(false),vertexIsValid(false),
+			 lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0), cosAlpha(-999.),
+			 ipSigBS(999.), ipSigPV(999.)
+    {}
     
-    lxy = sqrt(v.Norm2Sqr());
-    lxyErr = sqrt( v*(errVtx*v) + v*(errBS*v) ) / lxy;
-    if (lxyErr > 0) sigLxy = lxy/lxyErr;
-    
-    // compute cosAlpha 2D wrt BeamSpot
-    v[0] = refitVertex->position().x()-beamSpot.position().x();
-    v[1] = refitVertex->position().y()-beamSpot.position().y();
-    TVector w(2);
-    w[0] = refitMother->currentState().globalMomentum().x();
-    w[1] = refitMother->currentState().globalMomentum().y();
-    cosAlpha = v*w/sqrt(v.Norm2Sqr()*w.Norm2Sqr());
-
-    // comput impact parameter
-    auto transientTrack = refitMother->refittedTransientTrack();
-    ipSigBS = transientTrack.stateAtBeamLine().transverseImpactParameter().significance();
-
-    ipSigPV = 999.;
-    for (const auto& vertex: vertices){
-      auto impactParameter3D = IPTools::absoluteImpactParameter3D(transientTrack, vertex);
-      if (impactParameter3D.first)
-	if (ipSigPV > impactParameter3D.second.significance())
-	  ipSigPV = impactParameter3D.second.significance();
+    bool valid() const {
+      return treeIsValid and vertexIsValid;
     }
-  }
+    
+    void postprocess(const reco::BeamSpot& beamSpot,
+		     const reco::VertexCollection& vertices)
+    {
+      if ( not valid() ) return;
+      // displacement information
+      TVector v(2);
+      v[0] = refitVertex->position().x()-beamSpot.position().x();
+      v[1] = refitVertex->position().y()-beamSpot.position().y();
+
+      TMatrix errVtx(2,2);
+      errVtx(0,0) = refitVertex->error().cxx();
+      errVtx(0,1) = refitVertex->error().matrix()(0,1);
+      errVtx(1,0) = errVtx(0,1);
+      errVtx(1,1) = refitVertex->error().cyy();
+      
+      TMatrix errBS(2,2);
+      errBS(0,0) = beamSpot.covariance()(0,0);
+      errBS(0,1) = beamSpot.covariance()(0,1);
+      errBS(1,0) = beamSpot.covariance()(1,0);
+      errBS(1,1) = beamSpot.covariance()(1,1);
+    
+      lxy = sqrt(v.Norm2Sqr());
+      lxyErr = sqrt( v*(errVtx*v) + v*(errBS*v) ) / lxy;
+      if (lxyErr > 0) sigLxy = lxy/lxyErr;
+    
+      // compute cosAlpha 2D wrt BeamSpot
+      v[0] = refitVertex->position().x()-beamSpot.position().x();
+      v[1] = refitVertex->position().y()-beamSpot.position().y();
+      TVector w(2);
+      w[0] = refitMother->currentState().globalMomentum().x();
+      w[1] = refitMother->currentState().globalMomentum().y();
+      cosAlpha = v*w/sqrt(v.Norm2Sqr()*w.Norm2Sqr());
+
+      // comput impact parameter
+      auto transientTrack = refitMother->refittedTransientTrack();
+      ipSigBS = transientTrack.stateAtBeamLine().transverseImpactParameter().significance();
+
+      ipSigPV = 999.;
+      for (const auto& vertex: vertices){
+	auto impactParameter3D = IPTools::absoluteImpactParameter3D(transientTrack, vertex);
+	if (impactParameter3D.first)
+	  if (ipSigPV > impactParameter3D.second.significance())
+	    ipSigPV = impactParameter3D.second.significance();
+      }
+    }
   
-  float mass() const
-  {
-    if ( not valid() ) return -1.0;
-    return refitMother->currentState().mass();
-  }
+    float mass() const
+    {
+      if ( not valid() ) return -1.0;
+      return refitMother->currentState().mass();
+    }
 
-  float refit_mass(unsigned int i, unsigned int j) const
-  {
-    if ( not valid() ) return -1.0;
-    if (i >= refitDaughters.size()) return -2.0;
-    if (j >= refitDaughters.size()) return -3.0;
-    if (refitDaughters.at(i)->currentState().globalMomentum().mag2()<0) return -4.0;
-    if (refitDaughters.at(j)->currentState().globalMomentum().mag2()<0) return -5.0;
-    auto momentum = refitDaughters.at(i)->currentState().globalMomentum() + 
-      refitDaughters.at(j)->currentState().globalMomentum();
-    auto energy1 = sqrt(refitDaughters.at(i)->currentState().globalMomentum().mag2() + 
-			pow(refitDaughters.at(i)->currentState().mass(),2));
-    auto energy2 = sqrt(refitDaughters.at(j)->currentState().globalMomentum().mag2() + 
-			pow(refitDaughters.at(j)->currentState().mass(),2));
-    return sqrt(pow(energy1+energy2,2)-momentum.mag2());
-  }
+    float refit_mass(unsigned int i, unsigned int j) const
+    {
+      if ( not valid() ) return -1.0;
+      if (i >= refitDaughters.size()) return -2.0;
+      if (j >= refitDaughters.size()) return -3.0;
+      if (refitDaughters.at(i)->currentState().globalMomentum().mag2()<0) return -4.0;
+      if (refitDaughters.at(j)->currentState().globalMomentum().mag2()<0) return -5.0;
+      auto momentum = refitDaughters.at(i)->currentState().globalMomentum() + 
+	refitDaughters.at(j)->currentState().globalMomentum();
+      auto energy1 = sqrt(refitDaughters.at(i)->currentState().globalMomentum().mag2() + 
+			  pow(refitDaughters.at(i)->currentState().mass(),2));
+      auto energy2 = sqrt(refitDaughters.at(j)->currentState().globalMomentum().mag2() + 
+			  pow(refitDaughters.at(j)->currentState().mass(),2));
+      return sqrt(pow(energy1+energy2,2)-momentum.mag2());
+    }
+    
+    GlobalVector p3() const
+    {
+      if ( not valid() ) return GlobalVector();
+      return refitMother->currentState().globalMomentum();
+    }
 
-  GlobalVector p3() const
-  {
-    if ( not valid() ) return GlobalVector();
-    return refitMother->currentState().globalMomentum();
-  }
+    GlobalVector dau_p3(unsigned int i) const
+    {
+      if ( not valid() or i>=refitDaughters.size() ) return GlobalVector();
+      return refitDaughters.at(i)->currentState().globalMomentum();
+    }
+    
+    float massErr() const
+    {
+      if ( not valid() ) return -1.0;
+      return sqrt(refitMother->currentState().kinematicParametersError().matrix()(6,6));
+    }
+    
+    float chi2() const
+    {
+      if ( not valid() ) return -1.0;
+      return refitVertex->chiSquared();
+    }
+    
+    float ndof() const
+    {
+      return refitVertex->degreesOfFreedom();
+    }
+    
+    float vtxProb() const
+    {
+      if ( not valid() ) return -1.0;
+      return TMath::Prob((double)refitVertex->chiSquared(), int(rint(refitVertex->degreesOfFreedom())));
+    }
+    
+  };
 
-  GlobalVector dau_p3(unsigned int i) const
-  {
-    if ( not valid() or i>=refitDaughters.size() ) return GlobalVector();
-    return refitDaughters.at(i)->currentState().globalMomentum();
-  }
-
-  float massErr() const
-  {
-    if ( not valid() ) return -1.0;
-    return sqrt(refitMother->currentState().kinematicParametersError().matrix()(6,6));
-  }
-
-  float chi2() const
-  {
-    if ( not valid() ) return -1.0;
-    return refitVertex->chiSquared();
-  }
-
-  float ndof() const
-  {
-    return refitVertex->degreesOfFreedom();
-  }
-
-  float vtxProb() const
-  {
-    if ( not valid() ) return -1.0;
-    return TMath::Prob((double)refitVertex->chiSquared(), int(rint(refitVertex->degreesOfFreedom())));
-  }
-  
-};
-
-struct GenMatchInfo{
-  const pat::PackedGenParticle* mc_trk1;
-  const pat::PackedGenParticle* mc_trk2;
-  const reco::Candidate*   match;
-  GenMatchInfo():mc_trk1(0), mc_trk2(0), match(0)
-  {}
+  struct GenMatchInfo{
+    const pat::PackedGenParticle* mc_trk1;
+    const pat::PackedGenParticle* mc_trk2;
+    const reco::Candidate*   match;
+    GenMatchInfo():mc_trk1(0), mc_trk2(0), match(0)
+    {}
+  };
 };
 
 using namespace std;

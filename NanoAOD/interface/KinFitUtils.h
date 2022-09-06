@@ -46,12 +46,12 @@ namespace bmm
   // create trajectory state for a photon
   FreeTrajectoryState getFTS(const reco::Photon& photon,
 			     double energyErr,
-			     MagneticField* field);
+			     const MagneticField* field);
 
   // build KinematicParticle for a photon
   KinematicParticleRef build_particle(const reco::Photon& photon,
 				      double energyErr,
-				      MagneticField * field,
+				      const MagneticField * field,
 				      float& chi2,
 				      float& ndof);
 }

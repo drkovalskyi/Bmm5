@@ -23,7 +23,7 @@ bmm::jacobianSphToCart(const reco::Candidate::LorentzVector& p4)
 FreeTrajectoryState
 bmm::getFTS(const reco::Photon& photon,
 	    double energyErr,
-	    MagneticField * field)
+	    const MagneticField * field)
 {
   GlobalTrajectoryParameters gtp(GlobalPoint(photon.caloPosition().x(),
 					     photon.caloPosition().y(),
@@ -72,7 +72,7 @@ bmm::getFTS(const reco::Photon& photon,
 KinematicParticleRef
 bmm::build_particle(const reco::Photon& photon,
 	       double energyErr,
-	       MagneticField * field,
+	       const MagneticField * field,
 	       float& chi2,
 	       float& ndof)
 {

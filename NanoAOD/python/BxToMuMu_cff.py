@@ -411,7 +411,8 @@ BxToMuMuBToKKmumuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProd
 ##################################################################################
 
 BxToMuMuBToMuMuGammaTableVariables =  merge_psets(
-    # copy_pset(kinematic_pset,{"kin_":"jpsikk_"}),
+    copy_pset(kinematic_pset,{"kin_":"nomc_"}),
+    copy_pset(kinematic_pset,{"kin_":"jpsimc_"}),
     cms.PSet(
         mm_index        = Var("userInt('mm_index')",           int,   doc = "Index of dimuon pair"),
         ph_index        = Var("userInt('ph_index')",           int,   doc = "Index of photon"),

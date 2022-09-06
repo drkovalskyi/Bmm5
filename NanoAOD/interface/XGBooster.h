@@ -1,3 +1,6 @@
+#ifndef Bmm5_NanoAOD_XGBooster_h
+#define Bmm5_NanoAOD_XGBooster_h
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -22,3 +25,5 @@ private:
     std::map<std::string,unsigned int> feature_name_to_index_;
     BoosterHandle  booster_;
 };
+
+#endif

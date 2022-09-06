@@ -46,6 +46,8 @@
 #include <math.h>
 
 #include "Bmm5/NanoAOD/interface/XGBooster.h"
+#include "Bmm5/NanoAOD/interface/KinFitUtils.h"
+#include "Bmm5/NanoAOD/interface/KinematicFitResult.h"
 
 // 
 // BxToMuMuProducer is designed for Bs/d->mumu analysis
@@ -63,363 +65,206 @@ namespace {
   const float JPsiMass_    = 3.0969;
   const float Psi2SMass_   = 3.6861;
   const float JPsiMassErr_ = 92.9e-6;
-};
-
-std::pair<float, float>
-getAlpha(const GlobalPoint& vtx_position, const GlobalError& vtx_error,
-	 const GlobalPoint& ip_position,  const GlobalError& ip_error,
-			     const GlobalVector &momentum,
-			     bool transverse = true){
-  AlgebraicSymMatrix33 error_matrix(vtx_error.matrix() + ip_error.matrix());
-  GlobalVector dir(vtx_position - ip_position);
-  if (dir.mag() == 0)
-    return std::pair<float, float>(999., 999.);
-
-  GlobalVector p(momentum);
-  if (transverse){
-    dir = GlobalVector(dir.x(), dir.y(), 0);
-    p = GlobalVector(p.x(), p.y(), 0);
+  
+  float momentum_resolution(const pat::Photon& photon){
+    if (fabs(photon.eta()) < 0.4) return photon.p() * 0.025;
+    if (fabs(photon.eta()) < 0.8) return photon.p() * 0.025;
+    if (fabs(photon.eta()) < 1.2) return photon.p() * 0.031;
+    if (fabs(photon.eta()) < 1.6) return photon.p() * 0.040;
+    if (fabs(photon.eta()) < 2.0) return photon.p() * 0.045;
+    return photon.p() * 0.044;
   }
   
-  double dot_product = dir.dot(p);
-  double cosAlpha = dot_product / p.mag() / dir.mag();
-  if (cosAlpha > 1) cosAlpha = 1;
-  if (cosAlpha < -1) cosAlpha = -1;
-
-  // Error propagation
-
-  double c1 = 1 / dir.mag() / p.mag();
-  double c2 = dot_product / pow(dir.mag(), 3) / p.mag();
-  
-  double dfdx = p.x() * c1 - dir.x() * c2;
-  double dfdy = p.y() * c1 - dir.y() * c2;
-  double dfdz = p.z() * c1 - dir.z() * c2;
-
-  double err2_cosAlpha =
-    pow(dfdx, 2) * error_matrix(0, 0) +
-    pow(dfdy, 2) * error_matrix(1, 1) +
-    pow(dfdz, 2) * error_matrix(2, 2) +
-    2 * dfdx * dfdy * error_matrix(0, 1) +
-    2 * dfdx * dfdz * error_matrix(0, 2) +
-    2 * dfdy * dfdz * error_matrix(1, 2);
-
-  float err_alpha = fabs(cosAlpha) <= 1 and err2_cosAlpha >=0 ? sqrt(err2_cosAlpha) / sqrt(1-pow(cosAlpha, 2)) : 999;
-  float alpha = acos(cosAlpha);
-  if (isnan(alpha) or isnan(err_alpha))
-    return std::pair<float, float>(999., 999.);
-  else
-    return std::pair<float, float>(alpha, err_alpha);
-}
-
-
-struct KinematicFitResult{
-  bool treeIsValid;
-  bool vertexIsValid;
-  RefCountedKinematicVertex      refitVertex;
-  RefCountedKinematicParticle    refitMother;
-  RefCountedKinematicTree        refitTree;
-  std::vector<RefCountedKinematicParticle> refitDaughters;
-  float lxy, lxyErr, sigLxy, alphaBS, alphaBSErr;
-  KinematicFitResult():treeIsValid(false),vertexIsValid(false),
-		       lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0),
-		       alphaBS(-999.), alphaBSErr(-999.)
-  {}
-
-  bool valid() const {
-    return treeIsValid and vertexIsValid;
-  }
-
-  void postprocess(const reco::BeamSpot& beamSpot)
-  {
-    if ( not valid() ) return;
-    // displacement information
-    TVector v(2);
-    v[0] = refitVertex->position().x()-beamSpot.position().x();
-    v[1] = refitVertex->position().y()-beamSpot.position().y();
-
-    TMatrix errVtx(2,2);
-    errVtx(0,0) = refitVertex->error().cxx();
-    errVtx(0,1) = refitVertex->error().matrix()(0,1);
-    errVtx(1,0) = errVtx(0,1);
-    errVtx(1,1) = refitVertex->error().cyy();
-
-    TMatrix errBS(2,2);
-    errBS(0,0) = beamSpot.covariance()(0,0);
-    errBS(0,1) = beamSpot.covariance()(0,1);
-    errBS(1,0) = beamSpot.covariance()(1,0);
-    errBS(1,1) = beamSpot.covariance()(1,1);
+  struct KalmanVertexFitResult{
+    float vtxProb;
+    bool  valid;
+    std::vector<LorentzVector> refitVectors;
+    GlobalPoint position;
+    GlobalError err;
+    float lxy, lxyErr, sigLxy;
     
-    lxy = sqrt(v.Norm2Sqr());
-    lxyErr = sqrt( v*(errVtx*v) + v*(errBS*v) ) / lxy;
-    if (lxyErr > 0) sigLxy = lxy/lxyErr;
+    KalmanVertexFitResult():vtxProb(-1.0),valid(false),lxy(-1.0),lxyErr(-1.0),sigLxy(-1.0){}
+
+    float mass() const
+    {
+      if (not valid) return -1.0;
+      LorentzVector p4;
+      for (auto v: refitVectors)
+	p4 += v;
+      return p4.mass();
+    }
+  
+    void postprocess(const reco::BeamSpot& bs)
+    {
+      if (not valid) return;
+      // position of the beam spot at a given z value (it takes into account the dxdz and dydz slopes)
+      reco::BeamSpot::Point bs_at_z(bs.position(position.z()));
+      GlobalPoint xy_displacement(position.x() - bs_at_z.x(),
+				  position.y() - bs_at_z.y(),
+				  0);
+      lxy = xy_displacement.perp();
+      lxyErr = sqrt(err.rerr(xy_displacement));
+      if (lxyErr > 0) sigLxy = lxy/lxyErr;
+    }
+  };
+
+  struct DisplacementInformationIn3D{
+    double decayLength, decayLengthErr, decayLength2, decayLength2Err, 
+      distaceOfClosestApproach, distaceOfClosestApproachErr, distaceOfClosestApproachSig,
+      distaceOfClosestApproach2, distaceOfClosestApproach2Err, distaceOfClosestApproach2Sig,
+      longitudinalImpactParameter, longitudinalImpactParameterErr, longitudinalImpactParameterSig,
+      longitudinalImpactParameter2, longitudinalImpactParameter2Err,longitudinalImpactParameter2Sig,
+      decayTime, decayTimeError, decayTimeXY, decayTimeXYError,
+      alpha, alphaErr, alphaXY, alphaXYErr;
+    const reco::Vertex *pv,*pv2;
+    int pvIndex,pv2Index;
+    DisplacementInformationIn3D():decayLength(-1.0), decayLengthErr(0.), decayLength2(-1.0), decayLength2Err(0.),
+				  distaceOfClosestApproach(-1.0), distaceOfClosestApproachErr(0.0), distaceOfClosestApproachSig(0.0),
+				  distaceOfClosestApproach2(-1.0), distaceOfClosestApproach2Err(0.0), distaceOfClosestApproach2Sig(0.0),
+				  longitudinalImpactParameter(0.0), longitudinalImpactParameterErr(0.), longitudinalImpactParameterSig(0.),
+				  longitudinalImpactParameter2(0.0), longitudinalImpactParameter2Err(0.), longitudinalImpactParameter2Sig(0.),
+				  decayTime(-999.), decayTimeError(-999.),
+				  decayTimeXY(-999.), decayTimeXYError(-999.),
+				  alpha(-999.), alphaErr(-999.),
+				  alphaXY(-999.), alphaXYErr(-999.),
+				  pv(0), pv2(0),
+				  pvIndex(-1), pv2Index(-1)
+    {};
+  };
+
+  LorentzVector makeLorentzVectorFromPxPyPzM(double px, double py, double pz, double m){
+    double p2 = px*px+py*py+pz*pz;
+    return LorentzVector(px,py,pz,sqrt(p2+m*m));
+  }
+
+  struct GenMatchInfo{
+    int mu1_pdgId, mu1_motherPdgId, mu2_pdgId, mu2_motherPdgId,
+      kaon1_pdgId, kaon1_motherPdgId, kaon2_pdgId, kaon2_motherPdgId, photon_pdgId, photon_motherPdgId,
+      mm_pdgId, mm_motherPdgId, kmm_pdgId, kkmm_pdgId, mmg_pdgId;
+    float mu1_pt, mu2_pt, kaon1_pt, kaon2_pt, photon_pt, mm_mass, mm_pt, kmm_mass, kkmm_mass, mmg_mass,
+      kmm_pt, kkmm_pt, mmg_pt;
+    math::XYZPoint mm_prod_vtx, mm_vtx, kmm_prod_vtx, kkmm_prod_vtx, mmg_prod_vtx;
+    const reco::Candidate* mc_mu1;
+    const reco::Candidate* mc_mu2;
+    const reco::Candidate* mc_kaon1;
+    const reco::Candidate* mc_kaon2;
+    const reco::Candidate* mc_photon;
+    const reco::Candidate* match;
+    const reco::Candidate* common_mother;
+    GenMatchInfo():mu1_pdgId(0), mu1_motherPdgId(0), mu2_pdgId(0), mu2_motherPdgId(0), 
+		   kaon1_pdgId(0), kaon1_motherPdgId(0), kaon2_pdgId(0), kaon2_motherPdgId(0),
+		   photon_pdgId(0), photon_motherPdgId(0), mm_pdgId(0), mm_motherPdgId(0), 
+		   kmm_pdgId(0), kkmm_pdgId(0), mmg_pdgId(0), mu1_pt(0), mu2_pt(0), 
+		   kaon1_pt(0), kaon2_pt(0), photon_pt(0), mm_mass(0), mm_pt(0), 
+		   kmm_mass(0), kkmm_mass(0), mmg_mass(0), kmm_pt(0), kkmm_pt(0), mmg_pt(0),
+		   mc_mu1(0), mc_mu2(0), mc_kaon1(0), mc_kaon2(0), mc_photon(0),
+		   match(0), common_mother(0)
+    {}
+    const reco::GenParticle* gen_mu1(){
+      return dynamic_cast<const reco::GenParticle*>(mc_mu1);
+    }
+    const reco::GenParticle* gen_mu2(){
+      return dynamic_cast<const reco::GenParticle*>(mc_mu2);
+    }
+  };
+
+  struct GenEventInfo{};
+
+  struct CloseTrack{
+    float svDoca, svDocaErr, svProb,
+      pvDoca, pvDocaErr,
+      impactParameterSignificanceBS;
+    const pat::PackedCandidate* pfCand;
+    CloseTrack(): svDoca(-1), svDocaErr(-1), svProb(-1),
+		  pvDoca(-1), pvDocaErr(-1),
+		  impactParameterSignificanceBS(-1),
+		  pfCand(0)
+    {};
+  };
+
+
+  struct CloseTrackInfo{
+    std::vector<CloseTrack> tracks;
+    unsigned int nTracksByVertexProbability(double minProb = 0.1, 
+					    double minIpSignificance = -1,
+					    int pvIndex = -1,
+					    const pat::PackedCandidate* ignoreTrack1 = 0)
+    {
+      unsigned int n = 0;
+      for (auto track: tracks){
+	if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
+	if (minIpSignificance>0 and track.impactParameterSignificanceBS<minIpSignificance) continue;
+	if (track.svProb<minProb) continue;
+	if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
+	n++;
+      }
+      return n;
+    }
+    unsigned int nTracksByDisplacementSignificance(double max_svDoca = 0.03, 
+						   double maxSignificance = -1,
+						   int pvIndex = -1,
+						   const pat::PackedCandidate* ignoreTrack1 = 0)
+    {
+      unsigned int n = 0;
+      for (auto track: tracks){
+	if (track.svDoca>max_svDoca) continue;
+	if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
+	if (maxSignificance>0 and (track.svDocaErr<=0 or 
+				   track.svDoca/track.svDocaErr > maxSignificance) ) continue;
+	if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
+	n++;
+      }
+      return n;
+    }
+    unsigned int nTracksByBetterMatch(double max_svDoca = 0.03, 
+				      double maxSignificance = 2,
+				      int pvIndex = -1,
+				      const pat::PackedCandidate* ignoreTrack1 = 0)
+    {
+      unsigned int n = 0;
+      for (auto track: tracks){
+	if (track.svDoca>max_svDoca) continue;
+	if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
+	if (maxSignificance>0 and (track.svDocaErr<=0 or 
+				   track.svDoca/track.svDocaErr > maxSignificance) ) continue;
+	if (track.svDocaErr<=0 or (track.pvDocaErr>0 and track.svDoca/track.svDocaErr > track.pvDoca/track.pvDocaErr) ) continue;
+	if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
+	n++;
+      }
+      return n;
+    }
+    float minDoca(double max_svDoca = 0.03, 
+		  int pvIndex = -1,
+		  const pat::PackedCandidate* ignoreTrack1 = 0)
+    {
+      float doca = 99.;
+      for (auto track: tracks){
+	if (track.svDoca>max_svDoca) continue;
+	if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
+	if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
+	if (doca>track.svDoca) doca = track.svDoca;
+      }
+      return doca;
+    }
     
-    // compute pointing angle wrt BeamSpot (2D)
-
-    // rotatedCovariance3D - is a proper covariance matrix for Beam Spot,
-    // which includes the beam spot width, not just uncertainty on the
-    // absolute beamspot position
-    auto alphaXY = getAlpha(refitVertex->vertexState().position(),
-			    refitVertex->vertexState().error(),
-			    GlobalPoint(Basic3DVector<float>(beamSpot.position())),
-			    GlobalError(beamSpot.rotatedCovariance3D()),
-			    refitMother->currentState().globalMomentum(),
-			    true);
-    alphaBS    = alphaXY.first;
-    alphaBSErr = alphaXY.second;
-  }
-  
-  float mass() const
-  {
-    if ( not valid() ) return -1.0;
-    return refitMother->currentState().mass();
-  }
-
-  float refit_mass(unsigned int i, unsigned int j) const
-  {
-    if ( not valid() ) return -1.0;
-    if (i >= refitDaughters.size()) return -2.0;
-    if (j >= refitDaughters.size()) return -3.0;
-    if (refitDaughters.at(i)->currentState().globalMomentum().mag2()<0) return -4.0;
-    if (refitDaughters.at(j)->currentState().globalMomentum().mag2()<0) return -5.0;
-    auto momentum = refitDaughters.at(i)->currentState().globalMomentum() + 
-      refitDaughters.at(j)->currentState().globalMomentum();
-    auto energy1 = sqrt(refitDaughters.at(i)->currentState().globalMomentum().mag2() + 
-			pow(refitDaughters.at(i)->currentState().mass(),2));
-    auto energy2 = sqrt(refitDaughters.at(j)->currentState().globalMomentum().mag2() + 
-			pow(refitDaughters.at(j)->currentState().mass(),2));
-    return sqrt(pow(energy1+energy2,2)-momentum.mag2());
-  }
-
-  GlobalVector p3() const
-  {
-    if ( not valid() ) return GlobalVector();
-    return refitMother->currentState().globalMomentum();
-  }
-
-  GlobalVector dau_p3(unsigned int i) const
-  {
-    if ( not valid() or i>=refitDaughters.size() ) return GlobalVector();
-    return refitDaughters.at(i)->currentState().globalMomentum();
-  }
-
-  float massErr() const
-  {
-    if ( not valid() ) return -1.0;
-    return sqrt(refitMother->currentState().kinematicParametersError().matrix()(6,6));
-  }
-
-  float chi2() const
-  {
-    if ( not valid() ) return -1.0;
-    return refitVertex->chiSquared();
-  }
-
-  float ndof() const
-  {
-    return refitVertex->degreesOfFreedom();
-  }
-
-  float vtxProb() const
-  {
-    if ( not valid() ) return -1.0;
-    return TMath::Prob((double)refitVertex->chiSquared(), int(rint(refitVertex->degreesOfFreedom())));
-  }
-  
-};
-
-struct KalmanVertexFitResult{
-  float vtxProb;
-  bool  valid;
-  std::vector<LorentzVector> refitVectors;
-  GlobalPoint position;
-  GlobalError err;
-  float lxy, lxyErr, sigLxy;
-
-  KalmanVertexFitResult():vtxProb(-1.0),valid(false),lxy(-1.0),lxyErr(-1.0),sigLxy(-1.0){}
-
-  float mass() const
-  {
-    if (not valid) return -1.0;
-    LorentzVector p4;
-    for (auto v: refitVectors)
-      p4 += v;
-    return p4.mass();
-  }
-  
-  void postprocess(const reco::BeamSpot& bs)
-  {
-    if (not valid) return;
-    // position of the beam spot at a given z value (it takes into account the dxdz and dydz slopes)
-    reco::BeamSpot::Point bs_at_z(bs.position(position.z()));
-    GlobalPoint xy_displacement(position.x() - bs_at_z.x(),
-				position.y() - bs_at_z.y(),
-				0);
-    lxy = xy_displacement.perp();
-    lxyErr = sqrt(err.rerr(xy_displacement));
-    if (lxyErr > 0) sigLxy = lxy/lxyErr;
-  }
-};
-
-struct DisplacementInformationIn3D{
-  double decayLength, decayLengthErr, decayLength2, decayLength2Err, 
-    distaceOfClosestApproach, distaceOfClosestApproachErr, distaceOfClosestApproachSig,
-    distaceOfClosestApproach2, distaceOfClosestApproach2Err, distaceOfClosestApproach2Sig,
-    longitudinalImpactParameter, longitudinalImpactParameterErr, longitudinalImpactParameterSig,
-    longitudinalImpactParameter2, longitudinalImpactParameter2Err,longitudinalImpactParameter2Sig,
-    decayTime, decayTimeError, decayTimeXY, decayTimeXYError,
-    alpha, alphaErr, alphaXY, alphaXYErr;
-  const reco::Vertex *pv,*pv2;
-  int pvIndex,pv2Index;
-  DisplacementInformationIn3D():decayLength(-1.0), decayLengthErr(0.), decayLength2(-1.0), decayLength2Err(0.),
-				distaceOfClosestApproach(-1.0), distaceOfClosestApproachErr(0.0), distaceOfClosestApproachSig(0.0),
-				distaceOfClosestApproach2(-1.0), distaceOfClosestApproach2Err(0.0), distaceOfClosestApproach2Sig(0.0),
-				longitudinalImpactParameter(0.0), longitudinalImpactParameterErr(0.), longitudinalImpactParameterSig(0.),
-				longitudinalImpactParameter2(0.0), longitudinalImpactParameter2Err(0.), longitudinalImpactParameter2Sig(0.),
-				decayTime(-999.), decayTimeError(-999.),
-				decayTimeXY(-999.), decayTimeXYError(-999.),
-				alpha(-999.), alphaErr(-999.),
-				alphaXY(-999.), alphaXYErr(-999.),
-				pv(0), pv2(0),
-				pvIndex(-1), pv2Index(-1)
-  {};
-};
-
-LorentzVector makeLorentzVectorFromPxPyPzM(double px, double py, double pz, double m){
-  double p2 = px*px+py*py+pz*pz;
-  return LorentzVector(px,py,pz,sqrt(p2+m*m));
-}
-
-struct GenMatchInfo{
-  int mu1_pdgId, mu1_motherPdgId, mu2_pdgId, mu2_motherPdgId,
-    kaon1_pdgId, kaon1_motherPdgId, kaon2_pdgId, kaon2_motherPdgId, photon_pdgId, photon_motherPdgId,
-    mm_pdgId, mm_motherPdgId, kmm_pdgId, kkmm_pdgId, mmg_pdgId;
-  float mu1_pt, mu2_pt, kaon1_pt, kaon2_pt, photon_pt, mm_mass, mm_pt, kmm_mass, kkmm_mass, mmg_mass,
-    kmm_pt, kkmm_pt, mmg_pt;
-  math::XYZPoint mm_prod_vtx, mm_vtx, kmm_prod_vtx, kkmm_prod_vtx, mmg_prod_vtx;
-  const reco::Candidate* mc_mu1;
-  const reco::Candidate* mc_mu2;
-  const reco::Candidate* mc_kaon1;
-  const reco::Candidate* mc_kaon2;
-  const reco::Candidate* mc_photon;
-  const reco::Candidate* match;
-  const reco::Candidate* common_mother;
-  GenMatchInfo():mu1_pdgId(0), mu1_motherPdgId(0), mu2_pdgId(0), mu2_motherPdgId(0), 
-		 kaon1_pdgId(0), kaon1_motherPdgId(0), kaon2_pdgId(0), kaon2_motherPdgId(0),
-		 photon_pdgId(0), photon_motherPdgId(0), mm_pdgId(0), mm_motherPdgId(0), 
-		 kmm_pdgId(0), kkmm_pdgId(0), mmg_pdgId(0), mu1_pt(0), mu2_pt(0), 
-		 kaon1_pt(0), kaon2_pt(0), photon_pt(0), mm_mass(0), mm_pt(0), 
-		 kmm_mass(0), kkmm_mass(0), mmg_mass(0), kmm_pt(0), kkmm_pt(0), mmg_pt(0),
-		 mc_mu1(0), mc_mu2(0), mc_kaon1(0), mc_kaon2(0), mc_photon(0),
-		 match(0), common_mother(0)
-  {}
-  const reco::GenParticle* gen_mu1(){
-    return dynamic_cast<const reco::GenParticle*>(mc_mu1);
-  }
-  const reco::GenParticle* gen_mu2(){
-    return dynamic_cast<const reco::GenParticle*>(mc_mu2);
-  }
-    
-
-};
-
-struct GenEventInfo{};
-
-struct CloseTrack{
-  float svDoca, svDocaErr, svProb,
-    pvDoca, pvDocaErr,
-    impactParameterSignificanceBS;
-  const pat::PackedCandidate* pfCand;
-  CloseTrack(): svDoca(-1), svDocaErr(-1), svProb(-1),
-		pvDoca(-1), pvDocaErr(-1),
-		impactParameterSignificanceBS(-1),
-		pfCand(0)
-  {};
-};
-
-
-struct CloseTrackInfo{
-  std::vector<CloseTrack> tracks;
-  unsigned int nTracksByVertexProbability(double minProb = 0.1, 
-					  double minIpSignificance = -1,
-					  int pvIndex = -1,
-					  const pat::PackedCandidate* ignoreTrack1 = 0)
-  {
-    unsigned int n = 0;
-    for (auto track: tracks){
-      if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
-      if (minIpSignificance>0 and track.impactParameterSignificanceBS<minIpSignificance) continue;
-      if (track.svProb<minProb) continue;
-      if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
-      n++;
+    void fillCandInfo(pat::CompositeCandidate& cand, int pvIndex, std::string name)
+    {
+      if (name!="") name += "_";
+      cand.addUserInt(   name + "nTrks",       nTracksByVertexProbability(0.1,-1.0,pvIndex) );
+      cand.addUserInt(   name + "nBMTrks",     nTracksByBetterMatch() );
+      cand.addUserInt(   name + "nDisTrks",    nTracksByVertexProbability(0.1, 2.0,pvIndex) );
+      cand.addUserInt(   name + "closetrk",    nTracksByDisplacementSignificance(0.03, -1, pvIndex) );
+      cand.addUserInt(   name + "closetrks1",  nTracksByDisplacementSignificance(0.03, 1, pvIndex) );
+      cand.addUserInt(   name + "closetrks2",  nTracksByDisplacementSignificance(0.03, 2, pvIndex) );
+      cand.addUserInt(   name + "closetrks3",  nTracksByDisplacementSignificance(0.03, 3, pvIndex) );
+      cand.addUserFloat( name + "docatrk",     minDoca(0.03, pvIndex) );
     }
-    return n;
-  }
-  unsigned int nTracksByDisplacementSignificance(double max_svDoca = 0.03, 
-						 double maxSignificance = -1,
-						 int pvIndex = -1,
-						 const pat::PackedCandidate* ignoreTrack1 = 0)
-  {
-    unsigned int n = 0;
-    for (auto track: tracks){
-      if (track.svDoca>max_svDoca) continue;
-      if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
-      if (maxSignificance>0 and (track.svDocaErr<=0 or 
-				 track.svDoca/track.svDocaErr > maxSignificance) ) continue;
-      if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
-      n++;
-    }
-    return n;
-  }
-  unsigned int nTracksByBetterMatch(double max_svDoca = 0.03, 
-				    double maxSignificance = 2,
-				    int pvIndex = -1,
-				    const pat::PackedCandidate* ignoreTrack1 = 0)
-  {
-    unsigned int n = 0;
-    for (auto track: tracks){
-      if (track.svDoca>max_svDoca) continue;
-      if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
-      if (maxSignificance>0 and (track.svDocaErr<=0 or 
-				 track.svDoca/track.svDocaErr > maxSignificance) ) continue;
-      if (track.svDocaErr<=0 or (track.pvDocaErr>0 and track.svDoca/track.svDocaErr > track.pvDoca/track.pvDocaErr) ) continue;
-      if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
-      n++;
-    }
-    return n;
-  }
-  float minDoca(double max_svDoca = 0.03, 
-		int pvIndex = -1,
-		const pat::PackedCandidate* ignoreTrack1 = 0)
-  {
-    float doca = 99.;
-    for (auto track: tracks){
-      if (track.svDoca>max_svDoca) continue;
-      if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
-      if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
-      if (doca>track.svDoca) doca = track.svDoca;
-    }
-    return doca;
-  }
+  };
 
-  void fillCandInfo(pat::CompositeCandidate& cand, int pvIndex, std::string name)
-  {
-    if (name!="") name += "_";
-    cand.addUserInt(   name + "nTrks",       nTracksByVertexProbability(0.1,-1.0,pvIndex) );
-    cand.addUserInt(   name + "nBMTrks",     nTracksByBetterMatch() );
-    cand.addUserInt(   name + "nDisTrks",    nTracksByVertexProbability(0.1, 2.0,pvIndex) );
-    cand.addUserInt(   name + "closetrk",    nTracksByDisplacementSignificance(0.03, -1, pvIndex) );
-    cand.addUserInt(   name + "closetrks1",  nTracksByDisplacementSignificance(0.03, 1, pvIndex) );
-    cand.addUserInt(   name + "closetrks2",  nTracksByDisplacementSignificance(0.03, 2, pvIndex) );
-    cand.addUserInt(   name + "closetrks3",  nTracksByDisplacementSignificance(0.03, 3, pvIndex) );
-    cand.addUserFloat( name + "docatrk",     minDoca(0.03, pvIndex) );
-  }
-};
+  struct BdtReaderData {
+    float fls3d, alpha, pvips, iso, chi2dof, docatrk, closetrk, m1iso, m2iso, eta, m;
+  };
 
-struct BdtReaderData {
-  float fls3d, alpha, pvips, iso, chi2dof, docatrk, closetrk, m1iso, m2iso, eta, m;
-};
-
-namespace {
   // Muon container to hold muons and hadrons that may decays to muons
   // Index is the position of the muon in the original muon collection
   // For hadrons Index is -1
@@ -510,6 +355,11 @@ private:
 		bool applyJpsiMassConstraint);
 
   KinematicFitResult
+  fitMuMuGamma( RefCountedKinematicTree tree,
+		const pat::Photon& photon,
+		float mass_constraint=-1.0);
+  
+  KinematicFitResult
   vertexMuonsWithPointingConstraint( const pat::Muon& muon1,
 				     const pat::Muon& muon2,
 				     const reco::Vertex& primaryVertex);
@@ -577,14 +427,12 @@ private:
   void 
   fillBtoMuMuKInfo(pat::CompositeCandidate& bCand,
 		   const edm::Event& iEvent,
-		   const KinematicFitResult& kinematicMuMuVertexFit,
 		   const pat::Muon& muon1,
 		   const pat::Muon& muon2,
 		   const pat::PackedCandidate & kaon); 
   void
   fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
 		     const edm::Event& iEvent,
-		     const KinematicFitResult& kinematicMuMuVertexFit,
 		     const pat::Muon& muon1,
 		     const pat::Muon& muon2,
 		     const pat::PackedCandidate & kaon1,
@@ -592,7 +440,6 @@ private:
   void
   fillMuMuGammaInfo(pat::CompositeCandidate& mmgCand,
 		    const edm::Event& iEvent,
-		    const KinematicFitResult& kinematicMuMuVertexFit,
 		    const pat::Muon& muon1,
 		    const pat::Muon& muon2,
 		    const pat::Photon & photon);
@@ -606,6 +453,15 @@ private:
 				    const pat::Muon& muon2,
 				    const pat::PackedCandidate & kaon);
  
+  void 
+  fillMvaInfoForMuMuGamma(pat::CompositeCandidate& mmg,
+			  const pat::CompositeCandidate& mm,
+			  const edm::Event& iEvent,
+			  const KinematicFitResult& kinematicMuMuVertexFit,
+			  const pat::Muon& muon1,
+			  const pat::Muon& muon2,
+			  const pat::Photon & photon);
+  
   KinematicFitResult 
   fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
 	       const edm::Event& iEvent,
@@ -1014,11 +870,7 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
 {
   auto kinematicMuMuVertexFit = vertexMuonsWithKinematicFitter(muon1, muon2);
   kinematicMuMuVertexFit.postprocess(*beamSpot_);
-
-  // printf("kinematicMuMuVertexFit (x,y,z): (%7.3f,%7.3f,%7.3f)\n", 
-  // 	 kinematicMuMuVertexFit.refitVertex->position().x(),
-  // 	 kinematicMuMuVertexFit.refitVertex->position().y(),
-  // 	 kinematicMuMuVertexFit.refitVertex->position().z());
+  
   auto displacement3D = compute3dDisplacement(kinematicMuMuVertexFit, *pvHandle_.product(),true);
   addFitInfo(dimuonCand, kinematicMuMuVertexFit, "kin", displacement3D,0,1);
   
@@ -1147,12 +999,15 @@ BxToMuMuProducer::fillMuMuInfo(pat::CompositeCandidate& dimuonCand,
 
 void BxToMuMuProducer::fillBtoMuMuKInfo(pat::CompositeCandidate& btokmmCand,
 					const edm::Event& iEvent,
-					const KinematicFitResult& kinematicMuMuVertexFit,
 					const pat::Muon& muon1,
 					const pat::Muon& muon2,
-					const pat::PackedCandidate & kaon
-					) 
+					const pat::PackedCandidate & kaon) 
 {
+  // Rebuild mm vertex to ensure that the KinematicTree remains self
+  // consistent and no elements get out of scope or get deleted
+  // when the tree is used in subsequent fits
+  auto mmVertexFit = vertexMuonsWithKinematicFitter(muon1, muon2);
+
   btokmmCand.addUserFloat("kaon_pt",     kaon.pt());
   btokmmCand.addUserFloat("kaon_eta",    kaon.eta());
   btokmmCand.addUserFloat("kaon_phi",    kaon.phi());
@@ -1183,13 +1038,13 @@ void BxToMuMuProducer::fillBtoMuMuKInfo(pat::CompositeCandidate& btokmmCand,
   // 	btokmmCand.addUserInt("kaon_mc_pdgId", 0);
   // }
   
-  auto bToKJPsiMuMu_NoMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, kaon, false);
+  auto bToKJPsiMuMu_NoMassConstraint = fitBToKJPsiMuMu(mmVertexFit.refitMother, kaon, false);
   bToKJPsiMuMu_NoMassConstraint.postprocess(*beamSpot_);
   auto bToKJPsiMuMu_NoMassConstraint_displacement = compute3dDisplacement(bToKJPsiMuMu_NoMassConstraint, *pvHandle_.product(),true);
   addFitInfo(btokmmCand, bToKJPsiMuMu_NoMassConstraint, "nomc", bToKJPsiMuMu_NoMassConstraint_displacement,-1,-1,1);
   
   // worse performing option
-  // auto bToKJPsiMuMuWithMassConstraint = fitBToKJPsiMuMu(kinematicMuMuVertexFit.refitMother, kaon, true);
+  // auto bToKJPsiMuMuWithMassConstraint = fitBToKJPsiMuMu(mmVertexFit.refitMother, kaon, true);
   // bToKJPsiMuMuWithMassConstraint.postprocess(beamSpot);
   // addFitInfo(btokmmCand, bToKJPsiMuMuWithMassConstraint, "jpsimc");
 
@@ -1197,8 +1052,8 @@ void BxToMuMuProducer::fillBtoMuMuKInfo(pat::CompositeCandidate& btokmmCand,
   
   KinematicFitResult bToKJPsiMuMu_MassConstraint;
   DisplacementInformationIn3D bToKJPsiMuMu_MassConstraint_displacement;
-  if (fabs(kinematicMuMuVertexFit.mass()-3.1) < 0.2) {
-    bToKJPsiMuMu_MassConstraint = fitBToKMuMu(kinematicMuMuVertexFit.refitTree, kaon, JPsiMass_);
+  if (fabs(mmVertexFit.mass()-3.1) < 0.2) {
+    bToKJPsiMuMu_MassConstraint = fitBToKMuMu(mmVertexFit.refitTree, kaon, JPsiMass_);
     bToKJPsiMuMu_MassConstraint.postprocess(*beamSpot_);
     bToKJPsiMuMu_MassConstraint_displacement = compute3dDisplacement(bToKJPsiMuMu_MassConstraint, *pvHandle_.product(),true);
   }
@@ -1207,8 +1062,8 @@ void BxToMuMuProducer::fillBtoMuMuKInfo(pat::CompositeCandidate& btokmmCand,
   // Psi(2S)K
   KinematicFitResult bToKPsi2SMuMu_MassConstraint;
   DisplacementInformationIn3D bToKPsi2SMuMu_MassConstraint_displacement;
-  if (fabs(kinematicMuMuVertexFit.mass()-3.7) < 0.2) {
-    bToKPsi2SMuMu_MassConstraint = fitBToKMuMu(kinematicMuMuVertexFit.refitTree, kaon, Psi2SMass_);
+  if (fabs(mmVertexFit.mass()-3.7) < 0.2) {
+    bToKPsi2SMuMu_MassConstraint = fitBToKMuMu(mmVertexFit.refitTree, kaon, Psi2SMass_);
     bToKPsi2SMuMu_MassConstraint.postprocess(*beamSpot_);
     bToKPsi2SMuMu_MassConstraint_displacement = compute3dDisplacement(bToKPsi2SMuMu_MassConstraint, *pvHandle_.product(),true);
   }
@@ -1222,13 +1077,17 @@ void BxToMuMuProducer::fillBtoMuMuKInfo(pat::CompositeCandidate& btokmmCand,
 
 void BxToMuMuProducer::fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
 					  const edm::Event& iEvent,
-					  const KinematicFitResult& kinematicMuMuVertexFit,
 					  const pat::Muon& muon1,
 					  const pat::Muon& muon2,
 					  const pat::PackedCandidate & kaon1,
 					  const pat::PackedCandidate & kaon2
 					) 
 {
+  // Rebuild mm vertex to ensure that the KinematicTree remains self
+  // consistent and no elements get out of scope or get deleted
+  // when the tree is used in subsequent fits
+  auto mmVertexFit = vertexMuonsWithKinematicFitter(muon1, muon2);
+  
   bCand.addUserFloat("kaon1_pt",     kaon1.pt());
   bCand.addUserFloat("kaon1_eta",    kaon1.eta());
   bCand.addUserFloat("kaon1_phi",    kaon1.phi());
@@ -1266,7 +1125,7 @@ void BxToMuMuProducer::fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
     bCand.addUserFloat("gen_cpdgId",       gen_info.common_mother?gen_info.common_mother->pdgId():0);
   }
 
-  auto bToKKJPsiMuMu = fitBToKKMuMu(kinematicMuMuVertexFit.refitTree, kaon1, kaon2, true);
+  auto bToKKJPsiMuMu = fitBToKKMuMu(mmVertexFit.refitTree, kaon1, kaon2, true);
   bToKKJPsiMuMu.postprocess(*beamSpot_);
   auto bToKKJPsiMuMu_displacement = compute3dDisplacement(bToKKJPsiMuMu, *pvHandle_.product(),true);
   addFitInfo(bCand, bToKKJPsiMuMu, "jpsikk", bToKKJPsiMuMu_displacement,-1,-1,1,2);
@@ -1275,14 +1134,21 @@ void BxToMuMuProducer::fillBstoJpsiKKInfo(pat::CompositeCandidate& bCand,
 
 void BxToMuMuProducer::fillMuMuGammaInfo(pat::CompositeCandidate& mmgCand,
 					 const edm::Event& iEvent,
-					 const KinematicFitResult& kinematicMuMuVertexFit,
 					 const pat::Muon& muon1,
 					 const pat::Muon& muon2,
 					 const pat::Photon & photon) 
 {
+  // Rebuild mm vertex to ensure that the KinematicTree remains self
+  // consistent and no elements get out of scope or get deleted
+  // when the tree is used in subsequent fits
+  auto mmVertexFit = vertexMuonsWithKinematicFitter(muon1, muon2);
+  
+  mmVertexFit.refitTree->movePointerToTheTop();
+  
   mmgCand.addUserFloat("ph_pt",     photon.pt());
   mmgCand.addUserFloat("ph_eta",    photon.eta());
   mmgCand.addUserFloat("ph_phi",    photon.phi());
+  // FIXME: add photon id
   if (isMC_){
     auto gen_mmg = getGenMatchInfo(muon1,muon2,nullptr,nullptr,&photon);
     mmgCand.addUserInt(  "gen_ph_pdgId",    gen_mmg.photon_pdgId);
@@ -1299,6 +1165,52 @@ void BxToMuMuProducer::fillMuMuGammaInfo(pat::CompositeCandidate& mmgCand,
     mmgCand.addUserFloat("gen_tau",         computeDecayTime(gen_mmg));
     mmgCand.addUserFloat("gen_cpdgId",      gen_mmg.common_mother?gen_mmg.common_mother->pdgId():0);
   }
+
+  KinematicFitResult jpsiGamma_NoMassConstraint;
+  DisplacementInformationIn3D jpsiGamma_NoMassConstraint_displacement;
+  jpsiGamma_NoMassConstraint = fitMuMuGamma(mmVertexFit.refitTree, photon);
+  jpsiGamma_NoMassConstraint.postprocess(*beamSpot_);
+  jpsiGamma_NoMassConstraint_displacement = compute3dDisplacement(jpsiGamma_NoMassConstraint, *pvHandle_.product(), true);
+  addFitInfo(mmgCand, jpsiGamma_NoMassConstraint, "nomc", jpsiGamma_NoMassConstraint_displacement, -1, -1, 1);
+
+  KinematicFitResult jpsiGamma_MassConstraint;
+  DisplacementInformationIn3D jpsiGamma_MassConstraint_displacement;
+  if (fabs(mmVertexFit.mass()-3.1) < 0.2) {
+    jpsiGamma_MassConstraint = fitMuMuGamma(mmVertexFit.refitTree, photon, JPsiMass_);
+    jpsiGamma_MassConstraint.postprocess(*beamSpot_);
+    jpsiGamma_MassConstraint_displacement = compute3dDisplacement(jpsiGamma_MassConstraint, *pvHandle_.product(), true);
+  }
+  addFitInfo(mmgCand, jpsiGamma_MassConstraint, "jpsimc", jpsiGamma_MassConstraint_displacement, -1, -1, 1);
+
+  // need bestVertex
+
+  // FIXME add relevant info that normally is added by addFitInfo
+  // - not all of it is needed, because everything vertex related should be
+  //   extracted from mm vertex
+  // - most of the variables are etracted using DisplacementInformationIn3D info
+  //   computed with compute3dDisplacement
+  // - massErr - this is something non-trivial
+  // - pt,eta,phi
+  
+  // auto alpha = getAlpha(fit.refitVertex->vertexState().position(),
+  // 			fit.refitVertex->vertexState().error(),
+  // 			GlobalPoint(Basic3DVector<float>(bestVertex->position())),
+  // 			GlobalError(bestVertex->covariance()),
+  // 			fit.refitMother->currentState().globalMomentum());
+
+  // auto alphaXY = getAlpha(fit.refitVertex->vertexState().position(),
+  // 			  fit.refitVertex->vertexState().error(),
+  // 			  GlobalPoint(Basic3DVector<float>(bestVertex->position())),
+  // 			  GlobalError(bestVertex->covariance()),
+  // 			  fit.refitMother->currentState().globalMomentum(),
+  // 			  true);
+
+  // result.alpha    = alpha.first;
+  // result.alphaErr = alpha.second;
+
+  // result.alphaXY    = alphaXY.first;
+  // result.alphaXYErr = alphaXY.second;
+
 }
 
 void 
@@ -1372,51 +1284,43 @@ BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCan
 
 
 // // FIXME: need to add info similar to addFitInfo for mmg
-// void 
-// BxToMuMuProducer::fillMvaInfoForMuMuGamma(pat::CompositeCandidate& mmg,
-// 					  const pat::CompositeCandidate& mm,
-// 					  const edm::Event& iEvent,
-// 					  const KinematicFitResult& kinematicMuMuVertexFit,
-// 					  const pat::Muon& muon1,
-// 					  const pat::Muon& muon2,
-// 					  const pat::Photon & photon) 
-// {
-//   // Treat mmGamma as B->mm 
-//   std::vector<const pat::PackedCandidate*> ignoreTracks;
-//   for (auto const& pfCand: *pfCandHandle_){
-//     if (pfCand.charge() == 0) continue;
-//     if (deltaR(pfCand, photon) > 0.01) continue;
-//     ignoreTracks.push_back(&pfCand);
-//   }
+void 
+BxToMuMuProducer::fillMvaInfoForMuMuGamma(pat::CompositeCandidate& mmg,
+					  const pat::CompositeCandidate& mm,
+					  const edm::Event& iEvent,
+					  const KinematicFitResult& kinematicMuMuVertexFit,
+					  const pat::Muon& muon1,
+					  const pat::Muon& muon2,
+					  const pat::Photon & photon) 
+{
+  int pvIndex = mm.userInt("kin_pvIndex");
 
-//   int pvIndex = mmK.userInt("jpsimc_pvIndex");
+  // Look for additional tracks compatible with the dimuon vertex
+  auto closeTracks = findTracksCompatibleWithTheVertex(muon1, muon2, kinematicMuMuVertexFit, 0.03);
+  closeTracks.fillCandInfo(mmg, pvIndex, "");
 
-//   // Look for additional tracks compatible with the dimuon vertex
-//   auto closeTracks = findTracksCompatibleWithTheVertex(muon1,muon2,kinematicMuMuVertexFit,0.03,ignoreTracks);
-//   closeTracks.fillCandInfo(mmK, pvIndex, "bmm");
+  mmg.addUserFloat( "_m1iso",     computeTrkMuonIsolation(muon1, muon2, pvIndex, 0.5, 0.5));
+  mmg.addUserFloat( "_m2iso",     computeTrkMuonIsolation(muon2, muon1, pvIndex, 0.5, 0.5));
+  mmg.addUserFloat( "_iso",       computeTrkMuMuIsolation(muon2, muon1, pvIndex, 0.9, 0.7));
+  mmg.addUserFloat( "_otherVtxMaxProb",  otherVertexMaxProb(muon1, muon2, 0.5, 0.1));
+  mmg.addUserFloat( "_otherVtxMaxProb1", otherVertexMaxProb(muon1, muon2, 1.0, 0.1));
+  mmg.addUserFloat( "_otherVtxMaxProb2", otherVertexMaxProb(muon1, muon2, 2.0, 0.1));
 
-//   mmK.addUserFloat( "bmm_m1iso",     computeTrkMuonIsolation(muon1,muon2,pvIndex,0.5,0.5,ignoreTracks));
-//   mmK.addUserFloat( "bmm_m2iso",     computeTrkMuonIsolation(muon2,muon1,pvIndex,0.5,0.5,ignoreTracks));
-//   mmK.addUserFloat( "bmm_iso",       computeTrkMuMuIsolation(muon2,muon1,pvIndex,0.9,0.7,ignoreTracks));
-//   mmK.addUserFloat( "bmm_otherVtxMaxProb",  otherVertexMaxProb(muon1,muon2,0.5,0.1,ignoreTracks));
-//   mmK.addUserFloat( "bmm_otherVtxMaxProb1", otherVertexMaxProb(muon1,muon2,1.0,0.1,ignoreTracks));
-//   mmK.addUserFloat( "bmm_otherVtxMaxProb2", otherVertexMaxProb(muon1,muon2,2.0,0.1,ignoreTracks));
-
-//   // BDT
-//   bdtData_.fls3d    = mm.userFloat("kin_sl3d");
-//   bdtData_.alpha    = mmK.userFloat("jpsimc_alpha");
-//   bdtData_.pvips    = mmK.userFloat("jpsimc_pvipErr")>0?mmK.userFloat("jpsimc_pvip")/mmK.userFloat("jpsimc_pvipErr"):999;
-//   // One can use bkmm without mass constraint, but it doesn't help
-//   // bdtData_.alpha    = mmK.userFloat("nomc_alpha");
-//   // bdtData_.pvips    = mmK.userFloat("nomc_pvip")/mmK.userFloat("nomc_pvipErr");
-//   bdtData_.iso      = mmK.userFloat("bmm_iso");
-//   bdtData_.chi2dof  = mm.userFloat("kin_vtx_chi2dof");
-//   bdtData_.docatrk  = mmK.userFloat("bmm_docatrk");
-//   bdtData_.closetrk = mmK.userInt(  "bmm_closetrk");
-//   bdtData_.m1iso    = mmK.userFloat("bmm_m1iso");
-//   bdtData_.m2iso    = mmK.userFloat("bmm_m2iso");
-//   bdtData_.eta      = mmK.userFloat("jpsimc_eta");	  
-//   bdtData_.m        = mmK.userFloat("jpsimc_mass");	  
+  // // BDT
+  // bdtData_.fls3d    = mm.userFloat("kin_sl3d");
+  // bdtData_.alpha    = mmK.userFloat("jpsimc_alpha");
+  // bdtData_.pvips    = mmK.userFloat("jpsimc_pvipErr")>0?mmK.userFloat("jpsimc_pvip")/mmK.userFloat("jpsimc_pvipErr"):999;
+  // // One can use bkmm without mass constraint, but it doesn't help
+  // // bdtData_.alpha    = mmK.userFloat("nomc_alpha");
+  // // bdtData_.pvips    = mmK.userFloat("nomc_pvip")/mmK.userFloat("nomc_pvipErr");
+  // bdtData_.iso      = mmK.userFloat("bmm_iso");
+  // bdtData_.chi2dof  = mm.userFloat("kin_vtx_chi2dof");
+  // bdtData_.docatrk  = mmK.userFloat("bmm_docatrk");
+  // bdtData_.closetrk = mmK.userInt(  "bmm_closetrk");
+  // bdtData_.m1iso    = mmK.userFloat("bmm_m1iso");
+  // bdtData_.m2iso    = mmK.userFloat("bmm_m2iso");
+  // bdtData_.eta      = mmK.userFloat("jpsimc_eta");	  
+  // bdtData_.m        = mmK.userFloat("jpsimc_mass");	  
 
 //   mmK.addUserFloat("bmm_bdt",computeAnalysisBDT(iEvent.eventAuxiliary().event()%3));
 
@@ -1441,7 +1345,7 @@ BxToMuMuProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCan
 //   xgBoosters_.at(xg_index).set("mm_kin_sl3d",        mm.userFloat("kin_sl3d")*1.6);
 
 //   mmK.addUserFloat("bmm_mva", xgBoosters_.at(xg_index).predict());
-// }
+}
 
 
 namespace {
@@ -1552,6 +1456,32 @@ BxToMuMuProducer::injectBhhHadrons(std::vector<MuonCand>& good_muon_candidates){
     good_muon_candidates.push_back(MuonCand(pfCand, false));
   }
 }
+
+// namespace {
+//   void dump_track(const reco::Track* trk){
+//     std::cout << "pt(): " << trk->pt() << std::endl;
+//     std::cout << "eta(): " << trk->eta() << std::endl;
+//     std::cout << "charge(): " << trk->charge() << std::endl;
+//     std::cout << "chi2(): " << trk->chi2() << std::endl;
+//     std::cout << "ndof(): " << trk->ndof() << std::endl;
+//     std::cout << "vertex(): " << trk->vertex().x() << ", " << trk->vertex().y() << ", " << trk->vertex().z() << std::endl;
+//     std::cout << "momentum(): " << trk->momentum().x() << ", " << trk->momentum().y() << ", " << trk->momentum().z() << std::endl;
+//     std::cout << "covariance matrix: " << std::endl;
+//     // for (unsigned int i=0; i<5; ++i)
+//     //   for (unsigned int j=0; j<5; ++j)
+//     //     std::cout << "\t(" << i << "," << j << "): " << trk->covariance(i,j) << std::endl;
+//     for (unsigned int i=0; i<15; ++i)
+//       std::cout << "\t" << trk->covariance().Array()[i] << ", ";
+//     std::cout << std::endl;
+//   }
+
+//   void dump_photon(const reco::Photon* photon){
+//     std::cout << "pt(): " << photon->pt() << std::endl;
+//     std::cout << "eta(): " << photon->eta() << std::endl;
+//     std::cout << "caloPosition: " << photon->caloPosition().x() << ", " << photon->caloPosition().y() << ", " << photon->caloPosition().z() << std::endl;
+//     std::cout << "XYZT: " << photon->px() << ", " << photon->py() << ", " << photon->pz() << ", " << photon->energy() << std::endl;
+//   }
+// }
 
 void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     iSetup.get<IdealMagneticFieldRecord>().get(bFieldHandle_);
@@ -1702,14 +1632,14 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 		double mmg_mass = (dimuon_p4 + photon.p4()).mass();
 		if (mmg_mass >= minMuMuGammaMass_ and mmg_mass <= maxMuMuGammaMass_){
 		  // fill BtoMuMuPhoton candidate info
-	    
+
 		  pat::CompositeCandidate mmgCand;
 		  mmgCand.addUserInt("mm_index", imm);
 		  mmgCand.addUserInt("ph_index", k);
 		  mmgCand.addUserFloat("mass", mmg_mass);
 		  
-		  fillMuMuGammaInfo(mmgCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,photon);
-		  // fillMvaInfoForMuMuGamma(mmgCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,photon);
+		  fillMuMuGammaInfo(mmgCand,iEvent,muon1,muon2,photon);
+		  fillMvaInfoForMuMuGamma(mmgCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,photon);
 
 		  btommg->push_back(mmgCand);
 		}
@@ -1751,7 +1681,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 		btokmmCand.addUserFloat("kaon_mu1_doca", mu1_kaon_doca);
 		btokmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon_doca);
 		
-		fillBtoMuMuKInfo(btokmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
+		fillBtoMuMuKInfo(btokmmCand,iEvent,muon1,muon2,kaonCand1);
 		fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
 
 		btokmm->push_back(btokmmCand);
@@ -1788,7 +1718,7 @@ void BxToMuMuProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
 		    btokkmmCand.addUserFloat("kaon_mu1_doca", mu1_kaon2_doca);
 		    btokkmmCand.addUserFloat("kaon_mu2_doca", mu2_kaon2_doca);
 		    
-		    fillBstoJpsiKKInfo(btokkmmCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1,kaonCand2);
+		    fillBstoJpsiKKInfo(btokkmmCand,iEvent,muon1,muon2,kaonCand1,kaonCand2);
 		    // FIXME
 		    // fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokkmmCand,dimuonCand,iEvent,kinematicMuMuVertexFit,muon1,muon2,kaonCand1);
 
@@ -1908,8 +1838,10 @@ BxToMuMuProducer::vertexWithKinematicFitter(std::vector<const reco::Track*> trks
       result.refitDaughters.push_back(vertexFitTree->currentParticle());
     } while (vertexFitTree->movePointerToTheNextChild());
   }
+
   return result;
 }
+
 
 KinematicFitResult
 BxToMuMuProducer::vertexMuonsWithKinematicFitter(const pat::Muon& muon1,
@@ -2064,6 +1996,76 @@ BxToMuMuProducer::fitBToKMuMu( RefCountedKinematicTree tree,
       result.refitDaughters.push_back(vertexFitTree->currentParticle());
     } while (vertexFitTree->movePointerToTheNextChild());
   }
+  return result;
+}
+
+KinematicFitResult
+BxToMuMuProducer::fitMuMuGamma( RefCountedKinematicTree tree,
+				const pat::Photon& photon,
+				float mass_constraint)
+{
+  KinematicFitResult result; 
+  if ( !tree->isValid()) return result;
+  tree->movePointerToTheTop();
+  
+  KinematicConstraint* mc(0);
+  if (mass_constraint > 0){
+    ParticleMass mass = mass_constraint;
+    // mass constraint fit
+    KinematicParticleFitter csFitter;
+    float mass_sigma = JPsiMassErr_;
+    // FIXME: memory leak
+    mc = new MassKinematicConstraint(mass, mass_sigma);
+    try {
+      tree = csFitter.fit(mc, tree);
+    } catch (const std::exception& e) {
+      return result;
+    }
+  }
+  
+  KinematicParticleFactoryFromTransientTrack partFactory;
+  KinematicParticleVertexFitter fitter;
+
+  std::vector<RefCountedKinematicParticle> particles;
+  float chi2 = 0.;
+  float ndf = 0.;
+
+  tree->movePointerToTheTop();
+  particles.push_back(tree->currentParticle());
+  bmm::KinematicParticleRef
+    photon_kp(bmm::build_particle(photon, momentum_resolution(photon),
+				  bFieldHandle_.product(), chi2, ndf));
+
+  particles.push_back(photon_kp);
+
+  RefCountedKinematicTree vertexFitTree;
+  try {
+    vertexFitTree = fitter.fit(particles);
+  } catch (const std::exception& e) {
+    return result;
+  }
+  
+  if ( !vertexFitTree->isValid()) return result;
+
+  result.treeIsValid = true;
+
+  vertexFitTree->movePointerToTheTop();
+  result.refitVertex = vertexFitTree->currentDecayVertex();
+  result.refitMother = vertexFitTree->currentParticle();
+  result.refitTree   = vertexFitTree;
+  
+  if ( !result.refitVertex->vertexIsValid()) return result;
+  
+  result.vertexIsValid = true;
+
+  // extract the re-fitted tracks
+  // vertexFitTree->movePointerToTheTop();
+
+  // if ( vertexFitTree->movePointerToTheFirstChild() ){
+  //   do {
+  //     result.refitDaughters.push_back(vertexFitTree->currentParticle());
+  //   } while (vertexFitTree->movePointerToTheNextChild());
+  // }
   return result;
 }
 
@@ -2582,6 +2584,10 @@ DisplacementInformationIn3D BxToMuMuProducer::compute3dDisplacement(const Kinema
   
   auto candTransientTrack = fit.refitMother->refittedTransientTrack();
 
+  // auto fts = fit.refitMother->currentState().freeTrajectoryState();
+  // std::cout << fts << std::endl;
+  // std::cout << "Charge: " << candTransientTrack.charge() << std::endl;
+  
   const reco::Vertex* bestVertex(0);
   int bestVertexIndex(-1);
   double minDistance(999.);
