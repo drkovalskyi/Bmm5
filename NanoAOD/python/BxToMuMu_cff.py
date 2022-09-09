@@ -49,8 +49,11 @@ BxToMuMu = cms.EDProducer(
     "BxToMuMuProducer",
     beamSpot=cms.InputTag("offlineBeamSpot"),
     vertexCollection=cms.InputTag("offlineSlimmedPrimaryVertices"),
+    # linkedObjects represent subset of original collections that are
+    # kept in NanoAOD. Use them in order to link with NanoAOD objects.
     muonCollection = cms.InputTag("linkedObjects","muons"),
     photonCollection = cms.InputTag("linkedObjects","photons"),
+    conversionCollection = cms.InputTag("oniaPhotonCandidates","conversions"),
     PFCandCollection = cms.InputTag("packedPFCandidates"),
     prunedGenParticleCollection = cms.InputTag("prunedGenParticles"),
     MuonMinPt = cms.double(1.),
@@ -64,6 +67,7 @@ BxToMuMu = cms.EDProducer(
     maxBKmmMass = cms.double(6.0),
     minMuMuGammaMass = cms.double(3.0),
     maxMuMuGammaMass = cms.double(6.0),
+    minGammaPt = cms.double(1.0),
     minBKKmmMass = cms.double(4.5),
     maxBKKmmMass = cms.double(6.0),
     maxTwoTrackDOCA = cms.double(0.1),
@@ -78,6 +82,7 @@ BxToMuMu = cms.EDProducer(
     injectMatchedBtohh = cms.bool(False),
     injectBtohh = cms.bool(True),
     recoMuMuGamma = cms.bool(True),
+    recoMuMuGammaConv = cms.bool(True),
     minBhhHadronPt = cms.double(4.0),
     maxBhhHadronEta = cms.double(1.4),
     minBhhMass   = cms.double(4.9),
@@ -416,6 +421,9 @@ BxToMuMuBToMuMuGammaTableVariables =  merge_psets(
     cms.PSet(
         mm_index        = Var("userInt('mm_index')",           int,   doc = "Index of dimuon pair"),
         ph_index        = Var("userInt('ph_index')",           int,   doc = "Index of photon"),
+        ph_pt           = Var("userFloat('ph_pt')",          float,   doc = "Photon pt"),
+        ph_eta          = Var("userFloat('ph_eta')",         float,   doc = "Photon eta"),
+        ph_phi          = Var("userFloat('ph_phi')",         float,   doc = "Photon phi"),
         mass            = Var("userFloat('mass')" ,          float,   doc = "Mass - no fit"),
     )
 )
