@@ -1,0 +1,7 @@
+----- Begin Fatal Exception 05-Sep-2022 23:39:26 CEST-----------------------
+An exception of category 'StdException' occurred while
+   [0] Processing the python configuration file named test.py
+Exception Message:
+A std::exception was thrown.
+File "test.py" could not be opened!
+----- End Fatal Exception -------------------------------------------------

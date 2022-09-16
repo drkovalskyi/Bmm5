@@ -29,6 +29,8 @@
 #include "RecoVertex/KinematicFit/interface/MassKinematicConstraint.h"
 #include "RecoVertex/KinematicFit/interface/PointingKinematicConstraint.h"
 #include "RecoVertex/KinematicFit/interface/KinematicConstrainedVertexFitter.h"
+#include "RecoVertex/KinematicFit/interface/ColinearityKinematicConstraintT.h"
+#include "RecoVertex/KinematicFit/interface/KinematicConstrainedVertexFitterT.h"
 #include "RecoVertex/KalmanVertexFit/interface/KalmanVertexFitter.h"
 #include "TrackingTools/PatternTools/interface/TwoTrackMinimumDistance.h"
 #include "TrackingTools/IPTools/interface/IPTools.h"
@@ -2202,6 +2204,9 @@ BxToMuMuProducer::fitMuMuGammaConv( RefCountedKinematicTree mmVertexTree,
   KinematicParticleFactoryFromTransientTrack partFactory;
   KinematicParticleVertexFitter vtxFitter;
 
+  ColinearityKinematicConstraintT<colinearityKinematic::PhiTheta> constr;
+  KinematicConstrainedVertexFitterT<2, 2> kcvFitter(bFieldHandle_.product());
+  
   std::vector<RefCountedKinematicParticle> particles;
   
   auto tk0 = photon.userData<reco::Track>("track0");
@@ -2216,27 +2221,35 @@ BxToMuMuProducer::fitMuMuGammaConv( RefCountedKinematicTree mmVertexTree,
 
   RefCountedKinematicTree photonVertexTree;
   try {
-    photonVertexTree = vtxFitter.fit(particles);
+    // photonVertexTree = vtxFitter.fit(particles);
+    // default parameters
+    // - maxDelta: 0.01
+    // - maxNbrOfIterations: 1000
+    // - maxReducedChiSq: 225.
+    // - minChiSqImprovement: 50.
+    // Note: the maximum number of convergence iterations is the only parameter that
+    // tends to be changed. 40 is used in EgammaPhotonProducers
+    photonVertexTree = kcvFitter.fit(particles, &constr);
   } catch (const std::exception& e) {
     return result;
   }
   
   if ( !photonVertexTree->isValid()) return result;
 
-  // add mass constraint to the photon candidate
+  // // add mass constraint to the photon candidate
 
-  const ParticleMass photon_mass(0);
-  float photon_mass_err(1e-6);
+  // const ParticleMass photon_mass(0);
+  // float photon_mass_err(1e-6);
 
-  KinematicConstraint* photon_mc = new MassKinematicConstraint(photon_mass, photon_mass_err);
-  photonVertexTree->movePointerToTheTop();
-  try {
-    photonVertexTree = csFitter.fit(photon_mc, photonVertexTree);
-  } catch (const std::exception& e) {
-    return result;
-  }
+  // KinematicConstraint* photon_mc = new MassKinematicConstraint(photon_mass, photon_mass_err);
+  // photonVertexTree->movePointerToTheTop();
+  // try {
+  //   photonVertexTree = csFitter.fit(photon_mc, photonVertexTree);
+  // } catch (const std::exception& e) {
+  //   return result;
+  // }
 
-  if ( !photonVertexTree->isValid()) return result;
+  // if ( !photonVertexTree->isValid()) return result;
 
   // common vertex fit
   std::vector<RefCountedKinematicParticle> mmg_particles;
