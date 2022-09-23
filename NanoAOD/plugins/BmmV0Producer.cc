@@ -185,6 +185,23 @@ namespace {
     GenMatchInfo():mc_trk1(0), mc_trk2(0), match(0)
     {}
   };
+
+  const pat::PackedGenParticle*
+    gen_match(const std::vector<pat::PackedGenParticle>& packedGenParticles,
+	      const LorentzVector& reco)
+  {
+    const pat::PackedGenParticle* best_match(nullptr);
+    float min_delta = 1e9;
+    for (auto const & gen: packedGenParticles){
+      if (deltaR(reco,gen) > 0.15) continue;
+      float delta = fabs(reco.pt()-gen.pt())/gen.pt();
+      if (delta > min_delta) continue;
+      min_delta = delta;
+      best_match = &gen;
+    }
+    return best_match;
+  }
+  
 };
 
 using namespace std;
@@ -304,6 +321,10 @@ private:
   double maxDsPreselectMass_;
   double minDsMass_;
   double maxDsMass_;
+  double minDstarPreselectMass_;
+  double maxDstarPreselectMass_;
+  double minDstarMass_;
+  double maxDstarMass_;
   double minD0PreselectMass_;
   double maxD0PreselectMass_;
   double minD0Mass_;
@@ -347,6 +368,10 @@ minDsPreselectMass_(     iConfig.getParameter<double>( "minDsPreselectMass" ) ),
 maxDsPreselectMass_(     iConfig.getParameter<double>( "maxDsPreselectMass" ) ),
 minDsMass_(     iConfig.getParameter<double>( "minDsMass" ) ),
 maxDsMass_(     iConfig.getParameter<double>( "maxDsMass" ) ),
+minDstarPreselectMass_(     iConfig.getParameter<double>( "minDstarPreselectMass" ) ),
+maxDstarPreselectMass_(     iConfig.getParameter<double>( "maxDstarPreselectMass" ) ),
+minDstarMass_(     iConfig.getParameter<double>( "minDstarMass" ) ),
+maxDstarMass_(     iConfig.getParameter<double>( "maxDstarMass" ) ),
 minD0PreselectMass_(     iConfig.getParameter<double>( "minD0PreselectMass" ) ),
 maxD0PreselectMass_(     iConfig.getParameter<double>( "maxD0PreselectMass" ) ),
 minD0Mass_(     iConfig.getParameter<double>( "minD0Mass" ) ),
@@ -545,17 +570,6 @@ void BmmV0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 	    phis->push_back(phiCand);
 	  }
 
-	  // Look for V0s built from displaced tracks
-	  if ( not displacedTrack(pfCand1) or 
-	       not displacedTrack(pfCand2) ) continue;
-
-	  // KsToPiPi
-	  auto ksCand = getKsToPiPi(iEvent, pfCand1, pfCand2);
-	  if (ksCand.numberOfDaughters() > 0){
-	    ksCand.addUserFloat( "doca", tt_doca);
-	    kss->push_back(ksCand);
-	  }
-
 	  // D0ToKPi
 	  auto d0Cand1 = getD0ToKPi(iEvent, pfCand1, pfCand2);
 	  if (d0Cand1.numberOfDaughters() > 0){
@@ -568,6 +582,17 @@ void BmmV0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 	    d0s->push_back(d0Cand2);
 	  }
 	  
+	  // Look for V0s built from displaced tracks
+	  if ( not displacedTrack(pfCand1) or 
+	       not displacedTrack(pfCand2) ) continue;
+
+	  // KsToPiPi
+	  auto ksCand = getKsToPiPi(iEvent, pfCand1, pfCand2);
+	  if (ksCand.numberOfDaughters() > 0){
+	    ksCand.addUserFloat( "doca", tt_doca);
+	    kss->push_back(ksCand);
+	  }
+
 	  // LambdaToPPi
 	  auto lambdaCand1 = getLambdaToPPi(iEvent, pfCand1, pfCand2);
 	  if (lambdaCand1.numberOfDaughters() > 0){
@@ -652,9 +677,11 @@ BmmV0Producer::getD0ToKPi(const edm::Event& iEvent,
   d0Cand.addUserFloat( "kaon_pt",  kaon.pt() );
   d0Cand.addUserFloat( "kaon_eta", kaon.eta() );
   d0Cand.addUserFloat( "kaon_phi", kaon.phi() );
+  d0Cand.addUserInt( "kaon_charge", kaon.charge() );
   d0Cand.addUserFloat( "pion_pt",  pion.pt() );
   d0Cand.addUserFloat( "pion_eta", pion.eta() );
   d0Cand.addUserFloat( "pion_phi", pion.phi() );
+  d0Cand.addUserInt( "pion_charge", pion.charge() );
   d0Cand.addUserFloat( "kaon_sip", trackImpactParameterSignificance(kaon) );
   d0Cand.addUserFloat( "pion_sip", trackImpactParameterSignificance(pion) );
   d0Cand.addUserInt( "kaon_mu_index", match_to_muon(kaon, *muonHandle_));
@@ -665,9 +692,73 @@ BmmV0Producer::getD0ToKPi(const edm::Event& iEvent,
   if ( not d0VtxFit.valid()  or 
        d0VtxFit.vtxProb() < minVtxProb_ or
        d0VtxFit.mass() < minD0Mass_ or  
-       d0VtxFit.mass() > maxD0Mass_ or
-       d0VtxFit.lxy > maxLxy_ or 
-       d0VtxFit.sigLxy < minSigLxy_ ) return pat::CompositeCandidate();
+       d0VtxFit.mass() > maxD0Mass_ // or
+       // d0VtxFit.lxy > maxLxy_ or 
+       // d0VtxFit.sigLxy < minSigLxy_ 
+       ) return pat::CompositeCandidate();
+  
+  // Look for Dstar To D0 Pi
+  // Keep the best candidate by vertex probability if there are multiple
+  KinematicFitResult dstarVtx;
+  const pat::PackedCandidate* dstar_pion(nullptr);
+  for (const pat::PackedCandidate& i_slow_pion: *pfCandHandle_){
+    if (&i_slow_pion == &ikaon or &i_slow_pion == &ipion) continue;
+    if (not isGoodTrack(i_slow_pion) ) continue;
+    // if (not isGoodPion(i_slow_pion) ) continue;
+    
+    pat::CompositeCandidate dstarCand;
+    pat::PackedCandidate slow_pion(i_slow_pion);
+    slow_pion.setMass(pion_mass_);
+    dstarCand.addDaughter( kaon , "kaon" );
+    dstarCand.addDaughter( pion , "pion" );
+    dstarCand.addDaughter( slow_pion , "slow_pion" );
+    addP4.set( dstarCand );
+    if ( dstarCand.mass() < minDstarPreselectMass_ or
+	 dstarCand.mass() > maxDstarPreselectMass_ ) continue;
+
+    // fit 3-body vertex
+    std::vector<const reco::Track*> trks;
+    std::vector<float> masses;
+    trks.push_back(kaon.bestTrack());
+    trks.push_back(pion.bestTrack());
+    trks.push_back(slow_pion.bestTrack());
+    masses.push_back(kaon.mass());
+    masses.push_back(pion.mass());
+    masses.push_back(slow_pion.mass());
+
+    auto vtxFit = vertexWithKinematicFitter(trks, masses);
+    vtxFit.postprocess(*beamSpot_, *primaryVertices_);
+
+    if ( vtxFit.valid()  and vtxFit.vtxProb() > minVtxProb_ and
+	 vtxFit.mass() > minDstarMass_ and vtxFit.mass() < maxDstarMass_ )
+      {
+	if (not dstarVtx.valid() or vtxFit.vtxProb() > dstarVtx.vtxProb()){
+	  dstarVtx = vtxFit;
+	  dstar_pion = &i_slow_pion;
+	}
+      }
+  }
+  if (dstar_pion){
+    d0Cand.addUserFloat( "dstar_pion_pt",  dstar_pion->pt() );
+    d0Cand.addUserFloat( "dstar_pion_eta", dstar_pion->eta() );
+    d0Cand.addUserFloat( "dstar_pion_phi", dstar_pion->phi() );
+    d0Cand.addUserInt( "dstar_pion_charge", dstar_pion->charge());
+    if (isMC_){
+      auto* match = gen_match(*packedGenParticles_, dstar_pion->p4());
+      d0Cand.addUserFloat( "dstar_pion_gen_pt", match ? match->pt():-1.0 );
+      d0Cand.addUserInt( "dstar_gen_pdgId", (match && match->numberOfMothers() > 0) ? match->mother(0)->pdgId():0 );
+    }
+  } else {
+    d0Cand.addUserFloat( "dstar_pion_pt", -1.0 );
+    d0Cand.addUserFloat( "dstar_pion_eta", 0.0 );
+    d0Cand.addUserFloat( "dstar_pion_phi", 0.0 );
+    d0Cand.addUserInt( "dstar_pion_charge", 0 );
+    if (isMC_){
+      d0Cand.addUserFloat( "dstar_pion_gen_pt", -1.0 );
+      d0Cand.addUserInt( "dstar_gen_pdgId", 0 );
+    }
+  }
+  addFitInfo(d0Cand, dstarVtx, "dstar");
 
   return d0Cand;
 }
@@ -871,22 +962,6 @@ pair<double,double> BmmV0Producer::computeDCA(const pat::PackedCandidate &kaon,
   return DCA;
 }
 namespace{
-
-  const pat::PackedGenParticle*
-    gen_match(const std::vector<pat::PackedGenParticle>& packedGenParticles,
-	      const LorentzVector& reco)
-  {
-    const pat::PackedGenParticle* best_match(nullptr);
-    float min_delta = 1e9;
-    for (auto const & gen: packedGenParticles){
-      if (deltaR(reco,gen) > 0.15) continue;
-      float delta = fabs(reco.pt()-gen.pt())/gen.pt();
-      if (delta > min_delta) continue;
-      min_delta = delta;
-      best_match = &gen;
-    }
-    return best_match;
-  }
 
   std::vector<unsigned int> 
     get_depth_from_permutation(const std::vector<unsigned int>& elements){
