@@ -187,7 +187,7 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 	mu_cand.addUserInt("nValidHits",      0);
 	mu_cand.addUserInt("nLostHitsInner",  0);
 	mu_cand.addUserInt("nLostHitsOn",     0);
-	mu_cand.addUserInt("nLostHitsOutter", 0);
+	mu_cand.addUserInt("nLostHitsOuter",  0);
 	
 	mu_cand.addUserInt("trkLayers",           0);
 	mu_cand.addUserInt("trkLostLayersInner",  0);
