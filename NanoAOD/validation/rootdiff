@@ -1,0 +1,205 @@
+#!/bin/env python
+# Use python2 for now since PyROOT fails with python3
+import sys
+from pprint import pprint
+from math import sqrt, isnan
+import argparse
+import re
+
+parser = argparse.ArgumentParser(description='Compare ROOT files')
+parser.add_argument('files', metavar='files', type=str, nargs=2,
+                    help='files to compare')
+parser.add_argument('-v, --verbose', dest='verbose', action='store_const',
+                    const=True, default=False,  help='verbose report')
+parser.add_argument('-d, --debug', dest='debug', action='store_const',
+                    const=True, default=False,
+                    help='print debugging information')
+parser.add_argument('-i, --ignore', dest='ignore', action='store_const',
+                    const=True, default=False,  help='ignore missing branches')
+parser.add_argument('-f, --fast', dest='fast', action='store_const',
+                    const=True, default=False,  help='fast comparison checking\
+ only compression, size and number of entries. By default a deep branch by\
+ branch comparison is performed.')
+parser.add_argument('-p, --pattern', dest='pattern', type=str,
+                    help='analyze only branches matching the pattern')
+parser.add_argument('--validate', dest='validate', type=str,
+                    help='report problems with data such as NaN values etc')
+
+args = parser.parse_args()
+
+from ROOT import TTree, TFile, gROOT  # NoQA
+
+gROOT.SetBatch(True)
+
+
+def FindTrees(dir, basepath=""):
+    # Generator function to recurse into a ROOT file/dir and find all TTrees
+    # It yields a list of paths
+    for key in dir.GetListOfKeys():
+        kname = key.GetName()
+        kclass = key.GetClassName()
+        if kclass == "TDirectoryFile":
+            for i in FindTrees(dir.Get(kname), basepath+kname+"/"):
+                yield i
+        else:
+            if kclass == "TTree":
+                yield basepath+kname
+
+
+def GetTrees(file):
+    trees = set()
+    for path in FindTrees(file):
+        trees.add(path)
+    return trees
+
+
+def GetBranchDataSummary(tree):
+    summary = dict()
+    branch_names = []
+    for branch in tree.GetListOfBranches():
+        if branch.GetClassName() != '':
+            continue
+        branch_name = branch.GetName()
+        if args.pattern:
+            if not re.search(args.pattern, branch_name):
+                continue
+        branch_names.append(branch_name)
+        summary[branch_name] = {
+            'min': None,
+            'max': None,
+            'mean': None,
+            'std': None,
+            'n': 0
+        }
+
+    for entry in tree:
+        for branch_name in branch_names:
+            data = getattr(entry, branch_name)
+
+            values = None
+            if type(data).__name__ in ['PyDoubleBuffer', 'PyFloatBuffer',
+                                       'PyIntBuffer', 'PyBoolBuffer']:
+                values = data
+            elif type(data).__name__ in ['long', 'float', 'int']:
+                values = [data]
+            else:
+                if type(data).__name__ in ['str']:
+                    continue
+                print data
+                print type(data).__name__
+                sys.exit()
+
+            if args.debug:
+                print "Branch:", branch_name, " \t", data
+            info = summary[branch_name]
+            for value in values:
+                info['n'] += 1
+                try:
+                    if info['mean'] is not None:
+                        info['mean'] += value
+                        info['std'] += value * value
+                    else:
+                        info['mean'] = value
+                        info['std'] = value * value
+
+                    if info['min'] is None or info['min'] > value:
+                        info['min'] = value
+                    if info['max'] is None or info['max'] < value:
+                        info['max'] = value
+
+                except TypeError, e:
+                    print value
+                    print type(value).__name__
+                    raise
+
+    for branch_name in branch_names:
+        info = summary[branch_name]
+        if info['n'] > 0:
+            info['mean'] = info['mean']/info['n']
+            info['std'] = info['std'] / info['n'] - info['mean'] * info['mean']
+            if info['std'] > 0:
+                info['std'] = sqrt(info['std'])
+            else:
+                info['std'] = 0
+
+    if args.debug:
+        pprint(summary)
+
+    return summary
+
+
+def GetBranchInfo(tree):
+    info = dict()
+    if not args.fast:
+        info = GetBranchDataSummary(tree)
+    else:
+        for branch in tree.GetListOfBranches():
+            info[branch.GetName()] = {
+                'size': branch.GetTotBytes(),
+                'nentries': branch.GetEntries(),
+            }
+    return info
+
+
+def DiffDict(d1, d2):
+    # Fast check
+    if d1 == d2:
+        return True
+
+    # Perform a deep check handing NaN properly
+    if len(d1) != len(d2):
+        return False
+    for key in d1:
+        if d1[key] is not None and d2[key] is not None and
+        isnan(d1[key]) and isnan(d2[key]):
+            continue
+        if d1[key] != d2[key]:
+            if args.debug:
+                print "%s: %s vs %s" % (key, d1[key], d2[key])
+            return False
+    return True
+
+
+file1 = TFile.Open(args.files[0])
+if not file1:
+    print "Cannot open file", args.files[0]
+    sys.exit(2)
+trees1 = GetTrees(file1)
+
+file2 = TFile.Open(args.files[1])
+if not file2:
+    print "Cannot open file", args.files[1]
+    sys.exit(2)
+trees2 = GetTrees(file2)
+
+print "Comparing common trees..."
+for tree in trees1.intersection(trees2):
+    print tree
+    tree1_info = GetBranchInfo(file1.Get(tree))
+    tree2_info = GetBranchInfo(file2.Get(tree))
+    matched = 0
+    not_matched = 0
+    for branch in tree1_info:
+        try:
+            if branch not in tree2_info:
+                if not args.ignore:
+                    print "Branch %s from file 1 is missing in file 2" % branch
+            elif not DiffDict(tree1_info[branch], tree2_info[branch]):
+                if args.verbose:
+                    print "Branch %s has changed" % branch
+                    pprint(tree1_info[branch])
+                    pprint(tree2_info[branch])
+                not_matched += 1
+            else:
+                matched += 1
+        except TypeError, e:
+            print branch
+            print tree1_info[branch]
+            print tree2_info[branch]
+            raise
+    if not args.ignore:
+        for branch in tree2_info:
+            if branch not in tree1_info:
+                print "Branch %s from file 2 is missing in file 1" % branch
+    print "\tNumber of matching branches: %u" % matched
+    print "\tNumber of not matching branches: %u" % not_matched
