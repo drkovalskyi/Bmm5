@@ -150,8 +150,8 @@ def DiffDict(d1, d2):
     if len(d1) != len(d2):
         return False
     for key in d1:
-        if d1[key] is not None and d2[key] is not None and
-        isnan(d1[key]) and isnan(d2[key]):
+        if d1[key] is not None and d2[key] is not None and \
+           isnan(d1[key]) and isnan(d2[key]):
             continue
         if d1[key] != d2[key]:
             if args.debug:
