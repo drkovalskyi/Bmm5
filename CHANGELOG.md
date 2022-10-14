@@ -2,6 +2,16 @@
 
 ## New developments
 
+## [NanoAODv9-V01] - 2022/10/14
+### New
+	- Reorganized code
+	- Integrated photon KinematicParticle code
+	- Added BtoMuMuGamma final state using regular and converted photons
+
+### Fixed
+	- fixed DstarToD0Pi code
+	- updated analysis scripts
+
 ## [NanoAODv8-V05] - 2021/12/06
 ### New
 	- Added L1 and HLT objects matched to offline muons
