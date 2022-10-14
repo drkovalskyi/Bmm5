@@ -2,7 +2,7 @@
 
 ## New developments
 
-## [NanoAODv9-V01] - 2022/10/14
+## [NanoAODv9-V02] - 2022/10/14
 ### New
 	- Reorganized code
 	- Integrated photon KinematicParticle code

@@ -13,6 +13,17 @@ def nanoAOD_customizeBxToMuMu(process):
     process.muonTable.variables.softMva = Var("softMvaValue()",float,doc="soft MVA ID score",precision=6)
     return process
 
+def nanoAOD_customizeDileptonPlusX(process):
+    process.load('Bmm5.NanoAOD.DileptonPlusX_cff')
+    process.load('Bmm5.NanoAOD.UpdateSlimmedMuons_cff')
+    process.load('PhysicsTools.NanoAOD.muons_cff')
+    # Data 
+    process.nanoSequence   = cms.Sequence(process.slimmedMuons + process.nanoSequence + process.DileptonPlusXSequence + process.DileptonPlusXTables)
+    # MC
+    process.nanoSequenceMC = cms.Sequence(process.slimmedMuons + process.nanoSequenceMC + process.DileptonPlusXMcSequence + process.DileptonPlusXMcTables)
+    process.muonTable.variables.softMva = Var("softMvaValue()",float,doc="soft MVA ID score",precision=6)
+    return process
+
 def nanoAOD_customizeV0ForMuonFake(process):
     process.load('Bmm5.NanoAOD.BmmV0ForMuonFake_cff')
     process.load('Bmm5.NanoAOD.UpdateSlimmedMuons_cff')
