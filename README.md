@@ -19,9 +19,9 @@ NanoAOD samples produced by the CMS Central Production infrastructure.
 
 ## cmsDriver Options
 Here is a list required cmsDriver options to get analysis specific parts included
-* --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX
-* --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake
-* --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId 
+* `--customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX`
+* `--customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake`
+* `--customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId`
 
 ## Optional Filtering
 If you want to add event filtering to the commands below you just need to modify the step option the following way
