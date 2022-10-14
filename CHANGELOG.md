@@ -2,6 +2,12 @@
 
 ## New developments
 
+## [NanoAODv9-V03] - 2022/10/14
+### New
+	- Major code re-organization with re-writes
+	- Added dielectron channels (Kee, KKee)
+	- Added Dstar to D0(mumu) pi
+
 ## [NanoAODv9-V02] - 2022/10/14
 ### New
 	- Reorganized code
