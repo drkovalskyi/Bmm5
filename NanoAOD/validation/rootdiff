@@ -5,6 +5,7 @@ from pprint import pprint
 from math import sqrt, isnan
 import argparse
 import re
+import json
 
 parser = argparse.ArgumentParser(description='Compare ROOT files')
 parser.add_argument('files', metavar='files', type=str, nargs=2,
@@ -22,8 +23,16 @@ parser.add_argument('-f, --fast', dest='fast', action='store_const',
  branch comparison is performed.')
 parser.add_argument('-p, --pattern', dest='pattern', type=str,
                     help='analyze only branches matching the pattern')
+parser.add_argument('-t, --tree', dest='tree', type=str,
+                    help='analyze specific tree')
+parser.add_argument('--tolerance', dest='tolerance', type=float,
+                    help='relative tolerance applied during comparison')
 parser.add_argument('--validate', dest='validate', type=str,
                     help='report problems with data such as NaN values etc')
+parser.add_argument('-m, --map', dest='map', type=str, metavar="file",
+                    help='JSON file containing a map of renamed branches.\
+ Example: {"bkmm_kaon_mu1_doca":"bkmm_kaon_l1_doca"}')
+
 
 args = parser.parse_args()
 
@@ -154,6 +163,10 @@ def DiffDict(d1, d2):
            isnan(d1[key]) and isnan(d2[key]):
             continue
         if d1[key] != d2[key]:
+            if args.tolerance:
+                if d2[key] != 0:
+                    if abs(d1[key] / d2[key] - 1.0) < args.tolerance:
+                        continue
             if args.debug:
                 print "%s: %s vs %s" % (key, d1[key], d2[key])
             return False
@@ -172,33 +185,48 @@ if not file2:
     sys.exit(2)
 trees2 = GetTrees(file2)
 
+renamed_branches = dict()
+reverse_branch_map = dict()
+if args.map:
+    renamed_branches = json.load(open(args.map))
+    for old_branch, new_branch in renamed_branches.items():
+        reverse_branch_map[new_branch] = old_branch
+
 print "Comparing common trees..."
 for tree in trees1.intersection(trees2):
+    if args.tree:
+        if tree != args.tree:
+            continue
     print tree
     tree1_info = GetBranchInfo(file1.Get(tree))
     tree2_info = GetBranchInfo(file2.Get(tree))
     matched = 0
     not_matched = 0
-    for branch in tree1_info:
+    for old_branch in tree1_info:
+        new_branch = old_branch
+        if old_branch in renamed_branches:
+            new_branch = renamed_branches[old_branch]
         try:
-            if branch not in tree2_info:
+            if new_branch not in tree2_info:
                 if not args.ignore:
-                    print "Branch %s from file 1 is missing in file 2" % branch
-            elif not DiffDict(tree1_info[branch], tree2_info[branch]):
+                    print "Branch %s from file 1 is missing in file 2" % new_branch
+            elif not DiffDict(tree1_info[old_branch], tree2_info[new_branch]):
                 if args.verbose:
-                    print "Branch %s has changed" % branch
-                    pprint(tree1_info[branch])
-                    pprint(tree2_info[branch])
+                    print "Branch %s has changed" % old_branch
+                    pprint(tree1_info[old_branch])
+                    pprint(tree2_info[new_branch])
                 not_matched += 1
             else:
                 matched += 1
         except TypeError, e:
-            print branch
-            print tree1_info[branch]
-            print tree2_info[branch]
+            print old_branch
+            print tree1_info[old_branch]
+            print tree2_info[new_branch]
             raise
     if not args.ignore:
         for branch in tree2_info:
+            if branch in reverse_branch_map:
+                branch = reverse_branch_map[branch]
             if branch not in tree1_info:
                 print "Branch %s from file 2 is missing in file 1" % branch
     print "\tNumber of matching branches: %u" % matched
