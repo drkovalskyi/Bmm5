@@ -39,19 +39,14 @@ def copy_pset(pset,replace_dict):
             setattr(result,new_name,value)
     return result
 
-##################################################################################
-###
-###                              Bx to mu mu
-###
-##################################################################################
-
-BxToMuMu = cms.EDProducer(
-    "BxToMuMuProducer",
+Dileptons = cms.EDProducer(
+    "DileptonPlusXProducer",
     beamSpot=cms.InputTag("offlineBeamSpot"),
     vertexCollection=cms.InputTag("offlineSlimmedPrimaryVertices"),
     # linkedObjects represent subset of original collections that are
     # kept in NanoAOD. Use them in order to link with NanoAOD objects.
     muonCollection = cms.InputTag("linkedObjects","muons"),
+    electronCollection = cms.InputTag("linkedObjects","electrons"),
     photonCollection = cms.InputTag("linkedObjects","photons"),
     conversionCollection = cms.InputTag("oniaPhotonCandidates","conversions"),
     PFCandCollection = cms.InputTag("packedPFCandidates"),
@@ -61,15 +56,17 @@ BxToMuMu = cms.EDProducer(
     KaonMinPt = cms.double(1.0),
     # KaonMinPt=cms.double(-1),
     KaonMaxEta = cms.double(2.4),
+    ElectronMinPt = cms.double(2.),
+    ElectronMaxEta = cms.double(2.4),
     KaonMinDCASig=cms.double(-1.),
-    DiMuonChargeCheck=cms.bool(False),
-    minBKmmMass = cms.double(4.5),
-    maxBKmmMass = cms.double(6.0),
-    minMuMuGammaMass = cms.double(3.0),
-    maxMuMuGammaMass = cms.double(6.0),
+    DiLeptonChargeCheck=cms.bool(False),
+    minBKllMass = cms.double(4.5),
+    maxBKllMass = cms.double(6.0),
+    minLLGammaMass = cms.double(3.0),
+    maxLLGammaMass = cms.double(6.0),
     minGammaPt = cms.double(1.0),
-    minBKKmmMass = cms.double(4.5),
-    maxBKKmmMass = cms.double(6.0),
+    minBKKllMass = cms.double(4.5),
+    maxBKKllMass = cms.double(6.0),
     maxTwoTrackDOCA = cms.double(0.1),
     bdtEvent0 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events0_BDT.weights.xml'),
     bdtEvent1 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events1_BDT.weights.xml'),
@@ -80,18 +77,30 @@ BxToMuMu = cms.EDProducer(
     isMC = cms.bool(False),
     # injectMatchedBtohh = cms.bool(True),
     injectMatchedBtohh = cms.bool(False),
-    injectBtohh = cms.bool(False),
+    injectBtohh = cms.bool(True),
     recoMuMuGamma = cms.bool(True),
     recoMuMuGammaConv = cms.bool(True),
+    recoElElX = cms.bool(True),
     minBhhHadronPt = cms.double(4.0),
     maxBhhHadronEta = cms.double(1.4),
     minBhhMass   = cms.double(4.9),
     maxBhhMass   = cms.double(5.9),
     minBhhSigLxy = cms.double(4.0),
     minBhhVtxProb  = cms.double(0.01),
+    recoMuMuPi = cms.bool(True),
+    minD0Mass = cms.double(1.75),
+    maxD0Mass = cms.double(1.95),
+    minDstarMass = cms.double(1.90),
+    maxDstarMass = cms.double(2.10),
 )
 
-BxToMuMuMc = BxToMuMu.clone( isMC = cms.bool(True) ) 
+DileptonsMc = Dileptons.clone( isMC = cms.bool(True) ) 
+
+##################################################################################
+###
+###                              Common PSets
+###
+##################################################################################
 
 kinematic_pset = cms.PSet(
     kin_valid    = Var("userInt('kin_valid')",         int,   doc = "Kinematic fit: vertex validity"),
@@ -136,7 +145,30 @@ kinematic_pset = cms.PSet(
     kin_pv2lipErr = Var("userFloat('kin_pv2lipErr')",    float, doc = "Kinematic fit: longitudinal impact parameter uncertainty wrt Second best Primary Vertex"),
 )
 
-BxToMuMuDiMuonTableVariables = merge_psets(
+isolation_pset = cms.PSet(
+    nTrks            = Var("userInt('nTrks')",             int,   doc = "Number of tracks compatible with the vertex by vertex probability"),
+    nBMTrks          = Var("userInt('nBMTrks')",           int,   doc = "Number of tracks more compatible with the mm vertex than with PV by doca significance"),
+    nDisTrks         = Var("userInt('nDisTrks')",          int,   doc = "Number of displaced tracks compatible with the vertex by vertex probability"),
+    closetrk         = Var("userInt('closetrk')",          int,   doc = "Number of tracks compatible with the vertex by doca"),
+    closetrks1       = Var("userInt('closetrks1')",        int,   doc = "Number of tracks compatible with the vertex with doca signifance less than 1"),
+    closetrks2       = Var("userInt('closetrks2')",        int,   doc = "Number of tracks compatible with the vertex with doca signifance less than 2"),
+    closetrks3       = Var("userInt('closetrks3')",        int,   doc = "Number of tracks compatible with the vertex with doca signifance less than 3"),
+    docatrk          = Var("userFloat('docatrk')",         float, doc = "Distance of closest approach of a track to the vertex"),
+    m1iso            = Var("userFloat('m1iso')",           float, doc = "Muon isolation the way it's done in Bmm4"),
+    m2iso            = Var("userFloat('m2iso')",           float, doc = "Muon isolation the way it's done in Bmm4"),
+    iso              = Var("userFloat('iso')",             float, doc = "B isolation the way it's done in Bmm4"),
+    otherVtxMaxProb  = Var("userFloat('otherVtxMaxProb')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=0.5GeV"),
+    otherVtxMaxProb1 = Var("userFloat('otherVtxMaxProb1')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=1.0GeV"),
+    otherVtxMaxProb2 = Var("userFloat('otherVtxMaxProb2')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=2.0GeV"),
+)
+
+##################################################################################
+###
+###                              Dilepton Info
+###
+##################################################################################
+
+DileptonsDiMuonTableVariables = merge_psets(
     cms.PSet(
         mu1_index    = Var("userInt('mu1_index')",         int,   doc = "Index of corresponding leading muon"),
         mu1_pdgId    = Var("userInt('mu1_pdgId')",         int,   doc = "Leading muon candidate pdgId. Used in hadron fake studies"),
@@ -150,28 +182,8 @@ BxToMuMuDiMuonTableVariables = merge_psets(
         mu2_phi      = Var("userFloat('mu2_phi')",         float, doc = "Trailing muon phi"),
         mass         = Var("mass",                         float, doc = "Unfit invariant mass"),
         doca         = Var("userFloat('doca')",            float, doc = "Distance of closest approach of muons"),
-        nTrks        = Var("userInt('nTrks')",             int,   doc = "Number of tracks compatible with the vertex by vertex probability"),
-        nBMTrks      = Var("userInt('nBMTrks')",           int,   doc = "Number of tracks more compatible with the mm vertex than with PV by doca significance"),
-        nDisTrks     = Var("userInt('nDisTrks')",          int,   doc = "Number of displaced tracks compatible with the vertex by vertex probability"),
-        closetrk     = Var("userInt('closetrk')",          int,   doc = "Number of tracks compatible with the vertex by doca"),
-        closetrks1   = Var("userInt('closetrks1')",        int,   doc = "Number of tracks compatible with the vertex with doca signifance less than 1"),
-        closetrks2   = Var("userInt('closetrks2')",        int,   doc = "Number of tracks compatible with the vertex with doca signifance less than 2"),
-        closetrks3   = Var("userInt('closetrks3')",        int,   doc = "Number of tracks compatible with the vertex with doca signifance less than 3"),
-        docatrk      = Var("userFloat('docatrk')",         float, doc = "Distance of closest approach of a track to the vertex"),
-        m1iso        = Var("userFloat('m1iso')",           float, doc = "Muon isolation the way it's done in Bmm4"),
-        m2iso        = Var("userFloat('m2iso')",           float, doc = "Muon isolation the way it's done in Bmm4"),
-        iso          = Var("userFloat('iso')",             float, doc = "B isolation the way it's done in Bmm4"),
         bdt          = Var("userFloat('bdt')",             float, doc = "Bmm4 BDT"),
         mva          = Var("userFloat('mva')",             float, doc = "XGBoost based Bmm5 MVA"),
-        otherVtxMaxProb = Var("userFloat('otherVtxMaxProb')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=0.5GeV"),
-        otherVtxMaxProb1 = Var("userFloat('otherVtxMaxProb1')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=1.0GeV"),
-        otherVtxMaxProb2 = Var("userFloat('otherVtxMaxProb2')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=2.0GeV"),
-        # Kalman Fit
-        kal_valid    = Var("userInt('kalman_valid')",      int,   doc = "Kalman vertex fit validity"),
-        kal_vtx_prob = Var("userFloat('kalman_vtx_prob')", float, doc = "Kalman fit vertex probability"),
-        kal_mass     = Var("userFloat('kalman_mass')",     float, doc = "Kalman vertex refitted mass"),
-        kal_lxy      = Var("userFloat('kalman_lxy')",      float, doc = "Kalman fit vertex displacement in XY plane"),
-        kal_slxy     = Var("userFloat('kalman_sigLxy')",   float, doc = "Kalman fit vertex displacement significance in XY plane"),
         # Kinematic Fit daugter info
         kin_mu1pt    = Var("userFloat('kin_mu1pt')",       float, doc = "Kinematic fit: refitted muon 1 pt"),
         kin_mu1eta   = Var("userFloat('kin_mu1eta')",      float, doc = "Kinematic fit: refitted muon 1 eta"),
@@ -182,64 +194,115 @@ BxToMuMuDiMuonTableVariables = merge_psets(
         ),
     kinematic_pset,
     copy_pset(kinematic_pset,{"kin_":"kinpc_"}),
+    isolation_pset    
 )
 
-BxToMuMuDiMuonMcTableVariables = merge_psets(
-    BxToMuMuDiMuonTableVariables,
+DileptonsDiMuonMcTableVariables = merge_psets(
+    DileptonsDiMuonTableVariables,
     cms.PSet(
-        gen_mu1_pdgId  = Var("userInt(  'gen_mu1_pdgId')",    int,   doc = "Gen match: first muon pdg Id"),
-        gen_mu1_mpdgId = Var("userInt(  'gen_mu1_mpdgId')",   int,   doc = "Gen match: first muon mother pdg Id"),
-        gen_mu1_pt     = Var("userFloat('gen_mu1_pt')",     float,   doc = "Gen match: first muon pt"),
-        gen_mu2_pdgId  = Var("userInt(  'gen_mu2_pdgId')",    int,   doc = "Gen match: second muon pdg Id"),
-        gen_mu2_mpdgId = Var("userInt(  'gen_mu2_mpdgId')",   int,   doc = "Gen match: second muon mother pdg Id"),
-        gen_mu2_pt     = Var("userFloat('gen_mu2_pt')",     float,   doc = "Gen match: second muon pt"),
-        gen_pdgId      = Var("userInt(  'gen_pdgId')",        int,   doc = "Gen match: dimuon pdg Id"),
-        gen_cpdgId     = Var("userInt(  'gen_cpdgId')",       int,   doc = "Gen match: common mother pdg Id"),
-        gen_mpdgId     = Var("userInt(  'gen_mpdgId')",       int,   doc = "Gen match: dimuon mother pdg Id"),
-        gen_mass       = Var("userFloat('gen_mass')",       float,   doc = "Gen match: dimuon mass"),
-        gen_pt         = Var("userFloat('gen_pt')",         float,   doc = "Gen match: dimuon pt"),
-        gen_prod_z     = Var("userFloat('gen_prod_z')",     float,   doc = "Gen match: dimuon mother production vertex z"),
-        gen_vtx_x      = Var("userFloat('gen_vtx_x')",      float,   doc = "Gen match: dimuon vertex x"),
-        gen_vtx_y      = Var("userFloat('gen_vtx_y')",      float,   doc = "Gen match: dimuon vertex y"),
-        gen_vtx_z      = Var("userFloat('gen_vtx_z')",      float,   doc = "Gen match: dimuon vertex z"),
-        gen_l3d        = Var("userFloat('gen_l3d')",        float,   doc = "Gen match: dimuon decay legnth 3D"),
-        gen_lxy        = Var("userFloat('gen_lxy')",        float,   doc = "Gen match: dimuon decay legnth XY"),
-        gen_tau        = Var("userFloat('gen_tau')",        float,   doc = "Gen match: dimuon decay time 3D"),
-        gen_doca       = Var("userFloat('gen_doca')",       float,   doc = "Gen match: dimuon distance of closest approach"),
-        gen_alpha_p_phi = Var("userFloat('gen_alpha_p_phi')", float,   doc = "Difference in direction between reconstructed and generated B in phi"),
+        gen_l1_pdgId      = Var("userInt(  'gen_l1_pdgId')",        int,   doc = "Gen match: first lepton pdg Id"),
+        gen_l1_mpdgId     = Var("userInt(  'gen_l1_mpdgId')",       int,   doc = "Gen match: first lepton mother pdg Id"),
+        gen_l1_pt         = Var("userFloat('gen_l1_pt')",         float,   doc = "Gen match: first lepton pt"),
+        gen_l2_pdgId      = Var("userInt(  'gen_l2_pdgId')",        int,   doc = "Gen match: second lepton pdg Id"),
+        gen_l2_mpdgId     = Var("userInt(  'gen_l2_mpdgId')",       int,   doc = "Gen match: second lepton mother pdg Id"),
+        gen_l2_pt         = Var("userFloat('gen_l2_pt')",         float,   doc = "Gen match: second lepton pt"),
+        gen_pdgId         = Var("userInt(  'gen_pdgId')",           int,   doc = "Gen match: dilepton pdg Id"),
+        gen_cpdgId        = Var("userInt(  'gen_cpdgId')",          int,   doc = "Gen match: common mother pdg Id"),
+        gen_mpdgId        = Var("userInt(  'gen_mpdgId')",          int,   doc = "Gen match: dilepton mother pdg Id"),
+        gen_mass          = Var("userFloat('gen_mass')",          float,   doc = "Gen match: dilepton mass"),
+        gen_pt            = Var("userFloat('gen_pt')",            float,   doc = "Gen match: dilepton pt"),
+        gen_prod_z        = Var("userFloat('gen_prod_z')",        float,   doc = "Gen match: dilepton mother production vertex z"),
+        gen_vtx_x         = Var("userFloat('gen_vtx_x')",         float,   doc = "Gen match: dilepton vertex x"),
+        gen_vtx_y         = Var("userFloat('gen_vtx_y')",         float,   doc = "Gen match: dilepton vertex y"),
+        gen_vtx_z         = Var("userFloat('gen_vtx_z')",         float,   doc = "Gen match: dilepton vertex z"),
+        gen_l3d           = Var("userFloat('gen_l3d')",           float,   doc = "Gen match: dilepton decay legnth 3D"),
+        gen_lxy           = Var("userFloat('gen_lxy')",           float,   doc = "Gen match: dilepton decay legnth XY"),
+        gen_tau           = Var("userFloat('gen_tau')",           float,   doc = "Gen match: dilepton decay time 3D"),
+        gen_doca          = Var("userFloat('gen_doca')",          float,   doc = "Gen match: dilepton distance of closest approach"),
+        gen_alpha_p_phi   = Var("userFloat('gen_alpha_p_phi')",   float,   doc = "Difference in direction between reconstructed and generated B in phi"),
         gen_alpha_p_theta = Var("userFloat('gen_alpha_p_theta')", float,   doc = "Difference in direction between reconstructed and generated B in theta"),
-        gen_alpha_ip = Var("userFloat('gen_alpha_ip')", float,   doc = "Pointing angle due to reco IP for gen vertex and momentum"),
-        gen_alpha_vtx = Var("userFloat('gen_alpha_vtx')", float,   doc = "Pointing angle due to reco vtx for gen IP and momentum"),
-        ),
+        gen_alpha_ip      = Var("userFloat('gen_alpha_ip')",      float,   doc = "Pointing angle due to reco IP for gen vertex and momentum"),
+        gen_alpha_vtx     = Var("userFloat('gen_alpha_vtx')",     float,   doc = "Pointing angle due to reco vtx for gen IP and momentum"),
+    ),
 )
 
-BxToMuMuDiMuonTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
-    src=cms.InputTag("BxToMuMu","DiMuon"),
+DileptonsDiMuonTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","MuMu"),
     cut=cms.string(""),
     name=cms.string("mm"),
     doc=cms.string("Dimuon Variables"),
     singleton=cms.bool(False),
     extension=cms.bool(False),
-    variables = BxToMuMuDiMuonTableVariables
+    variables = DileptonsDiMuonTableVariables
 )
 
-BxToMuMuDiMuonMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
-    src=cms.InputTag("BxToMuMuMc","DiMuon"),
+DileptonsDiMuonMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","MuMu"),
     cut=cms.string(""),
     name=cms.string("mm"),
     doc=cms.string("Dimuon Variables"),
     singleton=cms.bool(False),
     extension=cms.bool(False),
-    variables = BxToMuMuDiMuonMcTableVariables
+    variables = DileptonsDiMuonMcTableVariables
 )
 
+### hh
+
+DileptonsHHTableVariables = copy_pset(DileptonsDiMuonTableVariables, {"mu1_":"had1_", "mu2_":"had2_"})
+DileptonsHHMcTableVariables = copy_pset(DileptonsDiMuonMcTableVariables, {"mu1_":"had1_", "mu2_":"had2_"})
+
+DileptonsHHTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","HH"),
+    cut=cms.string(""),
+    name=cms.string("hh"),
+    doc=cms.string("hh Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsHHTableVariables
+)
+
+DileptonsHHMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","HH"),
+    cut=cms.string(""),
+    name=cms.string("hh"),
+    doc=cms.string("hh Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsHHMcTableVariables
+)
+
+DileptonsElElTableVariables = copy_pset(DileptonsDiMuonTableVariables, {"mu1_":"el1_", "mu2_":"el2_"})
+DileptonsElElMcTableVariables = copy_pset(DileptonsDiMuonMcTableVariables, {"mu1_":"el1_", "mu2_":"el2_"})
+
+DileptonsElElTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","ElEl"),
+    cut=cms.string(""),
+    name=cms.string("ee"),
+    doc=cms.string("ee Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsElElTableVariables
+)
+
+DileptonsElElMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","ElEl"),
+    cut=cms.string(""),
+    name=cms.string("ee"),
+    doc=cms.string("ee Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsElElMcTableVariables
+)
+
+
+
 ##################################################################################
 ###
-###                              B to K mu mu
+###                              B to K l l
 ###
 ##################################################################################
 
-BxToMuMuBToKmumuTableVariables =  merge_psets(
+DileptonsKmumuTableVariables =  merge_psets(
     copy_pset(kinematic_pset,{"kin_":"nomc_"}),
     copy_pset(kinematic_pset,{"kin_":"jpsimc_"}),
     cms.PSet(
@@ -250,8 +313,8 @@ BxToMuMuBToKmumuTableVariables =  merge_psets(
         kaon_phi       = Var("userFloat('kaon_phi')",        float, doc = "Kaon phi"),
         kaon_dxy_bs    = Var("userFloat('kaon_dxy_bs')",     float, doc = "Kaon impact parameter wrt the beam spot"),
         kaon_sdxy_bs   = Var("userFloat('kaon_sdxy_bs')",    float, doc = "Kaon impact parameter significance wrt the beam spot"),
-        kaon_mu1_doca  = Var("userFloat('kaon_mu1_doca')",   float, doc = "Kaon distance of closest approach to muon1"),
-        kaon_mu2_doca  = Var("userFloat('kaon_mu2_doca')",   float, doc = "Kaon distance of closest approach to muon2"),
+        kaon_l1_doca   = Var("userFloat('kaon_l1_doca')",    float, doc = "Kaon distance of closest approach to lepton1"),
+        kaon_l2_doca   = Var("userFloat('kaon_l2_doca')",    float, doc = "Kaon distance of closest approach to lepton2"),
         bmm_nTrks      = Var("userInt('bmm_nTrks')",         int,   doc = "Number of tracks compatible with the vertex by vertex probability (BtoJpsiK as Bmm)"),
         bmm_nBMTrks    = Var("userInt('bmm_nBMTrks')",       int,   doc = "Number of tracks more compatible with the mm vertex than with PV by doca significance (BtoJpsiK as Bmm)"),
         bmm_nDisTrks   = Var("userInt('bmm_nDisTrks')",      int,   doc = "Number of displaced tracks compatible with the vertex by vertex probability (BtoJpsiK as Bmm)"),
@@ -264,9 +327,9 @@ BxToMuMuBToKmumuTableVariables =  merge_psets(
         bmm_m2iso      = Var("userFloat('bmm_m2iso')",       float, doc = "Muon isolation the way it's done in Bmm4 (BtoJpsiK as Bmm)"),
         bmm_iso        = Var("userFloat('bmm_iso')",         float, doc = "B isolation the way it's done in Bmm4 (BtoJpsiK as Bmm)"),
         bmm_bdt        = Var("userFloat('bmm_bdt')",         float, doc = "BDT (BtoJpsiK as Bmm)"),
-        bmm_otherVtxMaxProb = Var("userFloat('bmm_otherVtxMaxProb')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=0.5GeV (BtoJpsiK as Bmm)"),
-        bmm_otherVtxMaxProb1 = Var("userFloat('bmm_otherVtxMaxProb1')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=1.0GeV (BtoJpsiK as Bmm)"),
-        bmm_otherVtxMaxProb2 = Var("userFloat('bmm_otherVtxMaxProb2')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=2.0GeV (BtoJpsiK as Bmm)"),
+        bmm_otherVtxMaxProb = Var("userFloat('bmm_otherVtxMaxProb')", float, doc = "Max vertexing probability of one of the leptons with a random track with minPt=0.5GeV (BtoJpsiK as Bmm)"),
+        bmm_otherVtxMaxProb1 = Var("userFloat('bmm_otherVtxMaxProb1')", float, doc = "Max vertexing probability of one of the leptons with a random track with minPt=1.0GeV (BtoJpsiK as Bmm)"),
+        bmm_otherVtxMaxProb2 = Var("userFloat('bmm_otherVtxMaxProb2')", float, doc = "Max vertexing probability of one of the leptons with a random track with minPt=2.0GeV (BtoJpsiK as Bmm)"),
         bmm_mva        = Var("userFloat('bmm_mva')",         float, doc = "MVA (BtoJpsiK as Bmm)"),
         # Kinematic Fit daugter info
         nomc_kaon1pt    = Var("userFloat('nomc_kaon1pt')",       float, doc = "Kinematic fit (no Jpsi mass constraint): refitted kaon 1 pt"),
@@ -278,8 +341,8 @@ BxToMuMuBToKmumuTableVariables =  merge_psets(
     )
 )
 
-BxToMuMuBToKmumuMcTableVariables = merge_psets(
-    BxToMuMuBToKmumuTableVariables,
+DileptonsKmumuMcTableVariables = merge_psets(
+    DileptonsKmumuTableVariables,
     cms.PSet(
         gen_kaon_pdgId  = Var("userInt('gen_kaon_pdgId')",    int,   doc = "Gen match: kaon pdg Id"),
         gen_kaon_mpdgId = Var("userInt('gen_kaon_mpdgId')",   int,   doc = "Gen match: kaon mother pdg Id"),
@@ -297,34 +360,127 @@ BxToMuMuBToKmumuMcTableVariables = merge_psets(
 )
         
 
-BxToMuMuBToKmumuTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
-    src=cms.InputTag("BxToMuMu","BToKmumu"),
+DileptonsKmumuTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","BToKmumu"),
     cut=cms.string(""),
     name=cms.string("bkmm"),
     doc=cms.string("BToKmumu Variables"),
     singleton=cms.bool(False),
     extension=cms.bool(False),
-    variables = BxToMuMuBToKmumuTableVariables
+    variables = DileptonsKmumuTableVariables
 )
 
-BxToMuMuBToKmumuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
-    src=cms.InputTag("BxToMuMuMc","BToKmumu"),
+DileptonsKmumuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","BToKmumu"),
     cut=cms.string(""),
     name=cms.string("bkmm"),
     doc=cms.string("BToKmumu Variables"),
     singleton=cms.bool(False),
     extension=cms.bool(False),
-    variables = BxToMuMuBToKmumuMcTableVariables
+    variables = DileptonsKmumuMcTableVariables
+)
+
+DileptonsKeeTableVariables = copy_pset(DileptonsKmumuTableVariables, {"mm_index":"ee_index"})
+DileptonsKeeMcTableVariables = copy_pset(DileptonsKmumuMcTableVariables, {"mm_index":"ee_index"})
+
+DileptonsKeeTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","BToKee"),
+    cut=cms.string(""),
+    name=cms.string("bkee"),
+    doc=cms.string("BToKee Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsKeeTableVariables
+)
+
+DileptonsKeeMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","BToKee"),
+    cut=cms.string(""),
+    name=cms.string("bkee"),
+    doc=cms.string("BToKee Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsKeeMcTableVariables
 )
 
 ##################################################################################
 ###
-###                              Bs to Jpsi K K
+###                              Dstar to D0 pi, D0 to Mu Mu
 ###
 ##################################################################################
 
-BxToMuMuBToKKmumuTableVariables =  merge_psets(
-    copy_pset(kinematic_pset,{"kin_":"jpsikk_"}),
+DileptonsDstarTableVariables =  merge_psets(
+    copy_pset(kinematic_pset,{"kin_":"nomc_"}),
+    copy_pset(kinematic_pset,{"kin_":"mc_"}),
+    cms.PSet(
+        mm_index       = Var("userInt('mm_index')",          int,   doc = "Index of dimuon pair"),
+        pion_charge    = Var("userInt('pion_charge')",       int,   doc = "Pion charge"),
+        pion_pt        = Var("userFloat('pion_pt')",         float, doc = "Pion pt"),
+        pion_eta       = Var("userFloat('pion_eta')",        float, doc = "Pion eta"),
+        pion_phi       = Var("userFloat('pion_phi')",        float, doc = "Pion phi"),
+        pion_dxy_bs    = Var("userFloat('pion_dxy_bs')",     float, doc = "Pion impact parameter wrt the beam spot"),
+        pion_sdxy_bs   = Var("userFloat('pion_sdxy_bs')",    float, doc = "Pion impact parameter significance wrt the beam spot"),
+        pion_l1_doca   = Var("userFloat('pion_l1_doca')",    float, doc = "Pion distance of closest approach to lepton1"),
+        pion_l2_doca   = Var("userFloat('pion_l2_doca')",    float, doc = "Pion distance of closest approach to lepton2"),
+        # Kinematic Fit daugter info
+        # nomc_kaon1pt    = Var("userFloat('nomc_kaon1pt')",       float, doc = "Kinematic fit (no Jpsi mass constraint): refitted kaon 1 pt"),
+        # nomc_kaon1eta   = Var("userFloat('nomc_kaon1eta')",      float, doc = "Kinematic fit (no Jpsi mass constraint): refitted kaon 1 eta"),
+        # nomc_kaon1phi   = Var("userFloat('nomc_kaon1phi')",      float, doc = "Kinematic fit (no Jpsi mass constraint): refitted kaon 1 phi"),
+        # jpsimc_kaon1pt    = Var("userFloat('jpsimc_kaon1pt')",       float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 pt"),
+        # jpsimc_kaon1eta   = Var("userFloat('jpsimc_kaon1eta')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 eta"),
+        # jpsimc_kaon1phi   = Var("userFloat('jpsimc_kaon1phi')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 phi"),
+    )
+)
+
+DileptonsDstarMcTableVariables = merge_psets(
+    DileptonsDstarTableVariables,
+    cms.PSet(
+        gen_pion_pdgId  = Var("userInt('gen_pion_pdgId')",    int,   doc = "Gen match: pion pdg Id"),
+        gen_pion_mpdgId = Var("userInt('gen_pion_mpdgId')",   int,   doc = "Gen match: pion mother pdg Id"),
+        gen_pion_pt     = Var("userFloat('gen_pion_pt')",     float, doc = "Gen match: pion pt"),
+        gen_pdgId       = Var("userInt('gen_pdgId')",         int,   doc = "Gen match: kmm pdg Id"),
+        gen_mass        = Var("userFloat('gen_mass')",        float, doc = "Gen match: kmm mass"),
+        gen_pt          = Var("userFloat('gen_pt')",          float, doc = "Gen match: kmm pt"),
+        gen_prod_x      = Var("userFloat('gen_prod_x')",      float, doc = "Gen match: kmm mother production vertex x"),
+        gen_prod_y      = Var("userFloat('gen_prod_y')",      float, doc = "Gen match: kmm mother production vertex y"),
+        gen_prod_z      = Var("userFloat('gen_prod_z')",      float, doc = "Gen match: kmm mother production vertex z"),
+        gen_l3d         = Var("userFloat('gen_l3d')",         float, doc = "Gen match: kmm decay legnth 3D"),
+        gen_lxy         = Var("userFloat('gen_lxy')",         float, doc = "Gen match: kmm decay legnth XY"),
+        gen_tau         = Var("userFloat('gen_tau')",         float, doc = "Gen match: kmm decay time 3D"),
+    )
+)
+        
+
+DileptonsDstarTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","DstarToMuMuPi"),
+    cut=cms.string(""),
+    name=cms.string("dstar"),
+    doc=cms.string("DstarToMuMuPi Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsDstarTableVariables
+)
+
+DileptonsDstarMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","DstarToMuMuPi"),
+    cut=cms.string(""),
+    name=cms.string("dstar"),
+    doc=cms.string("DstarToMuMuPi Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsDstarMcTableVariables
+)
+
+##################################################################################
+###
+###                              Bs to l l K K
+###
+##################################################################################
+
+DileptonsKKmumuTableVariables =  merge_psets(
+    kinematic_pset,
+    copy_pset(kinematic_pset, {"kin_":"jpsikk_"}),
+    copy_pset(kinematic_pset, {"kin_":"phill_"}),
     cms.PSet(
         mm_index        = Var("userInt('mm_index')",           int,   doc = "Index of dimuon pair"),
         kaon1_charge    = Var("userInt('kaon1_charge')",       int,   doc = "Kaon1 charge"),
@@ -368,8 +524,8 @@ BxToMuMuBToKKmumuTableVariables =  merge_psets(
     )
 )
 
-BxToMuMuBToKKmumuMcTableVariables = merge_psets(
-    BxToMuMuBToKKmumuTableVariables,
+DileptonsKKmumuMcTableVariables = merge_psets(
+    DileptonsKKmumuTableVariables,
     cms.PSet(
         gen_kaon1_pdgId  = Var("userInt('gen_kaon1_pdgId')",    int,   doc = "Gen match: kaon1 pdg Id"),
         gen_kaon1_mpdgId = Var("userInt('gen_kaon1_mpdgId')",   int,   doc = "Gen match: kaon1 mother pdg Id"),
@@ -389,25 +545,49 @@ BxToMuMuBToKKmumuMcTableVariables = merge_psets(
     )
 )
 
-BxToMuMuBToKKmumuTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
-    src=cms.InputTag("BxToMuMu","BToKKmumu"),
+DileptonsKKmumuTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","BToKKmumu"),
     cut=cms.string(""),
     name=cms.string("bkkmm"),
     doc=cms.string("BToKmumu Variables"),
     singleton=cms.bool(False),
     extension=cms.bool(False),
-    variables = BxToMuMuBToKKmumuTableVariables
+    variables = DileptonsKKmumuTableVariables
 )
 
-BxToMuMuBToKKmumuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
-    src=cms.InputTag("BxToMuMuMc","BToKKmumu"),
+DileptonsKKmumuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","BToKKmumu"),
     cut=cms.string(""),
     name=cms.string("bkkmm"),
     doc=cms.string("BToKKmumu Variables"),
     singleton=cms.bool(False),
     extension=cms.bool(False),
-    variables = BxToMuMuBToKKmumuMcTableVariables
+    variables = DileptonsKKmumuMcTableVariables
 )
+
+DileptonsKKeeTableVariables = copy_pset(DileptonsKKmumuTableVariables, {"mm_index":"ee_index"})
+DileptonsKKeeMcTableVariables = copy_pset(DileptonsKKmumuMcTableVariables, {"mm_index":"ee_index"})
+
+DileptonsKKeeTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","BToKKee"),
+    cut=cms.string(""),
+    name=cms.string("bkkee"),
+    doc=cms.string("BToKKee Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsKKeeTableVariables
+)
+
+DileptonsKKeeMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","BToKKee"),
+    cut=cms.string(""),
+    name=cms.string("bkkee"),
+    doc=cms.string("BToKKee Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsKKeeMcTableVariables
+)
+
 
 ##################################################################################
 ###
@@ -415,7 +595,7 @@ BxToMuMuBToKKmumuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProd
 ###
 ##################################################################################
 
-BxToMuMuBToMuMuGammaTableVariables =  merge_psets(
+DileptonsMuMuGammaTableVariables =  merge_psets(
     copy_pset(kinematic_pset,{"kin_":"nomc_"}),
     copy_pset(kinematic_pset,{"kin_":"jpsimc_"}),
     cms.PSet(
@@ -428,8 +608,8 @@ BxToMuMuBToMuMuGammaTableVariables =  merge_psets(
     )
 )
 
-BxToMuMuBToMuMuGammaMcTableVariables = merge_psets(
-    BxToMuMuBToMuMuGammaTableVariables,
+DileptonsMuMuGammaMcTableVariables = merge_psets(
+    DileptonsMuMuGammaTableVariables,
     cms.PSet(
         gen_ph_pdgId  = Var("userInt('gen_ph_pdgId')",      int,   doc = "Gen match: photon pdg Id"),
         gen_ph_mpdgId = Var("userInt('gen_ph_mpdgId')",     int,   doc = "Gen match: photon mother pdg Id"),
@@ -446,24 +626,24 @@ BxToMuMuBToMuMuGammaMcTableVariables = merge_psets(
     )
 )
 
-BxToMuMuBToMuMuGammaTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
-    src=cms.InputTag("BxToMuMu","BToMuMuGamma"),
+DileptonsMuMuGammaTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","BToMuMuGamma"),
     cut=cms.string(""),
     name=cms.string("mmg"),
     doc=cms.string("BToMuMuGamma Variables"),
     singleton=cms.bool(False),
     extension=cms.bool(False),
-    variables = BxToMuMuBToMuMuGammaTableVariables
+    variables = DileptonsMuMuGammaTableVariables
 )
 
-BxToMuMuBToMuMuGammaMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
-    src=cms.InputTag("BxToMuMuMc","BToMuMuGamma"),
+DileptonsMuMuGammaMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","BToMuMuGamma"),
     cut=cms.string(""),
     name=cms.string("mmg"),
     doc=cms.string("BToMuMuGamma Variables"),
     singleton=cms.bool(False),
     extension=cms.bool(False),
-    variables = BxToMuMuBToMuMuGammaMcTableVariables
+    variables = DileptonsMuMuGammaMcTableVariables
 )
 
 ##################################################################################
@@ -567,7 +747,13 @@ prescaleTable = cms.EDProducer("TriggerPrescaleProducer",
                                   'HLT_DoubleMu4_3_Jpsi_Displaced')
 )
 
-BxToMuMuSequence   = cms.Sequence(BxToMuMu)
-BxToMuMuMcSequence = cms.Sequence(BxToMuMuMc * BxToMuMuGen )
-BxToMuMuTables     = cms.Sequence(BxToMuMuDiMuonTable   * BxToMuMuBToKmumuTable * BxToMuMuBToKKmumuTable * BxToMuMuBToMuMuGammaTable *prescaleTable)
-BxToMuMuMcTables   = cms.Sequence(BxToMuMuDiMuonMcTable * BxToMuMuBToKmumuMcTable * BxToMuMuBToKKmumuMcTable * BxToMuMuBToMuMuGammaMcTable * BxToMuMuGenTable * BxToMuMuGenSummaryTable * prescaleTable)
+DileptonPlusXSequence   = cms.Sequence(Dileptons)
+DileptonPlusXMcSequence = cms.Sequence(DileptonsMc * BxToMuMuGen )
+DileptonPlusXTables     = cms.Sequence(DileptonsDiMuonTable   * DileptonsHHTable    * DileptonsElElTable     *
+                                       DileptonsKmumuTable    * DileptonsKeeTable   * DileptonsKKmumuTable   * DileptonsKKeeTable *
+                                       DileptonsDstarTable    *
+                                       DileptonsMuMuGammaTable * prescaleTable)
+DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTable  * DileptonsElElMcTable   *
+                                       DileptonsKmumuMcTable  * DileptonsKeeMcTable * DileptonsKKmumuMcTable * DileptonsKKeeMcTable *
+                                       DileptonsDstarMcTable  *
+                                       DileptonsMuMuGammaMcTable * BxToMuMuGenTable * BxToMuMuGenSummaryTable * prescaleTable)
