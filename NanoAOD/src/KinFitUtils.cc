@@ -84,3 +84,31 @@ bmm::build_particle(const reco::Photon& photon,
 							   last_constraint, previous_particle,
 							   nullptr));
 }
+
+float KalmanVertexFitResult::mass() const
+{
+  if (not valid) return -1.0;
+  LorentzVector p4;
+  for (auto v: refitVectors)
+    p4 += v;
+  return p4.mass();
+}
+  
+void KalmanVertexFitResult::postprocess(const reco::BeamSpot& bs)
+{
+  if (not valid) return;
+  // position of the beam spot at a given z value (it takes into account the dxdz and dydz slopes)
+  reco::BeamSpot::Point bs_at_z(bs.position(position.z()));
+  GlobalPoint xy_displacement(position.x() - bs_at_z.x(),
+			      position.y() - bs_at_z.y(),
+			      0);
+  lxy = xy_displacement.perp();
+  lxyErr = sqrt(err.rerr(xy_displacement));
+  if (lxyErr > 0) sigLxy = lxy/lxyErr;
+}
+
+LorentzVector
+bmm::makeLorentzVectorFromPxPyPzM(double px, double py, double pz, double m){
+  double p2 = px*px+py*py+pz*pz;
+  return LorentzVector(px,py,pz,sqrt(p2+m*m));
+}

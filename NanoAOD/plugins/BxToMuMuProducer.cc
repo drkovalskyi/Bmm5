@@ -50,6 +50,7 @@
 #include "Bmm5/NanoAOD/interface/XGBooster.h"
 #include "Bmm5/NanoAOD/interface/KinFitUtils.h"
 #include "Bmm5/NanoAOD/interface/KinematicFitResult.h"
+#include "Bmm5/NanoAOD/interface/CommonTools.h"
 
 // 
 // BxToMuMuProducer is designed for Bs/d->mumu analysis
@@ -57,19 +58,9 @@
 
 typedef reco::Candidate::LorentzVector LorentzVector;
 
+using namespace bmm;
+
 namespace {
-  const float ElectronMass_    = 0.511e-3;
-  const float ElectronMassErr_ = 3.5*1e-9;
-  const float MuonMass_    = 0.10565837;
-  const float MuonMassErr_ = 3.5*1e-9;
-  const float KaonMass_    = 0.493677;
-  const float KaonMassErr_ = 1.6e-5;
-  const float pionMass_    = 0.139570;
-  const float pionMassErr_ = 3.5e-7;
-  const float JPsiMass_    = 3.0969;
-  const float Psi2SMass_   = 3.6861;
-  const float JPsiMassErr_ = 92.9e-6;
-  
   float momentum_resolution(const pat::Photon& photon){
     if (fabs(photon.eta()) < 0.4) return photon.p() * 0.025;
     if (fabs(photon.eta()) < 0.8) return photon.p() * 0.025;
@@ -79,91 +70,17 @@ namespace {
     return photon.p() * 0.044;
   }
   
-  struct KalmanVertexFitResult{
-    float vtxProb;
-    bool  valid;
-    std::vector<LorentzVector> refitVectors;
-    GlobalPoint position;
-    GlobalError err;
-    float lxy, lxyErr, sigLxy;
-    
-    KalmanVertexFitResult():vtxProb(-1.0),valid(false),lxy(-1.0),lxyErr(-1.0),sigLxy(-1.0){}
-
-    float mass() const
-    {
-      if (not valid) return -1.0;
-      LorentzVector p4;
-      for (auto v: refitVectors)
-	p4 += v;
-      return p4.mass();
-    }
-  
-    void postprocess(const reco::BeamSpot& bs)
-    {
-      if (not valid) return;
-      // position of the beam spot at a given z value (it takes into account the dxdz and dydz slopes)
-      reco::BeamSpot::Point bs_at_z(bs.position(position.z()));
-      GlobalPoint xy_displacement(position.x() - bs_at_z.x(),
-				  position.y() - bs_at_z.y(),
-				  0);
-      lxy = xy_displacement.perp();
-      lxyErr = sqrt(err.rerr(xy_displacement));
-      if (lxyErr > 0) sigLxy = lxy/lxyErr;
-    }
-  };
-
-  struct DisplacementInformationIn3D{
-    double decayLength, decayLengthErr, decayLength2, decayLength2Err, 
-      distaceOfClosestApproach, distaceOfClosestApproachErr, distaceOfClosestApproachSig,
-      distaceOfClosestApproach2, distaceOfClosestApproach2Err, distaceOfClosestApproach2Sig,
-      longitudinalImpactParameter, longitudinalImpactParameterErr, longitudinalImpactParameterSig,
-      longitudinalImpactParameter2, longitudinalImpactParameter2Err,longitudinalImpactParameter2Sig,
-      decayTime, decayTimeError, decayTimeXY, decayTimeXYError,
-      alpha, alphaErr, alphaXY, alphaXYErr;
-    const reco::Vertex *pv,*pv2;
-    int pvIndex,pv2Index;
-    DisplacementInformationIn3D():decayLength(-1.0), decayLengthErr(0.), decayLength2(-1.0), decayLength2Err(0.),
-				  distaceOfClosestApproach(-1.0), distaceOfClosestApproachErr(0.0), distaceOfClosestApproachSig(0.0),
-				  distaceOfClosestApproach2(-1.0), distaceOfClosestApproach2Err(0.0), distaceOfClosestApproach2Sig(0.0),
-				  longitudinalImpactParameter(0.0), longitudinalImpactParameterErr(0.), longitudinalImpactParameterSig(0.),
-				  longitudinalImpactParameter2(0.0), longitudinalImpactParameter2Err(0.), longitudinalImpactParameter2Sig(0.),
-				  decayTime(-999.), decayTimeError(-999.),
-				  decayTimeXY(-999.), decayTimeXYError(-999.),
-				  alpha(-999.), alphaErr(-999.),
-				  alphaXY(-999.), alphaXYErr(-999.),
-				  pv(0), pv2(0),
-				  pvIndex(-1), pv2Index(-1)
-    {};
-  };
-
-  LorentzVector makeLorentzVectorFromPxPyPzM(double px, double py, double pz, double m){
-    double p2 = px*px+py*py+pz*pz;
-    return LorentzVector(px,py,pz,sqrt(p2+m*m));
-  }
-
   struct GenMatchInfo{
-    int mu1_pdgId, mu1_motherPdgId, mu2_pdgId, mu2_motherPdgId,
-      kaon1_pdgId, kaon1_motherPdgId, kaon2_pdgId, kaon2_motherPdgId, photon_pdgId, photon_motherPdgId,
-      mm_pdgId, mm_motherPdgId, kmm_pdgId, kkmm_pdgId, mmg_pdgId;
-    float mu1_pt, mu2_pt, kaon1_pt, kaon2_pt, photon_pt, mm_mass, mm_pt, kmm_mass, kkmm_mass, mmg_mass,
-      kmm_pt, kkmm_pt, mmg_pt;
+    int mu1_pdgId{0}, mu1_motherPdgId{0}, mu2_pdgId{0}, mu2_motherPdgId{0},
+      kaon1_pdgId{0}, kaon1_motherPdgId{0}, kaon2_pdgId{0}, kaon2_motherPdgId{0},
+      photon_pdgId{0}, photon_motherPdgId{0},
+      mm_pdgId{0}, mm_motherPdgId{0}, kmm_pdgId{0}, kkmm_pdgId{0}, mmg_pdgId{0};
+    float mu1_pt{0}, mu2_pt{0}, kaon1_pt{0}, kaon2_pt{0}, photon_pt{0}, mm_mass{0}, mm_pt{0},
+      kmm_mass{0}, kkmm_mass{0}, mmg_mass{0}, kmm_pt{0}, kkmm_pt{0}, mmg_pt{0};
     math::XYZPoint mm_prod_vtx, mm_vtx, kmm_prod_vtx, kkmm_prod_vtx, mmg_prod_vtx;
-    const reco::Candidate* mc_mu1;
-    const reco::Candidate* mc_mu2;
-    const reco::Candidate* mc_kaon1;
-    const reco::Candidate* mc_kaon2;
-    const reco::Candidate* mc_photon;
-    const reco::Candidate* match;
-    const reco::Candidate* common_mother;
-    GenMatchInfo():mu1_pdgId(0), mu1_motherPdgId(0), mu2_pdgId(0), mu2_motherPdgId(0), 
-		   kaon1_pdgId(0), kaon1_motherPdgId(0), kaon2_pdgId(0), kaon2_motherPdgId(0),
-		   photon_pdgId(0), photon_motherPdgId(0), mm_pdgId(0), mm_motherPdgId(0), 
-		   kmm_pdgId(0), kkmm_pdgId(0), mmg_pdgId(0), mu1_pt(0), mu2_pt(0), 
-		   kaon1_pt(0), kaon2_pt(0), photon_pt(0), mm_mass(0), mm_pt(0), 
-		   kmm_mass(0), kkmm_mass(0), mmg_mass(0), kmm_pt(0), kkmm_pt(0), mmg_pt(0),
-		   mc_mu1(0), mc_mu2(0), mc_kaon1(0), mc_kaon2(0), mc_photon(0),
-		   match(0), common_mother(0)
-    {}
+    const reco::Candidate* mc_mu1{nullptr}, *mc_mu2{nullptr}, *mc_kaon1{nullptr},
+      *mc_kaon2{nullptr}, *mc_photon{nullptr}, *match{nullptr}, *common_mother{nullptr};
+    
     const reco::GenParticle* gen_mu1(){
       return dynamic_cast<const reco::GenParticle*>(mc_mu1);
     }
@@ -173,97 +90,6 @@ namespace {
   };
 
   struct GenEventInfo{};
-
-  struct CloseTrack{
-    float svDoca, svDocaErr, svProb,
-      pvDoca, pvDocaErr,
-      impactParameterSignificanceBS;
-    const pat::PackedCandidate* pfCand;
-    CloseTrack(): svDoca(-1), svDocaErr(-1), svProb(-1),
-		  pvDoca(-1), pvDocaErr(-1),
-		  impactParameterSignificanceBS(-1),
-		  pfCand(0)
-    {};
-  };
-
-
-  struct CloseTrackInfo{
-    std::vector<CloseTrack> tracks;
-    unsigned int nTracksByVertexProbability(double minProb = 0.1, 
-					    double minIpSignificance = -1,
-					    int pvIndex = -1,
-					    const pat::PackedCandidate* ignoreTrack1 = 0)
-    {
-      unsigned int n = 0;
-      for (auto track: tracks){
-	if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
-	if (minIpSignificance>0 and track.impactParameterSignificanceBS<minIpSignificance) continue;
-	if (track.svProb<minProb) continue;
-	if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
-	n++;
-      }
-      return n;
-    }
-    unsigned int nTracksByDisplacementSignificance(double max_svDoca = 0.03, 
-						   double maxSignificance = -1,
-						   int pvIndex = -1,
-						   const pat::PackedCandidate* ignoreTrack1 = 0)
-    {
-      unsigned int n = 0;
-      for (auto track: tracks){
-	if (track.svDoca>max_svDoca) continue;
-	if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
-	if (maxSignificance>0 and (track.svDocaErr<=0 or 
-				   track.svDoca/track.svDocaErr > maxSignificance) ) continue;
-	if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
-	n++;
-      }
-      return n;
-    }
-    unsigned int nTracksByBetterMatch(double max_svDoca = 0.03, 
-				      double maxSignificance = 2,
-				      int pvIndex = -1,
-				      const pat::PackedCandidate* ignoreTrack1 = 0)
-    {
-      unsigned int n = 0;
-      for (auto track: tracks){
-	if (track.svDoca>max_svDoca) continue;
-	if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
-	if (maxSignificance>0 and (track.svDocaErr<=0 or 
-				   track.svDoca/track.svDocaErr > maxSignificance) ) continue;
-	if (track.svDocaErr<=0 or (track.pvDocaErr>0 and track.svDoca/track.svDocaErr > track.pvDoca/track.pvDocaErr) ) continue;
-	if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
-	n++;
-      }
-      return n;
-    }
-    float minDoca(double max_svDoca = 0.03, 
-		  int pvIndex = -1,
-		  const pat::PackedCandidate* ignoreTrack1 = 0)
-    {
-      float doca = 99.;
-      for (auto track: tracks){
-	if (track.svDoca>max_svDoca) continue;
-	if (ignoreTrack1 and track.pfCand==ignoreTrack1) continue;
-	if (pvIndex >= 0 and int(track.pfCand->vertexRef().key())!=pvIndex) continue;
-	if (doca>track.svDoca) doca = track.svDoca;
-      }
-      return doca;
-    }
-    
-    void fillCandInfo(pat::CompositeCandidate& cand, int pvIndex, std::string name)
-    {
-      if (name!="") name += "_";
-      cand.addUserInt(   name + "nTrks",       nTracksByVertexProbability(0.1,-1.0,pvIndex) );
-      cand.addUserInt(   name + "nBMTrks",     nTracksByBetterMatch() );
-      cand.addUserInt(   name + "nDisTrks",    nTracksByVertexProbability(0.1, 2.0,pvIndex) );
-      cand.addUserInt(   name + "closetrk",    nTracksByDisplacementSignificance(0.03, -1, pvIndex) );
-      cand.addUserInt(   name + "closetrks1",  nTracksByDisplacementSignificance(0.03, 1, pvIndex) );
-      cand.addUserInt(   name + "closetrks2",  nTracksByDisplacementSignificance(0.03, 2, pvIndex) );
-      cand.addUserInt(   name + "closetrks3",  nTracksByDisplacementSignificance(0.03, 3, pvIndex) );
-      cand.addUserFloat( name + "docatrk",     minDoca(0.03, pvIndex) );
-    }
-  };
 
   struct BdtReaderData {
     float fls3d, alpha, pvips, iso, chi2dof, docatrk, closetrk, m1iso, m2iso, eta, m;
@@ -1970,7 +1796,7 @@ BxToMuMuProducer::vertexWithKinematicFitter(const pat::Muon& muon1,
   trks.push_back( muon2.innerTrack().get() );
   masses.push_back(MuonMass_);
   trks.push_back( pion.bestTrack() );
-  masses.push_back(pionMass_);
+  masses.push_back(PionMass_);
   return vertexWithKinematicFitter(trks,masses);
 }
 
@@ -2431,90 +2257,8 @@ pair<double,double> BxToMuMuProducer::computeDCA(const pat::PackedCandidate &kao
     
   return DCA;
 }
+
 namespace{
-
-  bool dr_match(const LorentzVector& reco , const LorentzVector& gen){
-    if (fabs(reco.pt()-gen.pt())/gen.pt()<0.1 and deltaR(reco,gen)<0.02)
-      return true;
-    return false;
-  }
-
-  std::vector<unsigned int> 
-    get_depth_from_permutation(const std::vector<unsigned int>& elements){
-    std::vector<unsigned int> result;
-    unsigned int counter(0);
-    for (auto element: elements){
-      if (element==0){
-	counter++;
-      } else {
-	result.push_back(counter);
-	counter = 0;
-      }
-    }
-    result.push_back(counter);
-    return result;
-  }
-
-  bool is_acceptable(const reco::Candidate* cand){
-    if ( not cand) return false; 
-    // skip quarks
-    if ( abs(cand->pdgId())<10 ) return false;
-    // skip protons
-    if ( abs(cand->pdgId())==2212 ) return false;
-    // skip gluons
-    if ( abs(cand->pdgId())==21 ) return false;
-    return true;
-  }
-
-  // depth 0 - first mother
-
-  const reco::Candidate* get_mother(const reco::Candidate* cand, unsigned int depth){
-    if (not cand) return 0;
-    const reco::Candidate* mother = cand->mother();
-    unsigned int i = 0;
-    while ( is_acceptable(mother) and i<depth ){
-      i++;
-      mother = mother->mother();
-    }
-    if (is_acceptable(mother))
-      return mother;
-    else
-      return 0;
-  }
-
-  const reco::Candidate* 
-    find_common_ancestor(const std::vector<const reco::Candidate*>& particles, 
-			 unsigned int max_depth=10){
-    auto n = particles.size();
-    for (unsigned int depth=0; depth<max_depth; ++depth){
-      // make a list of elements (0) and separators (1) and
-      // find all possible permutations of the elements
-      std::vector<unsigned int> elements;
-      for (unsigned int i=0; i<depth; ++i)
-	elements.push_back(0);
-      for (unsigned int i=0; i<n-1; ++i)
-	elements.push_back(1);
-      do {
-	auto depth_vector = get_depth_from_permutation(elements);
-	const reco::Candidate* common_mother(0);
-	for (unsigned int i=0; i<n; ++i){
-	  auto mother = get_mother(particles[i],depth_vector[i]);
-	  if (not mother) {
-	    common_mother = 0;
-	    break;
-	  }
-	  if (not common_mother) common_mother = mother;
-	  if (common_mother != mother) {
-	    common_mother = 0;
-	    break;
-	  }	  
-	}
-	if (common_mother) return common_mother;
-      } while(std::next_permutation(elements.begin(), elements.end()));
-    }
-    return 0;
-  }
-
 }
 
 const reco::Candidate* BxToMuMuProducer::getGenParticle(const reco::Candidate* cand)
