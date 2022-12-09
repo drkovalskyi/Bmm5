@@ -1605,26 +1605,26 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
       if (not isGoodMuon(muon)) continue;
       good_lepton_candidates.push_back(LeptonCandidate(muon, i));
     }
-    std::cout << "good_lepton_candidates.size() after muons: " << good_lepton_candidates.size() << std::endl;
+    // std::cout << "good_lepton_candidates.size() after muons: " << good_lepton_candidates.size() << std::endl;
     
     // Inject B to hh candidates where hadrons are explicitely matched
     // to gen level decays 
     if ( injectMatchedBtohh_ and isMC_ ) {
       injectHadronsThatMayFakeMuons(good_lepton_candidates);
     }
-    std::cout << "good_lepton_candidates.size() after Bhh MC: " << good_lepton_candidates.size() << std::endl;
+    // std::cout << "good_lepton_candidates.size() after Bhh MC: " << good_lepton_candidates.size() << std::endl;
 
     // Inject reco B to hh candidates
     if ( injectBtohh_ ) {
       injectBhhHadrons(good_lepton_candidates);
     }
-    std::cout << "good_lepton_candidates.size() after Bhh: " << good_lepton_candidates.size() << std::endl;
+    // std::cout << "good_lepton_candidates.size() after Bhh: " << good_lepton_candidates.size() << std::endl;
 
     // Inject Jpsi to mumu based on charged tracks
     if ( injectJpsiTracks_ ) {
       injectJpsiTracks(good_lepton_candidates);
     }
-    std::cout << "good_lepton_candidates.size() after Jpsi: " << good_lepton_candidates.size() << std::endl;
+    // std::cout << "good_lepton_candidates.size() after Jpsi: " << good_lepton_candidates.size() << std::endl;
 
     // Dielectrons
     if ( recoElElX_ ){
@@ -1634,9 +1634,9 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	good_lepton_candidates.push_back(LeptonCandidate(el, i));
       }
     }
-    std::cout << "good_lepton_candidates.size() after electrons: " << good_lepton_candidates.size() << std::endl;
+    // std::cout << "good_lepton_candidates.size() after electrons: " << good_lepton_candidates.size() << std::endl;
 
-    std::cout << "good_lepton_candidates.size(): " << good_lepton_candidates.size() << std::endl;
+    // std::cout << "good_lepton_candidates.size(): " << good_lepton_candidates.size() << std::endl;
     // Build dilepton candidates
     if ( good_lepton_candidates.size() > 1 ){
       for (unsigned int i = 0; i < good_lepton_candidates.size(); ++i) {
