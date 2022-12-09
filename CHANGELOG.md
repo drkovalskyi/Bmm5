@@ -2,6 +2,10 @@
 
 ## New developments
 
+## [NanoAODv9-V04] - 2022/12/09
+### New
+	- Added Jpsi to mumu reconstructed as tracks, i.e. for muons below 4 GeV
+
 ## [NanoAODv9-V03] - 2022/10/14
 ### New
 	- Major code re-organization with re-writes
