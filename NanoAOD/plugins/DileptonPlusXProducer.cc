@@ -63,6 +63,20 @@ typedef reco::Candidate::LorentzVector LorentzVector;
 using namespace bmm;
 
 namespace {
+  bool overlap(const reco::Track* t1, const reco::Track* t2){
+    assert(t1);
+    assert(t2);
+    return deltaR(*t1, *t2) < 0.01;
+  }
+
+  bool overlap(const LeptonCandidate& lep, const pat::PackedCandidate& can){
+    return overlap(lep.track(), can.bestTrack());
+  }
+
+  bool overlap(const LeptonCandidate& lep1, const LeptonCandidate& lep2){
+    return overlap(lep1.track(), lep2.track());
+  }
+
   float momentum_resolution(const pat::Photon& photon){
     if (fabs(photon.eta()) < 0.4) return photon.p() * 0.025;
     if (fabs(photon.eta()) < 0.8) return photon.p() * 0.025;
@@ -120,6 +134,7 @@ private:
   virtual void produce(edm::Event&, const edm::EventSetup&);
 
   bool isGoodMuon(const pat::Muon& muon);
+  bool isGoodMuonCandidateFromTrack(const pat::PackedCandidate& cand);
   
   bool isGoodElectron(const pat::Electron& el);
     
@@ -310,6 +325,9 @@ private:
   void 
   injectBhhHadrons(std::vector<LeptonCandidate>& good_lepton_candidates);
 
+  void 
+  injectJpsiTracks(std::vector<LeptonCandidate>& good_lepton_candidates);
+
   float  computeAnalysisBDT(unsigned int event_idx);
   
   void setupTmvaReader(TMVA::Reader& reader, std::string file);
@@ -359,11 +377,13 @@ private:
   double maxTwoTrackDOCA_;
   bool   injectMatchedBtohh_;
   bool   injectBtohh_;
+  bool   injectJpsiTracks_;
   bool   recoElElX_;
   bool   recoMuMuGamma_;
   bool   recoMuMuGammaConv_;
   bool   recoMuMuPi_;
   double minBhhPt_;
+  double minJpsiHadronPt_;
   double minBhhMass_;
   double maxBhhMass_;
   double maxBhhEta_;
@@ -414,11 +434,13 @@ maxBKKllMass_(    iConfig.getParameter<double>( "maxBKKllMass" ) ),
 maxTwoTrackDOCA_( iConfig.getParameter<double>( "maxTwoTrackDOCA" ) ),
 injectMatchedBtohh_( iConfig.getParameter<bool>( "injectMatchedBtohh" ) ),
 injectBtohh_(        iConfig.getParameter<bool>( "injectBtohh" ) ),
+injectJpsiTracks_(  iConfig.getParameter<bool>( "injectJpsiTracks" ) ),
 recoElElX_(      iConfig.getParameter<bool>( "recoElElX" ) ),
 recoMuMuGamma_(      iConfig.getParameter<bool>( "recoMuMuGamma" ) ),
 recoMuMuGammaConv_(  iConfig.getParameter<bool>( "recoMuMuGammaConv" ) ),
 recoMuMuPi_(      iConfig.getParameter<bool>( "recoMuMuPi" ) ),
 minBhhPt_(        iConfig.getParameter<double>( "minBhhHadronPt" ) ),
+minJpsiHadronPt_( iConfig.getParameter<double>( "minJpsiHadronPt" ) ),
 minBhhMass_(      iConfig.getParameter<double>( "minBhhMass" ) ),
 maxBhhMass_(      iConfig.getParameter<double>( "maxBhhMass" ) ),
 maxBhhEta_(       iConfig.getParameter<double>( "maxBhhHadronEta" ) ),
@@ -467,6 +489,16 @@ bool DileptonPlusXProducer::isGoodMuon(const pat::Muon& muon){
   if ( muon.pt() < ptMinMu_ || fabs(muon.eta()) > etaMaxMu_ ) return false;
   return true;
 }
+
+bool DileptonPlusXProducer::isGoodMuonCandidateFromTrack(const pat::PackedCandidate& cand)
+{
+  if (cand.charge() == 0) return false;
+  if (cand.pt() < minJpsiHadronPt_) return false;
+  if (not cand.hasTrackDetails()) return false;
+  if (abs(cand.pdgId()) != 211) return false;
+  if (not cand.bestTrack()->quality(reco::Track::highPurity)) return false;
+  return true;
+}  
 
 bool DileptonPlusXProducer::isGoodElectron(const pat::Electron& el){
   if ( el.pt() < ptMinEl_ || fabs(el.eta()) > etaMaxEl_ ) return false;
@@ -558,6 +590,10 @@ DileptonPlusXProducer::findTracksCompatibleWithTheVertex(const LeptonCandidate& 
   CloseTrackInfo result;
   if (not fit.valid()) return result;
   for (const auto& pfCand: *pfCandHandle_.product()){
+    if (pfCand.charge() == 0 ) continue;
+    if (!pfCand.hasTrackDetails()) continue;
+    if (overlap(lepton1, pfCand) || overlap(lepton2, pfCand)) continue;
+
     bool ignore_track = false;
     for (auto trk: ignoreTracks){
       if (deltaR(*trk, pfCand) < 0.01){
@@ -567,9 +603,6 @@ DileptonPlusXProducer::findTracksCompatibleWithTheVertex(const LeptonCandidate& 
     }
     if (ignore_track) continue;
     
-    if (deltaR(lepton1, pfCand) < 0.01 || deltaR(lepton2, pfCand) < 0.01) continue;
-    if (pfCand.charge() == 0 ) continue;
-    if (!pfCand.hasTrackDetails()) continue;
     double mu1_kaon_doca = distanceOfClosestApproach(lepton1.track(),
 						     pfCand.bestTrack());
     double mu2_kaon_doca = distanceOfClosestApproach(lepton2.track(),
@@ -617,11 +650,11 @@ DileptonPlusXProducer::computeTrkLeptonIsolation(const LeptonCandidate& theLepto
       }
     }
     if (ignore_track) continue;
-    if (deltaR(theLepton, pfCand) < 0.01 || deltaR(theOtherLepton, pfCand) < 0.01) continue;
     if (pfCand.charge() == 0 ) continue;
     if (!pfCand.hasTrackDetails()) continue;
     if (pfCand.pt() < minPt) continue;
     if (pfCand.vertexRef().key() != primaryVertexIndex) continue;
+    if (overlap(theLepton, pfCand) || overlap(theOtherLepton, pfCand)) continue;
     if (deltaR(theLepton, pfCand) > dR) continue;
     sumPt += pfCand.pt();
   }
@@ -647,11 +680,11 @@ DileptonPlusXProducer::computeTrkDileptonIsolation(const LeptonCandidate& lepton
       }
     }
     if (ignore_track) continue;
-    if (deltaR(lepton1, pfCand) < 0.01 || deltaR(lepton2, pfCand) < 0.01) continue;
     if (pfCand.charge() == 0 ) continue;
     if (!pfCand.hasTrackDetails()) continue;
     if (pfCand.pt()<minPt) continue;
     if (pfCand.vertexRef().key()!=primaryVertexIndex) continue;
+    if (overlap(lepton1, pfCand) || overlap(lepton2, pfCand)) continue;
     if (deltaR(b_p4, pfCand) > dR) continue;
     sumPt += pfCand.pt();
   }
@@ -676,6 +709,11 @@ DileptonPlusXProducer::otherVertexMaxProb(const LeptonCandidate& lepton1,
 
 
   for (const auto& pfCand: *pfCandHandle_.product()){
+    if (pfCand.pt() < minPt) continue;
+    if (pfCand.charge() == 0 ) continue;
+    if (!pfCand.hasTrackDetails()) continue;
+    if (overlap(lepton1, pfCand) || overlap(lepton2, pfCand)) continue;
+
     bool ignore_track = false;
     for (auto trk: ignoreTracks){
       if (trk==&pfCand){
@@ -684,10 +722,7 @@ DileptonPlusXProducer::otherVertexMaxProb(const LeptonCandidate& lepton1,
       }
     }
     if (ignore_track) continue;
-    if (deltaR(lepton1, pfCand) < 0.01 || deltaR(lepton2, pfCand) < 0.01) continue;
-    if (pfCand.charge() == 0 ) continue;
-    if (!pfCand.hasTrackDetails()) continue;
-    if (pfCand.pt()<minPt) continue;
+
     double lep1_doca = distanceOfClosestApproach(lepton1.track(),
 						pfCand.bestTrack());
     double lep2_doca = distanceOfClosestApproach(lepton2.track(),
@@ -803,6 +838,7 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
     }
     
     double ll_doca = -1;
+
     if (gen_ll.gen_l1() and gen_ll.gen_l2())
       ll_doca = distanceOfClosestApproach(gen_ll.gen_l1(), gen_ll.gen_l2());
     dileptonCand.addUserFloat("gen_doca",        ll_doca);
@@ -1353,7 +1389,7 @@ DileptonPlusXProducer::injectHadronsThatMayFakeMuons(std::vector<LeptonCandidate
     if (not final_b) continue;
 
     long long int signature = 1;
-    std::vector<const reco::Candidate*> final_state_particles;
+    std::vector<const pat::PackedGenParticle*> final_state_particles;
 
     // Loop over packed gen particles that represent final state
     // particles at gen level and compute the decay signature ignoring
@@ -1409,7 +1445,7 @@ DileptonPlusXProducer::injectHadronsThatMayFakeMuons(std::vector<LeptonCandidate
 	  }
 	}
 	if (good_candidate)
-	  good_lepton_candidates.push_back(LeptonCandidate(pfCand, true));
+	  good_lepton_candidates.push_back(LeptonCandidate(pfCand, hadron));
       }
     }
   }
@@ -1425,7 +1461,52 @@ DileptonPlusXProducer::injectBhhHadrons(std::vector<LeptonCandidate>& good_lepto
     if (abs(pfCand.eta()) > maxBhhEta_) continue;
     if (not pfCand.hasTrackDetails()) continue;
     if (not pfCand.bestTrack()->quality(reco::Track::highPurity)) continue;
-    good_lepton_candidates.push_back(LeptonCandidate(pfCand, false));
+    good_lepton_candidates.push_back(LeptonCandidate(pfCand));
+  }
+}
+
+void 
+DileptonPlusXProducer::injectJpsiTracks(std::vector<LeptonCandidate>& good_lepton_candidates){
+  // Look for Jpsi to mu mu candidates even if muon is too soft to be
+  // constructed as a muon
+
+  // find reco tracks matching preselection requirements
+  const auto& pf_candidates = *pfCandHandle_.product();
+    
+  std::vector<LeptonCandidate> muon_candidates;
+  muon_candidates.assign(good_lepton_candidates.begin(), good_lepton_candidates.end());
+
+  for (unsigned int i=0; i < pf_candidates.size(); ++i){
+    if (not isGoodMuonCandidateFromTrack(pf_candidates.at(i))) continue;
+    bool new_mu = true;
+    for (const auto& lep: muon_candidates){
+      if (overlap(lep, pf_candidates.at(i))) new_mu = false;
+    }
+    if (not new_mu) continue;
+    muon_candidates.push_back(LeptonCandidate(pf_candidates.at(i)));
+    muon_candidates.back().setType(MuonMass_, "mu");
+  }
+  
+  if (muon_candidates.size() - good_lepton_candidates.size() < 2 ) return;
+
+  for (unsigned int i=0; i < muon_candidates.size()-1; ++i){
+    for (unsigned int j=i+1; j < muon_candidates.size(); ++j){
+      if (muon_candidates.at(i).charge() == muon_candidates.at(j).charge()) continue;
+      if (fabs((muon_candidates.at(i).p4() + muon_candidates.at(j).p4()).mass() - 3.1) > 0.2) continue;
+      auto ll_doca = distanceOfClosestApproach(muon_candidates.at(i).track(), muon_candidates.at(j).track());
+      if (maxTwoTrackDOCA_>0 and ll_doca > maxTwoTrackDOCA_) continue;
+      bool new_mu1 = true;
+      bool new_mu2 = true;
+      for (const auto& lep: good_lepton_candidates){
+	if (overlap(lep, muon_candidates.at(i))) new_mu1 = false;
+	if (overlap(lep, muon_candidates.at(j))) new_mu2 = false;
+      }
+
+      if (new_mu1)
+	good_lepton_candidates.push_back(muon_candidates.at(i));
+      if (new_mu2)
+	good_lepton_candidates.push_back(muon_candidates.at(j));
+    }
   }
 }
 
@@ -1524,17 +1605,26 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
       if (not isGoodMuon(muon)) continue;
       good_lepton_candidates.push_back(LeptonCandidate(muon, i));
     }
+    std::cout << "good_lepton_candidates.size() after muons: " << good_lepton_candidates.size() << std::endl;
     
     // Inject B to hh candidates where hadrons are explicitely matched
     // to gen level decays 
     if ( injectMatchedBtohh_ and isMC_ ) {
       injectHadronsThatMayFakeMuons(good_lepton_candidates);
     }
+    std::cout << "good_lepton_candidates.size() after Bhh MC: " << good_lepton_candidates.size() << std::endl;
 
     // Inject reco B to hh candidates
     if ( injectBtohh_ ) {
       injectBhhHadrons(good_lepton_candidates);
     }
+    std::cout << "good_lepton_candidates.size() after Bhh: " << good_lepton_candidates.size() << std::endl;
+
+    // Inject Jpsi to mumu based on charged tracks
+    if ( injectJpsiTracks_ ) {
+      injectJpsiTracks(good_lepton_candidates);
+    }
+    std::cout << "good_lepton_candidates.size() after Jpsi: " << good_lepton_candidates.size() << std::endl;
 
     // Dielectrons
     if ( recoElElX_ ){
@@ -1544,7 +1634,9 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	good_lepton_candidates.push_back(LeptonCandidate(el, i));
       }
     }
-    
+    std::cout << "good_lepton_candidates.size() after electrons: " << good_lepton_candidates.size() << std::endl;
+
+    std::cout << "good_lepton_candidates.size(): " << good_lepton_candidates.size() << std::endl;
     // Build dilepton candidates
     if ( good_lepton_candidates.size() > 1 ){
       for (unsigned int i = 0; i < good_lepton_candidates.size(); ++i) {
@@ -1667,7 +1759,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 		if (pionCand.charge() == 0 ) continue;
 		if ( not pionCand.hasTrackDetails() ) continue;
 		pionCand.setMass(PionMass_);
-		if (deltaR(lepton1, pionCand) < 0.01 || deltaR(lepton2, pionCand) < 0.01) continue;
+		if (overlap(lepton1, pionCand) || overlap(lepton2, pionCand)) continue;
 		double l1_pion_doca = distanceOfClosestApproach(lepton1.track(),
 								pionCand.bestTrack());
 		double l2_pion_doca = distanceOfClosestApproach(lepton2.track(),
@@ -1693,11 +1785,11 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	    for (unsigned int k = 0; k < nPFCands; ++k) {
 	      pat::PackedCandidate kaonCand1((*pfCandHandle_)[k]);
 	      kaonCand1.setMass(KaonMass_);
-	      if (deltaR(lepton1, kaonCand1) < 0.01 || deltaR(lepton2, kaonCand1) < 0.01) continue;
 	      if (kaonCand1.charge() == 0 ) continue;
 	      if (!kaonCand1.hasTrackDetails()) continue;
 	      if (abs(kaonCand1.pdgId()) != 211) continue;
 	      if (kaonCand1.pt() < ptMinKaon_ or abs(kaonCand1.eta()) > etaMaxKaon_) continue;
+	      if (overlap(lepton1, kaonCand1) || overlap(lepton2, kaonCand1)) continue;
 	      double l1_kaon_doca = distanceOfClosestApproach(lepton1.track(),
 							       kaonCand1.bestTrack());
 	      double l2_kaon_doca = distanceOfClosestApproach(lepton2.track(),
@@ -1732,15 +1824,15 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	      for (unsigned int k2 = k+1; k2 < nPFCands; ++k2) { // only works if selection requirements for both kaons are identical
 		pat::PackedCandidate kaonCand2((*pfCandHandle_)[k2]);
 		kaonCand2.setMass(KaonMass_);
-		if (deltaR(lepton1, kaonCand2) < 0.01 || deltaR(lepton2, kaonCand2) < 0.01) continue;
 		if (kaonCand2.charge() == 0 ) continue;
 		if (!kaonCand2.hasTrackDetails()) continue;
+		if (abs(kaonCand2.pdgId()) != 211) continue;
+		if (kaonCand2.pt() < ptMinKaon_ || abs(kaonCand2.eta()) > etaMaxKaon_) continue;
+		if (overlap(lepton1, kaonCand2) || overlap(lepton2, kaonCand2)) continue;
 		double l1_kaon2_doca = distanceOfClosestApproach(lepton1.track(),
 								 kaonCand2.bestTrack());
 		double l2_kaon2_doca = distanceOfClosestApproach(lepton2.track(),
 								 kaonCand2.bestTrack());
-		if (abs(kaonCand2.pdgId()) != 211) continue;
-		if (kaonCand2.pt() < ptMinKaon_ || abs(kaonCand2.eta()) > etaMaxKaon_) continue;
 		if (maxTwoTrackDOCA_>0 and l1_kaon2_doca > maxTwoTrackDOCA_) continue;
 		if (maxTwoTrackDOCA_>0 and l2_kaon2_doca > maxTwoTrackDOCA_) continue;
 		
@@ -2444,10 +2536,8 @@ namespace{
 const reco::Candidate* DileptonPlusXProducer::getGenParticle(const LeptonCandidate& cand)
 {
   
-  if (cand.muon() and cand.muon()->genParticle())
-    return cand.muon()->genParticle();
-  if (cand.electron() and cand.electron()->genParticle())
-    return cand.electron()->genParticle();
+  if (cand.genParticle()) return cand.genParticle();
+
   for (auto const & genParticle: *packedGenParticles_){
       if (dr_match(cand.p4(), genParticle.p4()))
 	return &genParticle;
@@ -2586,7 +2676,7 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const LeptonCandidate& lept
 }
 
 float DileptonPlusXProducer::distanceOfClosestApproach( const reco::GenParticle* track1,
-						   const reco::GenParticle* track2)
+							const reco::GenParticle* track2)
 {
   TwoTrackMinimumDistance md;
   GlobalPoint trk1_pos(track1->vertex().x(), 
@@ -2606,7 +2696,7 @@ float DileptonPlusXProducer::distanceOfClosestApproach( const reco::GenParticle*
 }
 
 float DileptonPlusXProducer::distanceOfClosestApproach( const reco::Track* track1,
-						   const reco::Track* track2)
+							const reco::Track* track2)
 {
   TwoTrackMinimumDistance md;
   const reco::TransientTrack tt1 = theTTBuilder_->build(track1);
