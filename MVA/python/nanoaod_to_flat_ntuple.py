@@ -26,8 +26,8 @@ def _get_time():
     return datetime.now().strftime("%H:%M:%S")
 
 def _formated_print(data):
-    print "[%d-%s] %s" % (multiprocessing.current_process().pid,
-                          _get_time(),data)
+    print("[%d-%s] %s" % (multiprocessing.current_process().pid,
+                          _get_time(),data))
     sys.stdout.flush()
 
 def _is_good_file(f):
@@ -44,10 +44,10 @@ def output_is_already_available(filename):
         if force_recreation:
             os.remove(filename)
         elif good:
-            print message, " It appears to be good. Skip it. If you want to recreate it, please remove the existing file" 
+            print(message, " It appears to be good. Skip it. If you want to recreate it, please remove the existing file") 
             return True
         else:
-            print message," File is corrupted. Will recreate."
+            print(message," File is corrupted. Will recreate.")
             os.remove(filename)
     return False
 
@@ -265,8 +265,8 @@ def process_file(input_file,output_filename=None,signal_only=False,output_path="
             # print "Event: %d \tLumi: %d \tRun: %d"% (event.event,
             #                                          event.luminosityBlock,
             #                                          event.run)
-            if n_events_limit==None and (nevents)%10000==0: print "[%d] Event: %d" % (multiprocessing.current_process().pid,
-                                                                                      nevents)
+            if n_events_limit==None and (nevents)%10000==0: print("[%d] Event: %d" % (multiprocessing.current_process().pid,
+                                                                                      nevents))
             nevents += 1
             info = _apply_selection(event)
             _analyze_selection(info,statisitics)
@@ -277,10 +277,10 @@ def process_file(input_file,output_filename=None,signal_only=False,output_path="
         fout.Write()
         fout.Close()
         if collect_statistics:
-            print statisitics
+            print(statisitics)
         return output_filename
     except:
-        print "[%d-%s] process failed" % (multiprocessing.current_process().pid,_get_time())
+        print("[%d-%s] process failed" % (multiprocessing.current_process().pid,_get_time()))
         raise 
     return None
 
@@ -291,21 +291,21 @@ def process_files(input_files,output_file_name,output_path="./",signal_only=Fals
     results = []
     for f in input_files:
         result = process_file(f,signal_only,output_path)
-        print "Processed %s into %s" % (f,result)
+        print("Processed %s into %s" % (f,result))
         results.append(result)
 
-    print "Multiprocessing is done. Merging output."
+    print("Multiprocessing is done. Merging output.")
 
     good_files = []
     for rfile in results:
         if rfile: good_files.append(rfile)
     status = subprocess.call("hadd -f %s/%s %s" % (output_path,output_file_name," ".join(good_files)),shell=True)
     if status==0:
-        print "Merged output."
+        print("Merged output.")
         for file in good_files:
             os.remove(file)
     else:
-        print "Merge failed"
+        print("Merge failed")
 
     return results
 
@@ -313,5 +313,5 @@ if __name__ == "__main__":
     # print process_file('/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/505/BsToMuMu_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2+MINIAODSIM/0D690850-542C-874D-8553-2454517F6E54.root')
     # print process_file('/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/505/QCD_HT100to200_TuneCP5_13TeV-madgraphMLM-pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM_Skim.root')
     # print process_file('/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/505/Charmonium+Run2018A-17Sep2018-v1+MINIAOD/0024D10F-B9D6-3E46-BEE1-413765D77D91.root')
-    print process_file('/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/505/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root')
+    print(process_file('/eos/cms/store/group/phys_muon/dmytro/tmp/NanoAOD/505/BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1+MINIAODSIM/02F7319D-D4D6-8340-B94F-2D882775B406.root'))
     # print process_file('/afs/cern.ch/user/d/dmytro/eos/tmp/Bmm/QCD_Pt-30toInf_BmmGenFilter-NanoAOD/QCD_Pt-30toInf_BmmGenFilter-NanoAODv6-v5.root')

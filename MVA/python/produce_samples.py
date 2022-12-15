@@ -3,7 +3,7 @@
 # Tool to produce training samples using local resources
 #
 
-from nanoaod_to_flat_ntuple import *
+from .nanoaod_to_flat_ntuple import *
 
 ##
 ## User Input
@@ -158,21 +158,21 @@ def parellel_process(input_files,output_file_name,match=False):
         else:
             results.extend(pool.map(process_file, flist))
         pool.close()
-    print "Multiprocessing is done. Merging output."
+    print("Multiprocessing is done. Merging output.")
 
     good_files = []
     for rfile in results:
         if rfile: good_files.append(rfile)
     status = subprocess.call("hadd -f %s %s" % (output_file_name," ".join(good_files)),shell=True)
     if status==0:
-        print "Merged output."
+        print("Merged output.")
         for file in good_files:
             os.remove(file)
     else:
-        print "Merge failed"
+        print("Merge failed")
 
-for sample,info in samples.items():
-    print "Processing %s" % sample
+for sample,info in list(samples.items()):
+    print("Processing %s" % sample)
     output_filename = "%s.root"%sample
     if output_is_already_available(output_filename):
         continue
@@ -191,10 +191,10 @@ for sample,info in samples.items():
     elif 'lfns' in info:
         input_files = getPFNs(info['pfns'])
     else:
-        print "Input is not specified. Skip the sample"
+        print("Input is not specified. Skip the sample")
         continue
     if len(input_files)==0:
-        print "Nothing to process. Skip the sample"
+        print("Nothing to process. Skip the sample")
         continue
 
     match = False
