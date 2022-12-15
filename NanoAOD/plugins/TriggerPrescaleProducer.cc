@@ -2,7 +2,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Utilities/interface/StreamID.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -26,7 +26,7 @@ using namespace std;
 ///                             P L U G I N
 ///////////////////////////////////////////////////////////////////////////
 
-class TriggerPrescaleProducer : public edm::EDProducer {
+class TriggerPrescaleProducer : public edm::stream::EDProducer<> {
     
 public:
     
@@ -95,7 +95,7 @@ void TriggerPrescaleProducer::produce(edm::Event& iEvent, const edm::EventSetup&
     if (trigger_id != trigger_map.end()){
       prescale = prescale_handle->getPrescaleForIndex(trigger_id->second);
     }
-    out->addColumnValue<int>(trigger, prescale, "HLT prescale" , nanoaod::FlatTable::IntColumn);
+    out->addColumnValue<int>(trigger, prescale, "HLT prescale");
   }
   iEvent.put(std::move(out));
 }

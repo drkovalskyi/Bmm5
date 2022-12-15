@@ -2,7 +2,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Utilities/interface/StreamID.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -34,7 +34,7 @@ typedef pair<const reco::MuonChamberMatch*, const reco::MuonSegmentMatch*> Match
 ///                             P L U G I N
 ///////////////////////////////////////////////////////////////////////////
 
-class BmmMuonIdProducer : public edm::EDProducer {
+class BmmMuonIdProducer : public edm::stream::EDProducer<> {
     
 public:
     
