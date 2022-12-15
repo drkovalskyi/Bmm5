@@ -1,6 +1,7 @@
 #include "Bmm5/NanoAOD/interface/XGBooster.h"
 #include <assert.h>
 #include <math.h>
+#include <stdexcept>
 
 XGBooster::XGBooster(std::string model_file)
 {
@@ -30,7 +31,7 @@ float XGBooster::predict()
   bst_ulong out_len=0;
   const float* score;
 
-  auto ret = XGBoosterPredict(booster_, dvalues, 0, 0, &out_len, &score);
+  auto ret = XGBoosterPredict(booster_, dvalues, 0, 0, 0, &out_len, &score);
 
   XGDMatrixFree(dvalues);
 
