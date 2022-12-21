@@ -62,7 +62,7 @@ for module, time in nanoaod_block.items():
     nanoaod_block_time_per_event += time
 print("nanoAOD_step path time per event: %0.3f sec" % nanoaod_block_time_per_event)
 
-bmm_module_patterns = ['BxToMuMu', 'ForMuonFake', 'BmmMuonId']
+bmm_module_patterns = ['BxToMuMu', 'ForMuonFake', 'BmmMuonId', 'Dileptons']
 
 print("Bmm modules:")
 for module in sorted(nanoaod_block, key=nanoaod_block.get, reverse=True):
