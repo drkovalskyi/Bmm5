@@ -2,7 +2,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Utilities/interface/StreamID.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -210,7 +210,7 @@ using namespace std;
 ///                             P L U G I N
 ///////////////////////////////////////////////////////////////////////////
 
-class BmmV0Producer : public edm::EDProducer {
+class BmmV0Producer : public edm::stream::EDProducer<> {
     
 public:
     
@@ -295,8 +295,10 @@ private:
   edm::EDGetTokenT<std::vector<pat::PackedGenParticle> >   packedGenToken_;
   const std::vector<pat::PackedGenParticle>* packedGenParticles_;
 
-  edm::ESHandle<TransientTrackBuilder> theTTBuilder_;
-  edm::ESHandle<MagneticField> bFieldHandle_;
+  const TransientTrackBuilder* theTTBuilder_;
+  const edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> theTTBuilderToken_;
+  const MagneticField* bField_;
+  const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> bFieldToken_;
   edm::Handle<std::vector<pat::PackedCandidate> > pfCandHandle_;
   edm::Handle<std::vector<pat::Muon>> muonHandle_;
 
@@ -350,6 +352,10 @@ muonToken_( consumes<std::vector<pat::Muon>> ( iConfig.getParameter<edm::InputTa
 pfCandToken_( consumes<std::vector<pat::PackedCandidate>> ( iConfig.getParameter<edm::InputTag>( "PFCandCollection" ) ) ),
 packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( iConfig.getParameter<edm::InputTag>( "packedGenParticleCollection" ) ) ),
 packedGenParticles_(nullptr),
+theTTBuilder_(nullptr),
+theTTBuilderToken_(esConsumes(edm::ESInputTag{"", "TransientTrackBuilder"})),
+bField_(nullptr),
+bFieldToken_(esConsumes()),
 impactPointExtrapolator_(0),
 isMC_(             iConfig.getParameter<bool>( "isMC" ) ),
 minMuonPt_(         iConfig.getParameter<double>( "minMuonPt" ) ),
@@ -508,11 +514,10 @@ namespace{
 }
 
 void BmmV0Producer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+    bField_ = &iSetup.getData(bFieldToken_);
+    theTTBuilder_ = &iSetup.getData(theTTBuilderToken_);
 
-    iSetup.get<IdealMagneticFieldRecord>().get(bFieldHandle_);
-    iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder",theTTBuilder_);
-
-    AnalyticalImpactPointExtrapolator extrapolator(bFieldHandle_.product());
+    AnalyticalImpactPointExtrapolator extrapolator(bField_);
     impactPointExtrapolator_ = &extrapolator;
 
     edm::Handle<reco::BeamSpot> beamSpotHandle;
@@ -920,8 +925,13 @@ BmmV0Producer::vertexWithKinematicFitter(std::vector<const reco::Track*> trks,
     particles.push_back(factory.particle(transTrks.back(),masses[i],chi,ndf,mass_err));
   }
 
-  RefCountedKinematicTree vertexFitTree = fitter.fit(particles);
+  RefCountedKinematicTree vertexFitTree;
   KinematicFitResult result;
+  try {
+    vertexFitTree = fitter.fit(particles);
+  } catch (const std::exception& e) {
+    return result;
+  }
     
   if ( !vertexFitTree->isValid()) return result;
   
@@ -950,7 +960,7 @@ BmmV0Producer::vertexWithKinematicFitter(std::vector<const reco::Track*> trks,
 pair<double,double> BmmV0Producer::computeDCA(const pat::PackedCandidate &kaon,
                                                  reco::BeamSpot beamSpot){
 
-  const reco::TransientTrack trackTT((*(kaon.bestTrack())), &(*bFieldHandle_));
+  const reco::TransientTrack trackTT((*(kaon.bestTrack())), bField_);
 
   TrajectoryStateClosestToPoint theDCAXBS = trackTT.trajectoryStateClosestToPoint( GlobalPoint(beamSpot.position().x(),beamSpot.position().y(),beamSpot.position().z()) );  
   

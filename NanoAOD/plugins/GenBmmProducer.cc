@@ -2,7 +2,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Utilities/interface/StreamID.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -25,7 +25,7 @@ namespace {
   const float muon_mass_    = 0.10565837;
 }
 
-class GenBmmProducer : public edm::EDProducer {
+class GenBmmProducer : public edm::stream::EDProducer<> {
 public:
 explicit GenBmmProducer(const edm::ParameterSet &iConfig);
 ~GenBmmProducer() override {};

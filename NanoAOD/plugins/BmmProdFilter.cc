@@ -69,7 +69,8 @@ private:
 
   // ----------member data ---------------------------
   edm::EDGetTokenT<edm::View<reco::Muon>> muonToken_;
-  edm::ESHandle<TransientTrackBuilder> theTTBuilder_;
+  const TransientTrackBuilder* theTTBuilder_;
+  const edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> theTTBuilderToken_;
   double maxTwoTrackDOCA_;
   double ptMinMu_;
   double etaMaxMu_;
@@ -98,6 +99,8 @@ BmmProdFilter::distanceOfClosestApproach( const reco::Track* track1,
 
 BmmProdFilter::BmmProdFilter(const edm::ParameterSet& iConfig):
   muonToken_( consumes<edm::View<reco::Muon>> ( iConfig.getParameter<edm::InputTag>( "muonCollection" ) ) ),
+  theTTBuilder_(nullptr),
+  theTTBuilderToken_(esConsumes(edm::ESInputTag{"", "TransientTrackBuilder"})),
   maxTwoTrackDOCA_( iConfig.getParameter<double>( "maxTwoTrackDOCA" ) ),
   ptMinMu_(         iConfig.getParameter<double>( "MuonMinPt" ) ),
   etaMaxMu_(        iConfig.getParameter<double>( "MuonMaxEta" ) )
@@ -109,7 +112,7 @@ BmmProdFilter::~BmmProdFilter(){}
 bool
 BmmProdFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-  iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder",theTTBuilder_);
+  theTTBuilder_ = &iSetup.getData(theTTBuilderToken_);
   edm::Handle<edm::View<reco::Muon>> muonHandle;
   iEvent.getByToken(muonToken_, muonHandle);
   auto nMuons = muonHandle->size();

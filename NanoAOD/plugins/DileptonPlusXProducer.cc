@@ -349,8 +349,10 @@ private:
   const std::vector<reco::GenParticle>* prunedGenParticles_;
   const std::vector<pat::PackedGenParticle>* packedGenParticles_;
 
-  edm::ESHandle<TransientTrackBuilder> theTTBuilder_;
-  edm::ESHandle<MagneticField> bFieldHandle_;
+  const TransientTrackBuilder* theTTBuilder_;
+  const edm::ESGetToken<TransientTrackBuilder, TransientTrackRecord> theTTBuilderToken_;
+  const MagneticField* bField_;
+  const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> bFieldToken_;
   edm::Handle<edm::View<pat::PackedCandidate>> pfCandHandle_;
   edm::Handle<reco::VertexCollection> pvHandle_;
 
@@ -414,6 +416,10 @@ prunedGenToken_( consumes<std::vector<reco::GenParticle>> ( iConfig.getParameter
 packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( edm::InputTag( "packedGenParticles" ) ) ),
 prunedGenParticles_(nullptr),
 packedGenParticles_(nullptr),
+theTTBuilder_(nullptr),
+theTTBuilderToken_(esConsumes(edm::ESInputTag{"", "TransientTrackBuilder"})),
+bField_(nullptr),
+bFieldToken_(esConsumes()),
 impactPointExtrapolator_(0),
 isMC_(            iConfig.getParameter<bool>( "isMC" ) ),
 ptMinMu_(         iConfig.getParameter<double>( "MuonMinPt" ) ),
@@ -1537,10 +1543,10 @@ DileptonPlusXProducer::injectJpsiTracks(std::vector<LeptonCandidate>& good_lepto
 // }
 
 void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-    iSetup.get<IdealMagneticFieldRecord>().get(bFieldHandle_);
-    iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder",theTTBuilder_);
+    bField_ = &iSetup.getData(bFieldToken_);
+    theTTBuilder_ = &iSetup.getData(theTTBuilderToken_);
 
-    AnalyticalImpactPointExtrapolator extrapolator(bFieldHandle_.product());
+    AnalyticalImpactPointExtrapolator extrapolator(bField_);
     impactPointExtrapolator_ = &extrapolator;
 
     edm::Handle<reco::BeamSpot> beamSpotHandle;
@@ -2213,7 +2219,7 @@ DileptonPlusXProducer::fitLLGamma( RefCountedKinematicTree tree,
   particles.push_back(tree->currentParticle());
   bmm::KinematicParticleRef
     photon_kp(bmm::build_particle(photon, momentum_resolution(photon),
-				  bFieldHandle_.product(), chi2, ndf));
+				  bField_, chi2, ndf));
 
   particles.push_back(photon_kp);
 
@@ -2282,7 +2288,7 @@ DileptonPlusXProducer::fitLLGammaConv( RefCountedKinematicTree mmVertexTree,
   KinematicParticleVertexFitter vtxFitter;
 
   ColinearityKinematicConstraintT<colinearityKinematic::PhiTheta> constr;
-  KinematicConstrainedVertexFitterT<2, 2> kcvFitter(bFieldHandle_.product());
+  KinematicConstrainedVertexFitterT<2, 2> kcvFitter(bField_);
   
   std::vector<RefCountedKinematicParticle> particles;
   
@@ -2518,7 +2524,7 @@ DileptonPlusXProducer::vertexLeptonsWithPointingConstraint( const LeptonCandidat
 pair<double,double> DileptonPlusXProducer::computeDCA(const pat::PackedCandidate &kaon,
                                                  reco::BeamSpot beamSpot){
 
-  const reco::TransientTrack trackTT((*(kaon.bestTrack())), &(*bFieldHandle_));
+  const reco::TransientTrack trackTT((*(kaon.bestTrack())), bField_);
 
   TrajectoryStateClosestToPoint theDCAXBS = trackTT.trajectoryStateClosestToPoint( GlobalPoint(beamSpot.position().x(),beamSpot.position().y(),beamSpot.position().z()) );  
   
@@ -2684,13 +2690,13 @@ float DileptonPlusXProducer::distanceOfClosestApproach( const reco::GenParticle*
 		       track1->vertex().z());
   GlobalVector trk1_mom(track1->px(),track1->py(),track1->pz());
 
-  GlobalTrajectoryParameters trk1(trk1_pos,trk1_mom,track1->charge(),bFieldHandle_.product());
+  GlobalTrajectoryParameters trk1(trk1_pos,trk1_mom,track1->charge(),bField_);
   GlobalPoint trk2_pos(track2->vertex().x(), 
 		       track2->vertex().y(), 
 		       track2->vertex().z());
   GlobalVector trk2_mom(track2->px(),track2->py(),track2->pz());
 
-  GlobalTrajectoryParameters trk2(trk2_pos,trk2_mom,track2->charge(),bFieldHandle_.product());
+  GlobalTrajectoryParameters trk2(trk2_pos,trk2_mom,track2->charge(),bField_);
   if ( not md.calculate( trk1, trk2 ) ) return -1.0;
   return md.distance();
 }
