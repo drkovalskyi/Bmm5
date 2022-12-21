@@ -2,6 +2,11 @@
 
 ## New developments
 
+## [NanoAODv10-V01] - 2022/12/22
+### Fixed
+	- Improved multithreading support (stream level)
+	- Disabled slow options not relevant for Run3 at the moment
+
 ## [NanoAODv9-V04] - 2022/12/09
 ### New
 	- Added Jpsi to mumu reconstructed as tracks, i.e. for muons below 4 GeV
