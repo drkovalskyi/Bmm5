@@ -1,6 +1,7 @@
 from PhysicsTools.NanoAOD.common_cff import *
 import FWCore.ParameterSet.Config as cms
 import re
+from TrackingTools.TransientTrack.TransientTrackBuilder_cfi import *
 
 # NOTE: 
 #    All instances of FlatTableProducers must end with Table in their
@@ -77,11 +78,11 @@ Dileptons = cms.EDProducer(
     isMC = cms.bool(False),
     # injectMatchedBtohh = cms.bool(True),
     injectMatchedBtohh = cms.bool(False),
-    injectBtohh = cms.bool(True),
-    injectJpsiTracks = cms.bool(True),
+    injectBtohh = cms.bool(False),
+    injectJpsiTracks = cms.bool(False),
     recoMuMuGamma = cms.bool(True),
     recoMuMuGammaConv = cms.bool(True),
-    recoElElX = cms.bool(True),
+    recoElElX = cms.bool(False),
     minBhhHadronPt = cms.double(4.0),
     maxBhhHadronEta = cms.double(1.4),
     minJpsiHadronPt = cms.double(2.0),
