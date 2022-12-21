@@ -82,7 +82,8 @@ private:
   double max_mu_eta_;
   double min_mm_mass_;
   double max_mm_mass_;
-  edm::ESHandle<MagneticField> bFieldHandle_;
+  const MagneticField* bField_;
+  const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> bFieldToken_;
 };
 
 bool 
@@ -115,12 +116,12 @@ GenBmmFilter::distanceOfClosestApproach( const HepMC::GenParticle* track1,
   const HepMC::ThreeVector& trk1_point(track1->production_vertex()->point3d());
   GlobalPoint trk1_pos(trk1_point.x()/10, trk1_point.y()/10, trk1_point.z()/10); // to cm
   GlobalVector trk1_mom(track1->momentum().px(),track1->momentum().py(),track1->momentum().pz());
-  GlobalTrajectoryParameters trk1(trk1_pos,trk1_mom,charge(track1->pdg_id()),bFieldHandle_.product());
+  GlobalTrajectoryParameters trk1(trk1_pos,trk1_mom,charge(track1->pdg_id()),bField_);
 
   const HepMC::ThreeVector& trk2_point(track2->production_vertex()->point3d());
   GlobalPoint trk2_pos(trk2_point.x()/10, trk2_point.y()/10, trk2_point.z()/10); // to cm
   GlobalVector trk2_mom(track2->momentum().px(),track2->momentum().py(),track2->momentum().pz());
-  GlobalTrajectoryParameters trk2(trk2_pos,trk2_mom,charge(track2->pdg_id()),bFieldHandle_.product());
+  GlobalTrajectoryParameters trk2(trk2_pos,trk2_mom,charge(track2->pdg_id()),bField_);
 
   if ( not md.calculate( trk1, trk2 ) ) return -1.0;
   return -1.0;
@@ -133,7 +134,9 @@ GenBmmFilter::GenBmmFilter(const edm::ParameterSet& iConfig):
   min_mu_pt_(  iConfig.getParameter<double>( "min_mu_pt" ) ),
   max_mu_eta_( iConfig.getParameter<double>( "max_mu_eta" ) ),
   min_mm_mass_(  iConfig.getParameter<double>( "min_mm_mass" ) ),
-  max_mm_mass_(  iConfig.getParameter<double>( "max_mm_mass" ) )
+  max_mm_mass_(  iConfig.getParameter<double>( "max_mm_mass" ) ),
+  bField_(nullptr),
+  bFieldToken_(esConsumes())
 {}
 
 
@@ -149,7 +152,7 @@ namespace{
 bool
 GenBmmFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-  iSetup.get<IdealMagneticFieldRecord>().get(bFieldHandle_);
+  bField_ = &iSetup.getData(bFieldToken_);
   edm::Handle<edm::HepMCProduct> hep_mc_handle;
   iEvent.getByToken(hep_mc_token_, hep_mc_handle);
   
