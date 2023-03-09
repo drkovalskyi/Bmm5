@@ -254,6 +254,8 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 	if (l1_muon){
 	  mu_cand.addUserInt("l1_quality", l1_muon->hwQual());
 	  mu_cand.addUserFloat("l1_mpt",   l1_muon->pt());
+	  mu_cand.addUserFloat("l1_phiAtVtx", l1_muon->phiAtVtx());
+	  mu_cand.addUserFloat("l1_etaAtVtx", l1_muon->etaAtVtx());
 	}
       }
       
@@ -266,6 +268,8 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
       if (not l1_muon){
 	mu_cand.addUserInt("l1_quality", 0);
 	mu_cand.addUserFloat("l1_mpt",  -1);
+	mu_cand.addUserFloat("l1_phiAtVtx", 0);
+	mu_cand.addUserFloat("l1_etaAtVtx", 0);
       }
       
       muons->push_back(mu_cand);

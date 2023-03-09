@@ -93,6 +93,8 @@ BmmMuonIdVariables = cms.PSet(
     hlt_dr              = Var("userFloat('hlt_dr')",              float, doc = "HLT dR"),
     l1_pt               = Var("userFloat('l1_pt')",               float, doc = "L1 pt"),
     l1_mpt              = Var("userFloat('l1_mpt')",              float, doc = "L1 pt (cross-check)"),
+    l1_etaAtVtx         = Var("userFloat('l1_etaAtVtx')",         float, doc = "L1 eta at vertex"),
+    l1_phiAtVtx         = Var("userFloat('l1_phiAtVtx')",         float, doc = "L1 phi at vertex"),
     l1_eta              = Var("userFloat('l1_eta')",              float, doc = "L1 eta"),
     l1_phi              = Var("userFloat('l1_phi')",              float, doc = "L1 phi"),
     l1_quality          = Var("userInt('l1_quality')",              int, doc = "L1 quality"),
