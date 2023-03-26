@@ -2,6 +2,13 @@
 
 ## New developments
 
+## [NanoAODv10-V02] - 2023/03/26
+### Changes
+	- Revised code organization and handling of different final states
+	- Re-wrote Dstar code
+	- Renamed a number of branches
+	- added more info about L1 muons
+
 ## [NanoAODv10-V01] - 2022/12/22
 ### Fixed
 	- Improved multithreading support (stream level)
