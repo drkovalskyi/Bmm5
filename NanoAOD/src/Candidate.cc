@@ -1,9 +1,9 @@
-#include "Bmm5/NanoAOD/interface/LeptonCandidate.h"
+#include "Bmm5/NanoAOD/interface/Candidate.h"
 
 
 using namespace bmm;
 
-LeptonCandidate::LeptonCandidate(const pat::Muon& muon, int index):
+Candidate::Candidate(const pat::Muon& muon, int index):
   reco::LeafCandidate(muon.charge(), muon.polarP4(), muon.vertex(), muon.pdgId(), muon.status()),
   index_(index), name_("mu")
 {
@@ -11,7 +11,7 @@ LeptonCandidate::LeptonCandidate(const pat::Muon& muon, int index):
   gen_particle_ = muon.genParticle();
 }
 
-LeptonCandidate::LeptonCandidate(const pat::Electron& elec, int index):
+Candidate::Candidate(const pat::Electron& elec, int index):
   reco::LeafCandidate(elec.charge(), elec.polarP4(), elec.vertex(), elec.pdgId(), elec.status()),
   index_(index), name_("el")
 {
@@ -19,7 +19,7 @@ LeptonCandidate::LeptonCandidate(const pat::Electron& elec, int index):
   gen_particle_ = elec.genParticle();
 }
     
-LeptonCandidate::LeptonCandidate(const pat::PackedCandidate& hadron, const pat::PackedGenParticle* gen):
+Candidate::Candidate(const pat::PackedCandidate& hadron, const pat::PackedGenParticle* gen):
   reco::LeafCandidate(hadron.charge(), hadron.polarP4(), hadron.vertex(), hadron.pdgId(), hadron.status()),
   packed_gen_particle_(gen), name_("had")
 {
@@ -27,7 +27,9 @@ LeptonCandidate::LeptonCandidate(const pat::PackedCandidate& hadron, const pat::
 }
 
 
-void LeptonCandidate::setType(double mass, std::string name){
+void Candidate::setType(double mass, std::string name, int pdgId){
   this->setMass(mass);
   name_ = name;
+  if (pdgId != 0)
+    this->setPdgId(pdgId);
 }
