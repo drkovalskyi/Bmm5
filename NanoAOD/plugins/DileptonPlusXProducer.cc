@@ -52,7 +52,7 @@
 #include "Bmm5/NanoAOD/interface/KinFitUtils.h"
 #include "Bmm5/NanoAOD/interface/KinematicFitResult.h"
 #include "Bmm5/NanoAOD/interface/CommonTools.h"
-#include "Bmm5/NanoAOD/interface/LeptonCandidate.h"
+#include "Bmm5/NanoAOD/interface/Candidate.h"
 
 // 
 // DileptonPlusXProducer is designed for Bs/d->mumu analysis
@@ -69,11 +69,11 @@ namespace {
     return deltaR(*t1, *t2) < 0.01;
   }
 
-  bool overlap(const LeptonCandidate& lep, const pat::PackedCandidate& can){
+  bool overlap(const bmm::Candidate& lep, const pat::PackedCandidate& can){
     return overlap(lep.track(), can.bestTrack());
   }
 
-  bool overlap(const LeptonCandidate& lep1, const LeptonCandidate& lep2){
+  bool overlap(const bmm::Candidate& lep1, const bmm::Candidate& lep2){
     return overlap(lep1.track(), lep2.track());
   }
 
@@ -133,9 +133,41 @@ private:
     
   virtual void produce(edm::Event&, const edm::EventSetup&);
 
+  bool preprocess(pat::CompositeCandidate& candidate,
+		  const edm::Event& iEvent,
+		  const bmm::Candidate& lepton1,
+		  const bmm::Candidate& lepton2);
+
+  void buildLLXCandidates(pat::CompositeCandidateCollection& llk,
+			  pat::CompositeCandidateCollection& llkk,
+			  const edm::Event& iEvent,
+			  const KinematicFitResult& kinematicLLVertexFit,
+			  const pat::CompositeCandidate& dileptonCand,
+			  int ll_index,
+			  const bmm::Candidate& lepton1,
+			  const bmm::Candidate& lepton2);
+  void
+  fillDstarInfo(pat::CompositeCandidateCollection& dstar_collection,
+		const edm::Event& iEvent,
+		const KinematicFitResult& d0VertexFit,
+		const pat::CompositeCandidate& d0Cand,
+		const pat::PackedCandidate& soft_pion,
+		int mm_index,
+		int hh_index,
+		const bmm::Candidate& daughter1,
+		const bmm::Candidate& daughter2);
+
+  void
+  buildDstarCandidates(pat::CompositeCandidateCollection& dstar_collection,
+		       pat::CompositeCandidateCollection& hh_collection,
+		       const edm::Event& iEvent,
+		       const pat::PackedCandidate& had1,
+		       const pat::PackedCandidate& had2);
+
+
   bool isGoodMuon(const pat::Muon& muon);
   bool isGoodMuonCandidateFromTrack(const pat::PackedCandidate& cand);
-  
+  bool isGoodHadron(const pat::PackedCandidate& cand);
   bool isGoodElectron(const pat::Electron& el);
     
   KalmanVertexFitResult 
@@ -143,43 +175,47 @@ private:
 			 std::vector<float> masses);
 
   KalmanVertexFitResult 
-  vertexLeptonsWithKalmanFitter(const LeptonCandidate& lepton1,
-			      const LeptonCandidate& lepton2);
+  vertexLeptonsWithKalmanFitter(const bmm::Candidate& lepton1,
+			      const bmm::Candidate& lepton2);
 
   KinematicFitResult 
   vertexWithKinematicFitter(std::vector<const reco::Track*> trks,
 			    std::vector<float> masses);
 
   KinematicFitResult 
-  vertexLeptonsWithKinematicFitter(const LeptonCandidate& lepton1,
-				   const LeptonCandidate& lepton2);
+  vertexLeptonsWithKinematicFitter(const bmm::Candidate& lepton1,
+				   const bmm::Candidate& lepton2);
 
   KinematicFitResult 
   vertexKaonsWithKinematicFitter(const pat::PackedCandidate& pfCand1,
 				 const pat::PackedCandidate& pfCand2);
   
   KinematicFitResult 
-  vertexWithKinematicFitter(const LeptonCandidate& lepton1,
-			    const LeptonCandidate& lepton2,
+  vertexWithKinematicFitter(const bmm::Candidate& lepton1,
+			    const bmm::Candidate& lepton2,
 			    const pat::PackedCandidate& pfCand);
 
+  KinematicFitResult 
+  refitWithVertexConstraint(const reco::Track& track,
+			    int pvIndex);
+
   KinematicFitResult
-  fitBToKLL(const LeptonCandidate& lepton1,
-	    const LeptonCandidate& lepton2,
+  fitBToKLL(const bmm::Candidate& lepton1,
+	    const bmm::Candidate& lepton2,
 	    const pat::PackedCandidate& kaon,
 	    float mass_constraint=-1.0);
 
   KinematicFitResult
-  fitBToKKLL( const LeptonCandidate& lepton1,
-	      const LeptonCandidate& lepton2,
+  fitBToKKLL( const bmm::Candidate& lepton1,
+	      const bmm::Candidate& lepton2,
 	      const pat::PackedCandidate& kaon1,
 	      const pat::PackedCandidate& kaon2,
 	      float ll_mass_constraint=-1.0,
 	      float kk_mass_constraint=-1.0);
   
   KinematicFitResult
-  fitDstar(const LeptonCandidate& lepton1,
-	   const LeptonCandidate& lepton2,
+  fitDstar(const bmm::Candidate& lepton1,
+	   const bmm::Candidate& lepton2,
 	   const pat::PackedCandidate& pion,
 	   float mass_constraint);
 
@@ -194,19 +230,19 @@ private:
 		  float mass_constraint=-1.0);
 
   KinematicFitResult
-  vertexLeptonsWithPointingConstraint( const LeptonCandidate& lepton1,
-				       const LeptonCandidate& lepton2,
+  vertexLeptonsWithPointingConstraint( const bmm::Candidate& lepton1,
+				       const bmm::Candidate& lepton2,
 				       const reco::Vertex& primaryVertex);
 
   pair<double,double> computeDCA(const pat::PackedCandidate &kaon,
    				 reco::BeamSpot beamSpot);
-  GenMatchInfo getGenMatchInfo( const LeptonCandidate& lepton1,
-				const LeptonCandidate& lepton2,
+  GenMatchInfo getGenMatchInfo( const bmm::Candidate& lepton1,
+				const bmm::Candidate& lepton2,
 				const pat::PackedCandidate* kaon1 = 0,
 				const pat::PackedCandidate* kaon2 = 0,
 				const reco::Candidate* photon = 0);
   
-  const reco::Candidate* getGenParticle(const LeptonCandidate& cand);
+  const reco::Candidate* getGenParticle(const bmm::Candidate& cand);
 
   // Two track DOCA
   float 
@@ -229,30 +265,30 @@ private:
 			bool closestIn3D = true);
 
   CloseTrackInfo 
-  findTracksCompatibleWithTheVertex(const LeptonCandidate& lepton1,
-				    const LeptonCandidate& lepton2,
+  findTracksCompatibleWithTheVertex(const bmm::Candidate& lepton1,
+				    const bmm::Candidate& lepton2,
 				    const KinematicFitResult& fit,
 				    double maxDoca=0.03,
 				    std::vector<const pat::PackedCandidate*> ignoreTracks = 
 				    std::vector<const pat::PackedCandidate*>());
   float
-  computeTrkLeptonIsolation(const LeptonCandidate& lepton, 
-			    const LeptonCandidate& the_other_lepton,
+  computeTrkLeptonIsolation(const bmm::Candidate& lepton, 
+			    const bmm::Candidate& the_other_lepton,
 			    unsigned int primaryVertexIndex,
 			    float minPt=0.5, float dR=0.5,
 			    std::vector<const pat::PackedCandidate*> ignoreTracks = 
 			    std::vector<const pat::PackedCandidate*>());
   float
-  computeTrkDileptonIsolation(const LeptonCandidate& lepton1, 
-			      const LeptonCandidate& lepton2,
+  computeTrkDileptonIsolation(const bmm::Candidate& lepton1, 
+			      const bmm::Candidate& lepton2,
 			      unsigned int primaryVertexIndex,
 			      float minPt=0.9, float dR=0.7,
 			      std::vector<const pat::PackedCandidate*> ignoreTracks = 
 			      std::vector<const pat::PackedCandidate*>());
 
   float
-  otherVertexMaxProb(const LeptonCandidate& lepton1, 
-		     const LeptonCandidate& lepton2,
+  otherVertexMaxProb(const bmm::Candidate& lepton1, 
+		     const bmm::Candidate& lepton2,
 		     float min_pt = 0.5,
 		     float max_doca = 0.1,
 		     std::vector<const pat::PackedCandidate*> ignoreTracks = 
@@ -261,47 +297,41 @@ private:
   void 
   fillBtoKllInfo(pat::CompositeCandidate& bCand,
 		 const edm::Event& iEvent,
-		 const LeptonCandidate& muon1,
-		 const LeptonCandidate& muon2,
+		 const bmm::Candidate& muon1,
+		 const bmm::Candidate& muon2,
 		 const pat::PackedCandidate & kaon); 
-  void 
-  fillDstarInfo(pat::CompositeCandidate& dstarCand,
-		const edm::Event& iEvent,
-		const LeptonCandidate& muon1,
-		const LeptonCandidate& muon2,
-		const pat::PackedCandidate & pion); 
   void
   fillBtoKKllInfo(pat::CompositeCandidate& bCand,
 		     const edm::Event& iEvent,
-		     const LeptonCandidate& muon1,
-		     const LeptonCandidate& muon2,
+		     const bmm::Candidate& muon1,
+		     const bmm::Candidate& muon2,
 		     const pat::PackedCandidate & kaon1,
 		     const pat::PackedCandidate & kaon2); 
   void
   fillLLGammaGenInfo(pat::CompositeCandidate& llgCand,
 		       const edm::Event& iEvent,
-		       const LeptonCandidate& muon1,
-		       const LeptonCandidate& muon2,
+		       const bmm::Candidate& muon1,
+		       const bmm::Candidate& muon2,
 		       const reco::Candidate & photon);
   void
   fillLLGammaInfo(pat::CompositeCandidate& mmgCand,
 		    const edm::Event& iEvent,
-		    const LeptonCandidate& muon1,
-		    const LeptonCandidate& muon2,
+		    const bmm::Candidate& muon1,
+		    const bmm::Candidate& muon2,
 		    const pat::Photon & photon);
   void
   fillLLGammaConvInfo(pat::CompositeCandidate& mmgCand,
 			const edm::Event& iEvent,
-			const LeptonCandidate& muon1,
-			const LeptonCandidate& muon2,
+			const bmm::Candidate& muon1,
+			const bmm::Candidate& muon2,
 			const pat::CompositeCandidate& photon);
   void 
   fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCandidate& btokllCand,
 					       const pat::CompositeCandidate& dimuonCand,
 					       const edm::Event& iEvent,
 					       const KinematicFitResult& kinematicLLVertexFit,
-					       const LeptonCandidate& muon1,
-					       const LeptonCandidate& muon2,
+					       const bmm::Candidate& muon1,
+					       const bmm::Candidate& muon2,
 					       const pat::PackedCandidate & kaon);
  
   void 
@@ -309,24 +339,24 @@ private:
 			  const pat::CompositeCandidate& ll,
 			  const edm::Event& iEvent,
 			  const KinematicFitResult& kinematicLLVertexFit,
-			  const LeptonCandidate& muon1,
-			  const LeptonCandidate& muon2,
+			  const bmm::Candidate& muon1,
+			  const bmm::Candidate& muon2,
 			  const pat::Photon & photon);
   
   KinematicFitResult 
   fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
 		   const edm::Event& iEvent,
-		   const LeptonCandidate& lepton1,
-		   const LeptonCandidate& lepton2); 
+		   const bmm::Candidate& lepton1,
+		   const bmm::Candidate& lepton2); 
 
   void 
-  injectHadronsThatMayFakeMuons(std::vector<LeptonCandidate>& good_lepton_candidates);
+  injectHadronsThatMayFakeMuonsInMC(std::vector<bmm::Candidate>& good_lepton_candidates);
 
   void 
-  injectBhhHadrons(std::vector<LeptonCandidate>& good_lepton_candidates);
+  injectBhhHadrons(std::vector<bmm::Candidate>& good_lepton_candidates);
 
   void 
-  injectJpsiTracks(std::vector<LeptonCandidate>& good_lepton_candidates);
+  injectJpsiTracks(std::vector<bmm::Candidate>& good_lepton_candidates);
 
   float  computeAnalysisBDT(unsigned int event_idx);
   
@@ -383,18 +413,22 @@ private:
   bool   recoElElX_;
   bool   recoMuMuGamma_;
   bool   recoMuMuGammaConv_;
-  bool   recoMuMuPi_;
-  double minBhhPt_;
+  bool   recoDstar_;
+  bool   recoD0pipi_;
+  bool   recoD0Kpi_;
+  double minBhhTrkPt_;
+  double minDhhTrkPt_;
   double minJpsiHadronPt_;
   double minBhhMass_;
   double maxBhhMass_;
-  double maxBhhEta_;
+  double maxBhhTrkEta_;
+  double maxDhhTrkEta_;
   double minBhhSigLxy_;
   double minBhhVtxProb_;
   double minD0Mass_;
   double maxD0Mass_;
-  double minDstarMass_;
-  double maxDstarMass_;
+  double min_dm_;
+  double max_dm_;
   
   BdtReaderData bdtData_;
   TMVA::Reader  bdtReader0_;
@@ -444,18 +478,22 @@ injectJpsiTracks_(  iConfig.getParameter<bool>( "injectJpsiTracks" ) ),
 recoElElX_(      iConfig.getParameter<bool>( "recoElElX" ) ),
 recoMuMuGamma_(      iConfig.getParameter<bool>( "recoMuMuGamma" ) ),
 recoMuMuGammaConv_(  iConfig.getParameter<bool>( "recoMuMuGammaConv" ) ),
-recoMuMuPi_(      iConfig.getParameter<bool>( "recoMuMuPi" ) ),
-minBhhPt_(        iConfig.getParameter<double>( "minBhhHadronPt" ) ),
+recoDstar_(      iConfig.getParameter<bool>( "recoDstar" ) ),
+recoD0pipi_(     iConfig.getParameter<bool>( "recoD0pipi" ) ),
+recoD0Kpi_(      iConfig.getParameter<bool>( "recoD0Kpi" ) ),
+minBhhTrkPt_(        iConfig.getParameter<double>( "minBhhHadronPt" ) ),
+minDhhTrkPt_(        iConfig.getParameter<double>( "minDhhHadronPt" ) ),
 minJpsiHadronPt_( iConfig.getParameter<double>( "minJpsiHadronPt" ) ),
 minBhhMass_(      iConfig.getParameter<double>( "minBhhMass" ) ),
 maxBhhMass_(      iConfig.getParameter<double>( "maxBhhMass" ) ),
-maxBhhEta_(       iConfig.getParameter<double>( "maxBhhHadronEta" ) ),
+maxBhhTrkEta_(       iConfig.getParameter<double>( "maxBhhHadronEta" ) ),
+maxDhhTrkEta_(       iConfig.getParameter<double>( "maxDhhHadronEta" ) ),
 minBhhSigLxy_(    iConfig.getParameter<double>( "minBhhSigLxy" ) ),
 minBhhVtxProb_(   iConfig.getParameter<double>( "minBhhVtxProb" ) ),
 minD0Mass_(      iConfig.getParameter<double>( "minD0Mass" ) ),
 maxD0Mass_(      iConfig.getParameter<double>( "maxD0Mass" ) ),
-minDstarMass_(      iConfig.getParameter<double>( "minDstarMass" ) ),
-maxDstarMass_(      iConfig.getParameter<double>( "maxDstarMass" ) ),
+min_dm_(      iConfig.getParameter<double>( "minDm" ) ),
+max_dm_(      iConfig.getParameter<double>( "maxDm" ) ),
 bdtReader0_("!Color:Silent"),
 bdtReader1_("!Color:Silent"),
 bdtReader2_("!Color:Silent")
@@ -468,7 +506,7 @@ bdtReader2_("!Color:Silent")
     produces<pat::CompositeCandidateCollection>("BToKKmumu");
     produces<pat::CompositeCandidateCollection>("BToKKee");
     produces<pat::CompositeCandidateCollection>("BToMuMuGamma");
-    produces<pat::CompositeCandidateCollection>("DstarToMuMuPi");
+    produces<pat::CompositeCandidateCollection>("Dstar");
     
     setupTmvaReader(bdtReader0_,(iConfig.getParameter<edm::FileInPath>("bdtEvent0")).fullPath());
     setupTmvaReader(bdtReader1_,(iConfig.getParameter<edm::FileInPath>("bdtEvent1")).fullPath());
@@ -495,6 +533,15 @@ bool DileptonPlusXProducer::isGoodMuon(const pat::Muon& muon){
   if ( muon.pt() < ptMinMu_ || fabs(muon.eta()) > etaMaxMu_ ) return false;
   return true;
 }
+
+bool DileptonPlusXProducer::isGoodHadron(const pat::PackedCandidate& cand)
+{
+  if (cand.charge() == 0) return false;
+  if (not cand.hasTrackDetails()) return false;
+  if (abs(cand.pdgId()) != 211) return false;
+  if (not cand.bestTrack()->quality(reco::Track::highPurity)) return false;
+  return true;
+}  
 
 bool DileptonPlusXProducer::isGoodMuonCandidateFromTrack(const pat::PackedCandidate& cand)
 {
@@ -574,21 +621,21 @@ namespace {
       cand.addUserFloat( name+"_mu2phi",      fit.dau_p3(secondMuonDaughterIndex).phi() );
     }
     if (firstKaonDaughterIndex>=0){
-      cand.addUserFloat( name+"_kaon1pt",     fit.dau_p3(firstKaonDaughterIndex).perp() );
-      cand.addUserFloat( name+"_kaon1eta",    fit.dau_p3(firstKaonDaughterIndex).eta() );
-      cand.addUserFloat( name+"_kaon1phi",    fit.dau_p3(firstKaonDaughterIndex).phi() );
+      cand.addUserFloat( name+"_kaon1_pt",     fit.dau_p3(firstKaonDaughterIndex).perp() );
+      cand.addUserFloat( name+"_kaon1_eta",    fit.dau_p3(firstKaonDaughterIndex).eta() );
+      cand.addUserFloat( name+"_kaon1_phi",    fit.dau_p3(firstKaonDaughterIndex).phi() );
     }
     if (secondKaonDaughterIndex>=0){
-      cand.addUserFloat( name+"_kaon2pt",     fit.dau_p3(secondKaonDaughterIndex).perp() );
-      cand.addUserFloat( name+"_kaon2eta",    fit.dau_p3(secondKaonDaughterIndex).eta() );
-      cand.addUserFloat( name+"_kaon2phi",    fit.dau_p3(secondKaonDaughterIndex).phi() );
+      cand.addUserFloat( name+"_kaon2_pt",     fit.dau_p3(secondKaonDaughterIndex).perp() );
+      cand.addUserFloat( name+"_kaon2_eta",    fit.dau_p3(secondKaonDaughterIndex).eta() );
+      cand.addUserFloat( name+"_kaon2_phi",    fit.dau_p3(secondKaonDaughterIndex).phi() );
     }
   }
 }
 
 CloseTrackInfo 
-DileptonPlusXProducer::findTracksCompatibleWithTheVertex(const LeptonCandidate& lepton1,
-							 const LeptonCandidate& lepton2,
+DileptonPlusXProducer::findTracksCompatibleWithTheVertex(const bmm::Candidate& lepton1,
+							 const bmm::Candidate& lepton2,
 							 const KinematicFitResult& fit, 
 							 double maxDoca,
 							 std::vector<const pat::PackedCandidate*> ignoreTracks)
@@ -640,8 +687,8 @@ DileptonPlusXProducer::findTracksCompatibleWithTheVertex(const LeptonCandidate& 
 }
 
 float
-DileptonPlusXProducer::computeTrkLeptonIsolation(const LeptonCandidate& theLepton,
-						 const LeptonCandidate& theOtherLepton, 
+DileptonPlusXProducer::computeTrkLeptonIsolation(const bmm::Candidate& theLepton,
+						 const bmm::Candidate& theOtherLepton, 
 						 unsigned int primaryVertexIndex,
 						 float minPt, float dR,
 						 std::vector<const pat::PackedCandidate*> ignoreTracks)
@@ -669,8 +716,8 @@ DileptonPlusXProducer::computeTrkLeptonIsolation(const LeptonCandidate& theLepto
 }
 
 float
-DileptonPlusXProducer::computeTrkDileptonIsolation(const LeptonCandidate& lepton1,
-						   const LeptonCandidate& lepton2, 
+DileptonPlusXProducer::computeTrkDileptonIsolation(const bmm::Candidate& lepton1,
+						   const bmm::Candidate& lepton2, 
 						   unsigned int primaryVertexIndex,
 						   float minPt, float dR,
 						   std::vector<const pat::PackedCandidate*> ignoreTracks)
@@ -700,8 +747,8 @@ DileptonPlusXProducer::computeTrkDileptonIsolation(const LeptonCandidate& lepton
 
 
 float
-DileptonPlusXProducer::otherVertexMaxProb(const LeptonCandidate& lepton1, 
-					  const LeptonCandidate& lepton2,
+DileptonPlusXProducer::otherVertexMaxProb(const bmm::Candidate& lepton1, 
+					  const bmm::Candidate& lepton2,
 					  float minPt,
 					  float max_doca,
 					  std::vector<const pat::PackedCandidate*> ignoreTracks){
@@ -778,8 +825,8 @@ namespace {
 KinematicFitResult 
 DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
 					const edm::Event& iEvent,
-					const LeptonCandidate& lepton1,
-					const LeptonCandidate& lepton2 ) 
+					const bmm::Candidate& lepton1,
+					const bmm::Candidate& lepton2 ) 
 {
   auto kinematicLLVertexFit = vertexLeptonsWithKinematicFitter(lepton1, lepton2);
   kinematicLLVertexFit.postprocess(*beamSpot_);
@@ -789,12 +836,12 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
   
   if (isMC_){
     auto gen_ll = getGenMatchInfo(lepton1, lepton2);
-    dileptonCand.addUserInt(  "gen_l1_pdgId",   gen_ll.l1_pdgId);
-    dileptonCand.addUserInt(  "gen_l1_mpdgId",  gen_ll.l1_motherPdgId);
-    dileptonCand.addUserFloat("gen_l1_pt",      gen_ll.l1_pt);
-    dileptonCand.addUserInt(  "gen_l2_pdgId",   gen_ll.l2_pdgId);
-    dileptonCand.addUserInt(  "gen_l2_mpdgId",  gen_ll.l2_motherPdgId);
-    dileptonCand.addUserFloat("gen_l2_pt",      gen_ll.l2_pt);
+    dileptonCand.addUserInt(  "gen_" + lepton1.name() + "1_pdgId",   gen_ll.l1_pdgId);
+    dileptonCand.addUserInt(  "gen_" + lepton1.name() + "1_mpdgId",  gen_ll.l1_motherPdgId);
+    dileptonCand.addUserFloat("gen_" + lepton1.name() + "1_pt",      gen_ll.l1_pt);
+    dileptonCand.addUserInt(  "gen_" + lepton2.name() + "2_pdgId",   gen_ll.l2_pdgId);
+    dileptonCand.addUserInt(  "gen_" + lepton2.name() + "2_mpdgId",  gen_ll.l2_motherPdgId);
+    dileptonCand.addUserFloat("gen_" + lepton2.name() + "2_pt",      gen_ll.l2_pt);
     dileptonCand.addUserFloat("gen_mass",       gen_ll.ll_mass);
     dileptonCand.addUserFloat("gen_pt",         gen_ll.ll_pt);
     dileptonCand.addUserInt(  "gen_pdgId",      gen_ll.ll_pdgId);
@@ -907,8 +954,8 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
 
 void DileptonPlusXProducer::fillBtoKllInfo(pat::CompositeCandidate& btokllCand,
 					   const edm::Event& iEvent,
-					   const LeptonCandidate& lepton1,
-					   const LeptonCandidate& lepton2,
+					   const bmm::Candidate& lepton1,
+					   const bmm::Candidate& lepton2,
 					   const pat::PackedCandidate & kaon) 
 {
   btokllCand.addUserFloat("kaon_pt",     kaon.pt());
@@ -975,21 +1022,47 @@ void DileptonPlusXProducer::fillBtoKllInfo(pat::CompositeCandidate& btokllCand,
 }
 
 
-void DileptonPlusXProducer::fillDstarInfo(pat::CompositeCandidate& dstarCand,
-					  const edm::Event& iEvent,
-					  const LeptonCandidate& lepton1,
-					  const LeptonCandidate& lepton2,
-					  const pat::PackedCandidate & pion) 
+void
+DileptonPlusXProducer::fillDstarInfo(pat::CompositeCandidateCollection& dstar_collection,
+				     const edm::Event& iEvent,
+				     const KinematicFitResult& d0VertexFit,
+				     const pat::CompositeCandidate& d0Cand,
+				     const pat::PackedCandidate& soft_pion,
+				     int mm_index,
+				     int hh_index,
+				     const bmm::Candidate& daughter1,
+				     const bmm::Candidate& daughter2)
 {
-  dstarCand.addUserFloat("pion_pt",     pion.pt());
-  dstarCand.addUserFloat("pion_eta",    pion.eta());
-  dstarCand.addUserFloat("pion_phi",    pion.phi());
-  dstarCand.addUserFloat("pion_dxy_bs", pion.bestTrack()->dxy(*beamSpot_));
-  dstarCand.addUserFloat("pion_sdxy_bs", 
-			  pion.bestTrack()->dxyError()>0 ? fabs(pion.bestTrack()->dxy(*beamSpot_))/pion.bestTrack()->dxyError() : 0.0);
-  dstarCand.addUserInt("pion_charge", pion.charge());
+  pat::CompositeCandidate dstarCand;
+  dstarCand.addUserInt("mm_index", mm_index);
+  dstarCand.addUserInt("hh_index", hh_index);
+
+  // Dstar preselection is performed using original tracks. The best
+  // estimate of D0 parameters is achieved by vertexing its decay
+  // products. Dstar can be prompt and non-prompt. Therefore we can
+  // have the following dm estimates
+  // * dm_raw - dm computed without kinematic fits
+  // * dm_prompt - D0 vertexed and soft_pion is restricted to PV
+  // * dm_prompt2 - same as dm_prompt, but using second best PV
+  // * dm_free - D0 vertexed and soft_pion is not refit
+  //
+  // Dstar mass may have similiar to dm definitions, but since it's no
+  // expected to be used directly, we store only one mass varian: raw
+
+  // soft pion raw information
+  dstarCand.addUserFloat("pion_pt",     soft_pion.pt());
+  dstarCand.addUserFloat("pion_eta",    soft_pion.eta());
+  dstarCand.addUserFloat("pion_phi",    soft_pion.phi());
+  dstarCand.addUserFloat("pion_dxy_bs", soft_pion.bestTrack()->dxy(*beamSpot_));
+  auto pion_sdxy_bs = 0;
+  if (soft_pion.bestTrack()->dxyError() > 0)
+    pion_sdxy_bs = fabs(soft_pion.bestTrack()->dxy(*beamSpot_))/soft_pion.bestTrack()->dxyError();
+  dstarCand.addUserFloat("pion_sdxy_bs", pion_sdxy_bs);
+  dstarCand.addUserInt("pion_charge", soft_pion.charge());
+
+  // gen info
   if (isMC_){
-    auto gen_kll = getGenMatchInfo(lepton1, lepton2, &pion);
+    auto gen_kll = getGenMatchInfo(daughter1, daughter2, &soft_pion);
     dstarCand.addUserInt(  "gen_pion_pdgId",  gen_kll.kaon1_pdgId);
     dstarCand.addUserInt(  "gen_pion_mpdgId", gen_kll.kaon1_motherPdgId);
     dstarCand.addUserFloat("gen_pion_pt",     gen_kll.kaon1_pt);
@@ -1005,25 +1078,44 @@ void DileptonPlusXProducer::fillDstarInfo(pat::CompositeCandidate& dstarCand,
     dstarCand.addUserFloat("gen_cpdgId",      gen_kll.common_mother ? gen_kll.common_mother->pdgId() : 0);
   }
 
-  auto result_NoMassConstraint = fitDstar(lepton1, lepton2, pion, -1.0);
-  result_NoMassConstraint.postprocess(*beamSpot_);
-  auto result_NoMassConstraint_displacement = compute3dDisplacement(result_NoMassConstraint, *pvHandle_.product(),true);
-  addFitInfo(dstarCand, result_NoMassConstraint, "nomc", result_NoMassConstraint_displacement, -1, -1, 1);
+  // store mass information
+  auto d0_p4(makeLorentzVectorFromPxPyPzM(d0VertexFit.p3().x(),
+					  d0VertexFit.p3().y(),
+					  d0VertexFit.p3().z(),
+					  d0VertexFit.mass()));
+  float dstar_mass_raw = (soft_pion.p4() + daughter1.p4() + daughter2.p4()).mass();
+  dstarCand.addUserFloat("mass", dstar_mass_raw);
+  dstarCand.addUserFloat("dm_raw", dstar_mass_raw - (daughter1.p4() + daughter2.p4()).mass());
+  dstarCand.addUserFloat("dm_free", (soft_pion.p4() + d0_p4).mass() - d0_p4.mass());
+  float dm_prompt = 0;
 
-  // D0
-  auto result_MassConstraint = fitDstar(lepton1, lepton2, pion, D0Mass_);
-  result_MassConstraint.postprocess(*beamSpot_);
-  auto result_MassConstraint_displacement = compute3dDisplacement(result_MassConstraint, *pvHandle_.product(),true);
-  addFitInfo(dstarCand, result_MassConstraint, "mc", result_MassConstraint_displacement, -1, -1, 1);
+  // refit soft_pion with PV constraint
+  int pvIndex = d0Cand.userInt("kin_pvIndex");
+  
+  pat::PackedCandidate soft_pion_refit(soft_pion);
+  if (pvIndex >= 0){
+    auto soft_pion_refit_vertex = refitWithVertexConstraint(*soft_pion.bestTrack(), pvIndex);
+    if (soft_pion_refit_vertex.valid()){
+      auto soft_pion_refit_p3 = soft_pion_refit_vertex.dau_p3(0);
+      auto refit_p4(makeLorentzVectorFromPxPyPzM(soft_pion_refit_p3.x(),
+						 soft_pion_refit_p3.y(),
+						 soft_pion_refit_p3.z(),
+						 PionMass_));
+      dm_prompt = (refit_p4 + d0_p4).mass() - d0_p4.mass();
+    }
+  }
+  
+  dstarCand.addUserFloat("dm_prompt", dm_prompt);
+  
+  dstar_collection.push_back(dstarCand);
 }
 
 void DileptonPlusXProducer::fillBtoKKllInfo(pat::CompositeCandidate& bCand,
-					       const edm::Event& iEvent,
-					       const LeptonCandidate& lepton1,
-					       const LeptonCandidate& lepton2,
-					       const pat::PackedCandidate & kaon1,
-					       const pat::PackedCandidate & kaon2
-					       ) 
+					    const edm::Event& iEvent,
+					    const bmm::Candidate& lepton1,
+					    const bmm::Candidate& lepton2,
+					    const pat::PackedCandidate & kaon1,
+					    const pat::PackedCandidate & kaon2) 
 {
   bCand.addUserFloat("kaon1_pt",     kaon1.pt());
   bCand.addUserFloat("kaon1_eta",    kaon1.eta());
@@ -1096,8 +1188,8 @@ void DileptonPlusXProducer::fillBtoKKllInfo(pat::CompositeCandidate& bCand,
 
 void DileptonPlusXProducer::fillLLGammaGenInfo(pat::CompositeCandidate& llgCand,
 					       const edm::Event& iEvent,
-					       const LeptonCandidate& lepton1,
-					       const LeptonCandidate& lepton2,
+					       const bmm::Candidate& lepton1,
+					       const bmm::Candidate& lepton2,
 					       const reco::Candidate & photon) 
 {
   if (isMC_){
@@ -1120,8 +1212,8 @@ void DileptonPlusXProducer::fillLLGammaGenInfo(pat::CompositeCandidate& llgCand,
 
 void DileptonPlusXProducer::fillLLGammaInfo(pat::CompositeCandidate& llgCand,
 					      const edm::Event& iEvent,
-					      const LeptonCandidate& lepton1,
-					      const LeptonCandidate& lepton2,
+					      const bmm::Candidate& lepton1,
+					      const bmm::Candidate& lepton2,
 					      const pat::Photon & photon) 
 {
   // Rebuild ll vertex to ensure that the KinematicTree remains self
@@ -1187,8 +1279,8 @@ void DileptonPlusXProducer::fillLLGammaInfo(pat::CompositeCandidate& llgCand,
 
 void DileptonPlusXProducer::fillLLGammaConvInfo(pat::CompositeCandidate& llgCand,
 					     const edm::Event& iEvent,
-					     const LeptonCandidate& lepton1,
-					     const LeptonCandidate& lepton2,
+					     const bmm::Candidate& lepton1,
+					     const bmm::Candidate& lepton2,
 					     const pat::CompositeCandidate& photon) 
 {
   // Rebuild ll vertex to ensure that the KinematicTree remains self
@@ -1232,8 +1324,8 @@ DileptonPlusXProducer::fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::Composi
 							       const pat::CompositeCandidate& ll,
 							       const edm::Event& iEvent,
 							       const KinematicFitResult& kinematicLLVertexFit,
-							       const LeptonCandidate& lepton1,
-							       const LeptonCandidate& lepton2,
+							       const bmm::Candidate& lepton1,
+							       const bmm::Candidate& lepton2,
 							       const pat::PackedCandidate & kaon) 
 {
   ///////
@@ -1303,8 +1395,8 @@ DileptonPlusXProducer::fillMvaInfoForLLGamma(pat::CompositeCandidate& llg,
 					  const pat::CompositeCandidate& ll,
 					  const edm::Event& iEvent,
 					  const KinematicFitResult& kinematicLLVertexFit,
-					  const LeptonCandidate& lepton1,
-					  const LeptonCandidate& lepton2,
+					  const bmm::Candidate& lepton1,
+					  const bmm::Candidate& lepton2,
 					  const pat::Photon & photon) 
 {
   int pvIndex = ll.userInt("kin_pvIndex");
@@ -1374,7 +1466,7 @@ namespace {
 }
 
 void 
-DileptonPlusXProducer::injectHadronsThatMayFakeMuons(std::vector<LeptonCandidate>& good_lepton_candidates){
+DileptonPlusXProducer::injectHadronsThatMayFakeMuonsInMC(std::vector<bmm::Candidate>& good_lepton_candidates){
   // Loop over gen info and find interesting events
   for (auto const & cand: *prunedGenParticles_){
     // keep only interesting b-hadrons
@@ -1451,35 +1543,70 @@ DileptonPlusXProducer::injectHadronsThatMayFakeMuons(std::vector<LeptonCandidate
 	  }
 	}
 	if (good_candidate)
-	  good_lepton_candidates.push_back(LeptonCandidate(pfCand, hadron));
+	  good_lepton_candidates.push_back(bmm::Candidate(pfCand, hadron));
       }
     }
   }
 }
 
 void 
-DileptonPlusXProducer::injectBhhHadrons(std::vector<LeptonCandidate>& good_lepton_candidates){
+DileptonPlusXProducer::injectBhhHadrons(std::vector<bmm::Candidate>& good_lepton_candidates){
 
   // find reco tracks matching preselection requirements
   for (const auto& pfCand: *pfCandHandle_.product()){
     if (pfCand.charge() == 0) continue;
-    if (pfCand.pt() < minBhhPt_) continue;
-    if (abs(pfCand.eta()) > maxBhhEta_) continue;
+    if (pfCand.pt() < minBhhTrkPt_) continue;
+    if (abs(pfCand.eta()) > maxBhhTrkEta_) continue;
     if (not pfCand.hasTrackDetails()) continue;
     if (not pfCand.bestTrack()->quality(reco::Track::highPurity)) continue;
-    good_lepton_candidates.push_back(LeptonCandidate(pfCand));
+    good_lepton_candidates.push_back(bmm::Candidate(pfCand));
   }
 }
 
+// void 
+// DileptonPlusXProducer::injectDhhHadrons(std::vector<bmm::Candidate>& good_lepton_candidates){
+//   std::vector<const pat::PackedCandidate*> selected_candidates;
+
+//   // find reco tracks matching preselection requirements
+//   for (const auto& pfCand: *pfCandHandle_.product()){
+//     if (pfCand.charge() == 0) continue;
+//     if (pfCand.pt() < minDhhTrkPt_) continue;
+//     if (abs(pfCand.eta()) > maxDhhTrkEta_) continue;
+//     if (not pfCand.hasTrackDetails()) continue;
+//     if (not pfCand.bestTrack()->quality(reco::Track::highPurity)) continue;
+//     selected_candidates.push_back(&pfCand);
+//   }
+  
+//   if (selected_candidates.size() < 1) return;
+//   for (unsigned int i=0; i < selected_candidates.size() - 1; ++i){
+//     auto kaon1 bmm::Candidate(*selected_candidates.at(i));
+//     kaon1.setType(KaonMass_, "had");
+//     auto pion1 bmm::Candidate(*selected_candidates.at(i));
+//     pion1.setType(PionMass_, "had");
+//     for (unsigned int j=i + 1; j < selected_candidates.size(); ++j){
+//       auto kaon2 bmm::Candidate(*selected_candidates.at(j));
+//       kaon2.setType(KaonMass_, "had");
+//       auto pion2 bmm::Candidate(*selected_candidates.at(j));
+//       pion2.setType(PionMass_, "had");
+      
+
+
+
+//   // good_lepton_candidates.push_back(bmm::Candidate(pfCand));
+
+
+// }
+
+
 void 
-DileptonPlusXProducer::injectJpsiTracks(std::vector<LeptonCandidate>& good_lepton_candidates){
+DileptonPlusXProducer::injectJpsiTracks(std::vector<bmm::Candidate>& good_lepton_candidates){
   // Look for Jpsi to mu mu candidates even if muon is too soft to be
   // constructed as a muon
 
   // find reco tracks matching preselection requirements
   const auto& pf_candidates = *pfCandHandle_.product();
     
-  std::vector<LeptonCandidate> muon_candidates;
+  std::vector<bmm::Candidate> muon_candidates;
   muon_candidates.assign(good_lepton_candidates.begin(), good_lepton_candidates.end());
 
   for (unsigned int i=0; i < pf_candidates.size(); ++i){
@@ -1489,7 +1616,7 @@ DileptonPlusXProducer::injectJpsiTracks(std::vector<LeptonCandidate>& good_lepto
       if (overlap(lep, pf_candidates.at(i))) new_mu = false;
     }
     if (not new_mu) continue;
-    muon_candidates.push_back(LeptonCandidate(pf_candidates.at(i)));
+    muon_candidates.push_back(bmm::Candidate(pf_candidates.at(i)));
     muon_candidates.back().setType(MuonMass_, "mu");
   }
   
@@ -1516,6 +1643,7 @@ DileptonPlusXProducer::injectJpsiTracks(std::vector<LeptonCandidate>& good_lepto
   }
 }
 
+
 // namespace {
 //   void dump_track(const reco::Track* trk){
 //     std::cout << "pt(): " << trk->pt() << std::endl;
@@ -1541,6 +1669,215 @@ DileptonPlusXProducer::injectJpsiTracks(std::vector<LeptonCandidate>& good_lepto
 //     std::cout << "XYZT: " << photon->px() << ", " << photon->py() << ", " << photon->pz() << ", " << photon->energy() << std::endl;
 //   }
 // }
+
+
+
+bool DileptonPlusXProducer::preprocess(pat::CompositeCandidate& candidate,
+				       const edm::Event& iEvent,
+				       const bmm::Candidate& cand1,
+				       const bmm::Candidate& cand2)
+{
+  auto ll_doca = distanceOfClosestApproach(cand1.track(), cand2.track());
+  
+  if (maxTwoTrackDOCA_>0 and ll_doca > maxTwoTrackDOCA_) return false;
+  if (diLeptonCharge_ && cand1.charge() * cand2.charge() > 0) return false;
+
+  // We have a decent candidate. Let's fill some information
+  candidate.addUserInt(   cand1.name() + "1_index", cand1.index());
+  candidate.addUserInt(   cand1.name() + "1_pdgId", cand1.pdgId());
+  candidate.addUserFloat( cand1.name() + "1_pt",    cand1.pt());
+  candidate.addUserFloat( cand1.name() + "1_eta",   cand1.eta());
+  candidate.addUserFloat( cand1.name() + "1_phi",   cand1.phi());
+  candidate.addUserInt(   cand2.name() + "2_index", cand2.index());
+  candidate.addUserInt(   cand2.name() + "2_pdgId", cand2.pdgId());
+  candidate.addUserFloat( cand2.name() + "2_pt",    cand2.pt());
+  candidate.addUserFloat( cand2.name() + "2_eta",   cand2.eta());
+  candidate.addUserFloat( cand2.name() + "2_phi",   cand2.phi());
+  candidate.addUserFloat( "doca",                     ll_doca);
+
+  return true;
+}
+
+void
+DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk,
+					  pat::CompositeCandidateCollection& llkk,
+					  const edm::Event& iEvent,
+					  const KinematicFitResult& kinematicLLVertexFit,
+					  const pat::CompositeCandidate& dileptonCand,
+					  int ll_index,
+					  const bmm::Candidate& lepton1,
+					  const bmm::Candidate& lepton2)
+{
+  auto nPFCands = pfCandHandle_->size();
+  for (unsigned int k = 0; k < nPFCands; ++k) {
+    pat::PackedCandidate kaonCand1((*pfCandHandle_)[k]);
+    kaonCand1.setMass(KaonMass_);
+    if (kaonCand1.charge() == 0 ) continue;
+    if (!kaonCand1.hasTrackDetails()) continue;
+    if (abs(kaonCand1.pdgId()) != 211) continue;
+    if (kaonCand1.pt() < ptMinKaon_ or abs(kaonCand1.eta()) > etaMaxKaon_) continue;
+    if (overlap(lepton1, kaonCand1) || overlap(lepton2, kaonCand1)) continue;
+    double l1_kaon_doca = distanceOfClosestApproach(lepton1.track(),
+						    kaonCand1.bestTrack());
+    double l2_kaon_doca = distanceOfClosestApproach(lepton2.track(),
+						    kaonCand1.bestTrack());
+    if (maxTwoTrackDOCA_ > 0 and l1_kaon_doca > maxTwoTrackDOCA_) continue;
+    if (maxTwoTrackDOCA_ > 0 and l2_kaon_doca > maxTwoTrackDOCA_) continue;
+	      
+    bool goodBtoLLK = true;
+
+    double kll_mass = (lepton1.p4() + lepton2.p4() + kaonCand1.p4()).mass();
+    if (kll_mass < minBKllMass_ || kll_mass > maxBKllMass_) goodBtoLLK = false;
+	    
+    // fill BtoLLK candidate info
+    if (goodBtoLLK){
+      pat::CompositeCandidate btokllCand;
+      btokllCand.addUserInt(dileptonCand.name() + "_index", ll_index);
+      btokllCand.addUserFloat("kaon_l1_doca", l1_kaon_doca);
+      btokllCand.addUserFloat("kaon_l2_doca", l2_kaon_doca);
+      
+      fillBtoKllInfo(btokllCand, iEvent, lepton1, lepton2, kaonCand1);
+      fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokllCand, dileptonCand, iEvent, 
+						   kinematicLLVertexFit, lepton1, lepton2, kaonCand1);
+
+      llk.push_back(btokllCand);
+      
+    }
+
+    // Build BsToKKll
+    for (unsigned int k2 = k+1; k2 < nPFCands; ++k2) { 
+      // only works if selection requirements for both kaons are identical
+      pat::PackedCandidate kaonCand2((*pfCandHandle_)[k2]);
+      kaonCand2.setMass(KaonMass_);
+      if (kaonCand2.charge() == 0 ) continue;
+      if (!kaonCand2.hasTrackDetails()) continue;
+      if (abs(kaonCand2.pdgId()) != 211) continue;
+      if (kaonCand2.pt() < ptMinKaon_ || abs(kaonCand2.eta()) > etaMaxKaon_) continue;
+      if (overlap(lepton1, kaonCand2) || overlap(lepton2, kaonCand2)) continue;
+      double l1_kaon2_doca = distanceOfClosestApproach(lepton1.track(),
+						       kaonCand2.bestTrack());
+      double l2_kaon2_doca = distanceOfClosestApproach(lepton2.track(),
+						       kaonCand2.bestTrack());
+      if (maxTwoTrackDOCA_>0 and l1_kaon2_doca > maxTwoTrackDOCA_) continue;
+      if (maxTwoTrackDOCA_>0 and l2_kaon2_doca > maxTwoTrackDOCA_) continue;
+      
+      bool goodBtoLLKK = true;
+      
+      double kkll_mass = (lepton1.p4() + lepton2.p4() + kaonCand1.p4() + kaonCand2.p4()).mass();
+      if ( kkll_mass < minBKKllMass_ || kkll_mass > maxBKKllMass_ ) goodBtoLLKK = false;
+		  
+      // fill BtoLLKK candidate info
+      if (goodBtoLLKK){
+	pat::CompositeCandidate btokkllCand;
+	btokkllCand.addUserInt(dileptonCand.name() + "_index", ll_index);
+	btokkllCand.addUserFloat("kaon1_l1_doca", l1_kaon_doca);
+	btokkllCand.addUserFloat("kaon1_l2_doca", l2_kaon_doca);
+	btokkllCand.addUserFloat("kaon2_l1_doca", l1_kaon2_doca);
+	btokkllCand.addUserFloat("kaon2_l2_doca", l2_kaon2_doca);
+	
+	fillBtoKKllInfo(btokkllCand, iEvent, lepton1, lepton2, kaonCand1, kaonCand2);
+	// FIXME
+	// fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokkllCand,dileptonCand,iEvent,kinematicLLVertexFit,lepton1,lepton2,kaonCand1);
+
+	llkk.push_back(btokkllCand);
+	
+      }
+    }
+  }
+}
+
+void
+DileptonPlusXProducer::buildDstarCandidates(pat::CompositeCandidateCollection& dstar_collection,
+					    pat::CompositeCandidateCollection& hh_collection,
+					    const edm::Event& iEvent,
+					    const pat::PackedCandidate& had1,
+					    const pat::PackedCandidate& had2)
+{
+  if (had1.pt() < minDhhTrkPt_ || fabs(had1.eta()) > maxDhhTrkEta_) return;
+  if (had2.pt() < minDhhTrkPt_ || fabs(had2.eta()) > maxDhhTrkEta_) return;
+  AddFourMomenta addP4;
+  auto nPFCands = pfCandHandle_->size();
+  for (unsigned int k = 0; k < nPFCands; ++k) {
+    pat::PackedCandidate soft_pion((*pfCandHandle_)[k]);
+    if ( not isGoodHadron(soft_pion) ) continue;
+    
+    if (overlap(had1, soft_pion) || overlap(had2, soft_pion)) continue;
+
+    soft_pion.setMass(PionMass_);
+
+    bmm::Candidate pion1(had1);
+    pion1.setType(PionMass_, "had", 211 * had1.charge());
+    bmm::Candidate pion2(had2);
+    pion2.setType(PionMass_, "had", 211 * had2.charge());
+
+    bmm::Candidate kaon1(had1);
+    kaon1.setType(KaonMass_, "had", 321 * had1.charge());
+    bmm::Candidate kaon2(had2);
+    kaon2.setType(KaonMass_, "had", 321 * had2.charge());
+
+    // D0->pipi
+    if (recoD0pipi_){
+      double d0_mass = (pion1.p4() + pion2.p4()).mass();
+      double dstar_mass = (pion1.p4() + pion2.p4() + soft_pion.p4()).mass();
+
+      if (d0_mass > minD0Mass_ && d0_mass < maxD0Mass_ &&
+	  (dstar_mass - d0_mass) > min_dm_ && (dstar_mass - d0_mass) < max_dm_){
+	
+	pat::CompositeCandidate d0Cand(std::string("hh"));
+	d0Cand.addDaughter( pion1 , "pion1");
+	d0Cand.addDaughter( pion2 , "pion2");
+	addP4.set( d0Cand );
+	
+	if (preprocess(d0Cand, iEvent, pion1, pion2)){
+	  // Kinematic Fits
+	  auto d0VertexFit = fillDileptonInfo(d0Cand, iEvent, pion1, pion2);
+	  int hh_index = hh_collection.size();
+	  hh_collection.push_back(d0Cand);
+	  fillDstarInfo(dstar_collection, iEvent, d0VertexFit, d0Cand, soft_pion,
+			-1, hh_index, pion1, pion2);
+	}
+      }
+    }
+
+    // D0->Kpi
+    if (recoD0Kpi_){
+      const bmm::Candidate *daughter1(nullptr), *daughter2(nullptr);
+      
+      if (pion2.charge() == soft_pion.charge()){
+	// Kpi case
+	daughter1 = &kaon1;
+	daughter2 = &pion2;
+      } else {
+	// piK case
+	daughter1 = &pion1;
+	daughter2 = &kaon2;
+      }
+	
+      double d0_mass = (daughter1->p4() + daughter2->p4()).mass();
+      double dstar_mass = (daughter1->p4() + daughter2->p4() + soft_pion.p4()).mass();
+
+      if (d0_mass > minD0Mass_ && d0_mass < maxD0Mass_ &&
+	  (dstar_mass - d0_mass) > min_dm_ && (dstar_mass - d0_mass) < max_dm_){
+	
+	pat::CompositeCandidate d0Cand(std::string("hh"));
+	d0Cand.addDaughter( *daughter1 , "had1");
+	d0Cand.addDaughter( *daughter2 , "had2");
+	addP4.set( d0Cand );
+	
+	if (preprocess(d0Cand, iEvent, *daughter1, *daughter2)){
+	  // Kinematic Fits
+	  auto d0VertexFit = fillDileptonInfo(d0Cand, iEvent, *daughter1, *daughter2);
+	  int hh_index = hh_collection.size();
+	  hh_collection.push_back(d0Cand);
+	  fillDstarInfo(dstar_collection, iEvent, d0VertexFit, d0Cand, soft_pion,
+			-1, hh_index, *daughter1, *daughter2);
+	}
+      }
+    }
+
+  }
+}
+
 
 void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     bField_ = &iSetup.getData(bFieldToken_);
@@ -1593,304 +1930,395 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
     // unsigned int lostTrackNumber = useLostTracks_ ? lostTrackHandle->size() : 0;
     
     // Output collection
-    auto dimuon      = std::make_unique<pat::CompositeCandidateCollection>();
-    auto dielectron  = std::make_unique<pat::CompositeCandidateCollection>();
-    auto dihadron    = std::make_unique<pat::CompositeCandidateCollection>();
+    auto mm_collection = std::make_unique<pat::CompositeCandidateCollection>();
+    auto ee_collection = std::make_unique<pat::CompositeCandidateCollection>();
+    auto hh_collection = std::make_unique<pat::CompositeCandidateCollection>();
     auto btokmm  = std::make_unique<pat::CompositeCandidateCollection>();
     auto btokee  = std::make_unique<pat::CompositeCandidateCollection>();
     auto btokkmm = std::make_unique<pat::CompositeCandidateCollection>();
     auto btokkee = std::make_unique<pat::CompositeCandidateCollection>();
     auto btommg  = std::make_unique<pat::CompositeCandidateCollection>();
-    auto dstar2mmpi = std::make_unique<pat::CompositeCandidateCollection>();
+    auto dstar_collection = std::make_unique<pat::CompositeCandidateCollection>();
     AddFourMomenta addP4;
 
-    // Add good muon candidates
-    std::vector<LeptonCandidate> good_lepton_candidates;
+    // Build input lists
+
+    // Good muons
+    std::vector<bmm::Candidate> good_muon_candidates;
     for (unsigned int i = 0; i < nMuons; ++i) {
       const pat::Muon & muon = muonHandle->at(i);
       if (not isGoodMuon(muon)) continue;
-      good_lepton_candidates.push_back(LeptonCandidate(muon, i));
+      good_muon_candidates.push_back(bmm::Candidate(muon, i));
     }
-    // std::cout << "good_lepton_candidates.size() after muons: " << good_lepton_candidates.size() << std::endl;
     
-    // Inject B to hh candidates where hadrons are explicitely matched
-    // to gen level decays 
-    if ( injectMatchedBtohh_ and isMC_ ) {
-      injectHadronsThatMayFakeMuons(good_lepton_candidates);
-    }
-    // std::cout << "good_lepton_candidates.size() after Bhh MC: " << good_lepton_candidates.size() << std::endl;
-
-    // Inject reco B to hh candidates
-    if ( injectBtohh_ ) {
-      injectBhhHadrons(good_lepton_candidates);
-    }
-    // std::cout << "good_lepton_candidates.size() after Bhh: " << good_lepton_candidates.size() << std::endl;
-
-    // Inject Jpsi to mumu based on charged tracks
-    if ( injectJpsiTracks_ ) {
-      injectJpsiTracks(good_lepton_candidates);
-    }
-    // std::cout << "good_lepton_candidates.size() after Jpsi: " << good_lepton_candidates.size() << std::endl;
-
-    // Dielectrons
+    // Good electrons
+    std::vector<bmm::Candidate> good_electron_candidates;
     if ( recoElElX_ ){
       for (unsigned int i = 0; i < electronHandle->size(); ++i) {
 	const pat::Electron & el = electronHandle->at(i);
 	if (not isGoodElectron(el)) continue;
-	good_lepton_candidates.push_back(LeptonCandidate(el, i));
+	good_electron_candidates.push_back(bmm::Candidate(el, i));
       }
     }
-    // std::cout << "good_lepton_candidates.size() after electrons: " << good_lepton_candidates.size() << std::endl;
+    
+    // std::vector<bmm::Candidate> good_hadron_candidates;
+    // // Inject B to hh candidates where hadrons are explicitely matched
+    // // to gen level decays 
+    // if ( injectMatchedBtohh_ and isMC_ ) {
+    //   injectHadronsThatMayFakeMuonsInMC(good_hadron_candidates);
+    // }
+    // // Inject reco B to hh candidates
+    // if ( injectBtohh_ ) {
+    //   injectBhhHadrons(good_hadron_candidates);
+    // }
+    // // Inject Jpsi to mumu based on charged tracks
+    // if ( injectJpsiTracks_ ) {
+    //   injectJpsiTracks(good_hadron_candidates);
+    // }
 
-    // std::cout << "good_lepton_candidates.size(): " << good_lepton_candidates.size() << std::endl;
-    // Build dilepton candidates
-    if ( good_lepton_candidates.size() > 1 ){
-      for (unsigned int i = 0; i < good_lepton_candidates.size(); ++i) {
-	const LeptonCandidate & lepton1 = good_lepton_candidates.at(i);
-	for (unsigned int j = 0; j < good_lepton_candidates.size(); ++j) {
+    // Build dimuon candidates
+    if ( good_muon_candidates.size() > 1 ){
+      for (unsigned int i = 0; i < good_muon_candidates.size(); ++i) {
+	const bmm::Candidate & muon1 = good_muon_candidates.at(i);
+	for (unsigned int j = 0; j < good_muon_candidates.size(); ++j) {
+	  const bmm::Candidate & muon2 = good_muon_candidates.at(j);
 	  if (i==j) continue;
-	  const LeptonCandidate & lepton2 = good_lepton_candidates.at(j);
-	  // Ensure that lepton1.pt > lepton2.pt
-	  if (lepton2.pt() > lepton1.pt()) continue;
 
-	  // Ensure leptons have matching types.
-	  if (lepton1.name() != lepton2.name()) continue;
+	  // Enforce momentum ordering
+	  if (muon2.pt() > muon1.pt()) continue;
 
-	  auto ll_doca = distanceOfClosestApproach(lepton1.track(), lepton2.track());
+	  pat::CompositeCandidate dimuonCand(std::string("mm"));
+	  dimuonCand.addDaughter( muon1 , "muon1");
+	  dimuonCand.addDaughter( muon2 , "muon2");
+	  addP4.set( dimuonCand );
 
-	  if (maxTwoTrackDOCA_>0 and ll_doca > maxTwoTrackDOCA_) continue;
-	  if (diLeptonCharge_ && lepton1.charge() * lepton2.charge() > 0) continue;
-
-	  std::string candidate_name("mm");
-	  if (lepton1.name() == "el")  candidate_name = "ee";
-	  if (lepton1.name() == "had") candidate_name = "hh";
+	  if (not preprocess(dimuonCand, iEvent, muon1, muon2)) continue;
 	  
-	  pat::CompositeCandidate dileptonCand(candidate_name);
-	  dileptonCand.addDaughter( lepton1 , "lepton1");
-	  dileptonCand.addDaughter( lepton2 , "lepton2");
-	  addP4.set( dileptonCand );
-
-	  // reco Btohh
-	  if (dileptonCand.name() == "hh")
-	    if (not lepton1.from_gen() and not lepton2.from_gen())
-	      {
-		if (dileptonCand.mass() < minBhhMass_) continue;
-		if (dileptonCand.mass() > maxBhhMass_) continue;
-	      }
-
-	  dileptonCand.addUserInt(   lepton1.name() + "1_index", lepton1.index());
-	  dileptonCand.addUserInt(   lepton1.name() + "1_pdgId", lepton1.pdgId());
-	  dileptonCand.addUserFloat( lepton1.name() + "1_pt",    lepton1.pt());
-	  dileptonCand.addUserFloat( lepton1.name() + "1_eta",   lepton1.eta());
-	  dileptonCand.addUserFloat( lepton1.name() + "1_phi",   lepton1.phi());
-	  dileptonCand.addUserInt(   lepton2.name() + "2_index", lepton2.index());
-	  dileptonCand.addUserInt(   lepton2.name() + "2_pdgId", lepton2.pdgId());
-	  dileptonCand.addUserFloat( lepton2.name() + "2_pt",    lepton2.pt());
-	  dileptonCand.addUserFloat( lepton2.name() + "2_eta",   lepton2.eta());
-	  dileptonCand.addUserFloat( lepton2.name() + "2_phi",   lepton2.phi());
-	  dileptonCand.addUserFloat( "doca",                     ll_doca);
-
 	  // Kinematic Fits
-	  auto kinematicLLVertexFit = fillDileptonInfo(dileptonCand, iEvent, lepton1, lepton2);
+	  auto kinematicLLVertexFit = fillDileptonInfo(dimuonCand, iEvent, muon1, muon2);
 
-	  // reco Btohh
-	  if (dileptonCand.name() == "hh")
-	    if (not lepton1.from_gen() and not lepton2.from_gen())
-	      {
-		if (not kinematicLLVertexFit.valid()) continue;
-		if (kinematicLLVertexFit.vtxProb() < minBhhVtxProb_) continue;
-		if (kinematicLLVertexFit.sigLxy < minBhhSigLxy_) continue;
-	      }
-
-	  // dilepton + X
-	  if (dileptonCand.name() == "mm" || dileptonCand.name() == "ee"){
-	    int ll_index = -1;
-	    if (dileptonCand.name() == "mm") ll_index = dimuon->size();
-	    if (dileptonCand.name() == "ee") ll_index = dielectron->size();
+	  // dimuon + X
+	  int mm_index = mm_collection->size();
 	    
-	    auto dilepton_p4(makeLorentzVectorFromPxPyPzM(kinematicLLVertexFit.p3().x(),
-							  kinematicLLVertexFit.p3().y(),
-							  kinematicLLVertexFit.p3().z(),
-							  kinematicLLVertexFit.mass()));
-	    // MuMuGamma
-	    if (recoMuMuGamma_ && dileptonCand.name() == "mm" && kinematicLLVertexFit.valid()){
-	      for (unsigned int k=0; k < nPhotons; ++k){
-		auto photon(photonHandle->at(k));
-		if (photon.pt() < minGammaPt_) continue;
-		const auto & vtx_point = kinematicLLVertexFit.refitVertex->vertexState().position();
-		photon.setVertex(reco::Photon::Point(vtx_point.x(), vtx_point.y(), vtx_point.z()));
-		double mmg_mass = (dilepton_p4 + photon.p4()).mass();
-		if (mmg_mass >= minLLGammaMass_ and mmg_mass <= maxLLGammaMass_){
-		  // fill BtoLLPhoton candidate info
-		  pat::CompositeCandidate mmgCand;
-		  mmgCand.addUserInt("mm_index", ll_index);
-		  mmgCand.addUserInt("ph_index", k);
-		  mmgCand.addUserFloat("mass", mmg_mass);
-		  
-		  fillLLGammaInfo(mmgCand,iEvent,lepton1,lepton2,photon);
-		  fillMvaInfoForLLGamma(mmgCand,dileptonCand,iEvent,kinematicLLVertexFit,lepton1,lepton2,photon);
-
-		  btommg->push_back(mmgCand);
-		}
+	  auto dimuon_p4(makeLorentzVectorFromPxPyPzM(kinematicLLVertexFit.p3().x(),
+						      kinematicLLVertexFit.p3().y(),
+						      kinematicLLVertexFit.p3().z(),
+						      kinematicLLVertexFit.mass()));
+	  // MuMuGamma
+	  if (recoMuMuGamma_ && kinematicLLVertexFit.valid()){
+	    for (unsigned int k=0; k < nPhotons; ++k){
+	      auto photon(photonHandle->at(k));
+	      if (photon.pt() < minGammaPt_) continue;
+	      const auto & vtx_point = kinematicLLVertexFit.refitVertex->vertexState().position();
+	      photon.setVertex(reco::Photon::Point(vtx_point.x(), vtx_point.y(), vtx_point.z()));
+	      double mmg_mass = (dimuon_p4 + photon.p4()).mass();
+	      if (mmg_mass >= minLLGammaMass_ and mmg_mass <= maxLLGammaMass_){
+		// fill BtoLLPhoton candidate info
+		pat::CompositeCandidate mmgCand;
+		mmgCand.addUserInt("mm_index", mm_index);
+		mmgCand.addUserInt("ph_index", k);
+		mmgCand.addUserFloat("mass", mmg_mass);
+		
+		fillLLGammaInfo(mmgCand,iEvent,muon1,muon2,photon);
+		fillMvaInfoForLLGamma(mmgCand,dimuonCand,iEvent,kinematicLLVertexFit,muon1,muon2,photon);
+		
+		btommg->push_back(mmgCand);
 	      }
 	    }
+	  }
 
-	    // MuMuGamma with photon conversion
-	    if (recoMuMuGammaConv_ && dileptonCand.name() == "mm" && kinematicLLVertexFit.valid()){
-	      for (unsigned int k=0; k < nConversions; ++k){
+	  // MuMuGamma with photon conversion
+	  if (recoMuMuGammaConv_ && kinematicLLVertexFit.valid()){
+	    for (unsigned int k=0; k < nConversions; ++k){
 		auto conversion(conversionHandle->at(k));
 		if (conversion.pt() < minGammaPt_) continue;
-		double mmg_mass = (dilepton_p4 + conversion.p4()).mass();
+		double mmg_mass = (dimuon_p4 + conversion.p4()).mass();
 		if (mmg_mass >= minLLGammaMass_ and mmg_mass <= maxLLGammaMass_){
 		  // fill BtoLLPhoton candidate info
 		  pat::CompositeCandidate mmgCand;
-		  mmgCand.addUserInt("mm_index", ll_index);
+		  mmgCand.addUserInt("mm_index", mm_index);
 		  mmgCand.addUserInt("ph_index", -1);
 		  mmgCand.addUserFloat("mass", mmg_mass);
 		  
-		  fillLLGammaConvInfo(mmgCand,iEvent, lepton1, lepton2, conversion);
+		  fillLLGammaConvInfo(mmgCand,iEvent, muon1, muon2, conversion);
 		  // fillMvaInfoForLLGamma(mmgCand,dileptonCand,iEvent,kinematicLLVertexFit,lepton1,lepton2,photon);
 
 		  btommg->push_back(mmgCand);
 		}
-	      }
 	    }
-
-	    // Dstar to D0 pi, D0 to MuMu
-	    if (recoMuMuPi_ && dileptonCand.name() == "mm" && kinematicLLVertexFit.valid() &&
-		dilepton_p4.mass() > minD0Mass_ && dilepton_p4.mass() < maxD0Mass_){
-	      for (unsigned int k = 0; k < nPFCands; ++k) {
-		pat::PackedCandidate pionCand((*pfCandHandle_)[k]);
-		if ( abs(pionCand.pdgId()) != 211 ) continue;
-		if (pionCand.charge() == 0 ) continue;
-		if ( not pionCand.hasTrackDetails() ) continue;
-		pionCand.setMass(PionMass_);
-		if (overlap(lepton1, pionCand) || overlap(lepton2, pionCand)) continue;
-		double l1_pion_doca = distanceOfClosestApproach(lepton1.track(),
-								pionCand.bestTrack());
-		double l2_pion_doca = distanceOfClosestApproach(lepton2.track(),
-								pionCand.bestTrack());
-		if (maxTwoTrackDOCA_ > 0 and l1_pion_doca > maxTwoTrackDOCA_) continue;
-		if (maxTwoTrackDOCA_ > 0 and l2_pion_doca > maxTwoTrackDOCA_) continue;
-		
-		double mmpi_mass = (dilepton_p4 + pionCand.p4()).mass();
-		if (mmpi_mass < minDstarMass_ or mmpi_mass > maxDstarMass_) continue;
-		
-		pat::CompositeCandidate dstarCand;
-		dstarCand.addUserInt(dileptonCand.name() + "_index", ll_index);
-		dstarCand.addUserFloat("pion_l1_doca", l1_pion_doca);
-		dstarCand.addUserFloat("pion_l2_doca", l2_pion_doca);
-		
-		fillDstarInfo(dstarCand, iEvent, lepton1, lepton2, pionCand);
-
-		dstar2mmpi->push_back(dstarCand);
-	      }
-	    }
-	    
-	    // llK and llKK
-	    for (unsigned int k = 0; k < nPFCands; ++k) {
-	      pat::PackedCandidate kaonCand1((*pfCandHandle_)[k]);
-	      kaonCand1.setMass(KaonMass_);
-	      if (kaonCand1.charge() == 0 ) continue;
-	      if (!kaonCand1.hasTrackDetails()) continue;
-	      if (abs(kaonCand1.pdgId()) != 211) continue;
-	      if (kaonCand1.pt() < ptMinKaon_ or abs(kaonCand1.eta()) > etaMaxKaon_) continue;
-	      if (overlap(lepton1, kaonCand1) || overlap(lepton2, kaonCand1)) continue;
-	      double l1_kaon_doca = distanceOfClosestApproach(lepton1.track(),
-							       kaonCand1.bestTrack());
-	      double l2_kaon_doca = distanceOfClosestApproach(lepton2.track(),
-							       kaonCand1.bestTrack());
-	      if (maxTwoTrackDOCA_ > 0 and l1_kaon_doca > maxTwoTrackDOCA_) continue;
-	      if (maxTwoTrackDOCA_ > 0 and l2_kaon_doca > maxTwoTrackDOCA_) continue;
-	      
-	      
-	      bool goodBtoLLK = true;
-
-	      double kll_mass = (lepton1.p4() + lepton2.p4() + kaonCand1.p4()).mass();
-	      if (kll_mass < minBKllMass_ || kll_mass > maxBKllMass_) goodBtoLLK = false;
-	    
-	      // fill BtoLLK candidate info
-	      if (goodBtoLLK){
-		pat::CompositeCandidate btokllCand;
-		btokllCand.addUserInt(dileptonCand.name() + "_index", ll_index);
-		btokllCand.addUserFloat("kaon_l1_doca", l1_kaon_doca);
-		btokllCand.addUserFloat("kaon_l2_doca", l2_kaon_doca);
-		
-		fillBtoKllInfo(btokllCand, iEvent, lepton1, lepton2, kaonCand1);
-		fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokllCand, dileptonCand, iEvent, kinematicLLVertexFit, lepton1, lepton2, kaonCand1);
-
-		if (dileptonCand.name() == "mm")
-		  btokmm->push_back(btokllCand);
-		
-		if (dileptonCand.name() == "ee")
-		  btokee->push_back(btokllCand);
-	      }
-
-	      // Build BsToKKll
-	      for (unsigned int k2 = k+1; k2 < nPFCands; ++k2) { // only works if selection requirements for both kaons are identical
-		pat::PackedCandidate kaonCand2((*pfCandHandle_)[k2]);
-		kaonCand2.setMass(KaonMass_);
-		if (kaonCand2.charge() == 0 ) continue;
-		if (!kaonCand2.hasTrackDetails()) continue;
-		if (abs(kaonCand2.pdgId()) != 211) continue;
-		if (kaonCand2.pt() < ptMinKaon_ || abs(kaonCand2.eta()) > etaMaxKaon_) continue;
-		if (overlap(lepton1, kaonCand2) || overlap(lepton2, kaonCand2)) continue;
-		double l1_kaon2_doca = distanceOfClosestApproach(lepton1.track(),
-								 kaonCand2.bestTrack());
-		double l2_kaon2_doca = distanceOfClosestApproach(lepton2.track(),
-								 kaonCand2.bestTrack());
-		if (maxTwoTrackDOCA_>0 and l1_kaon2_doca > maxTwoTrackDOCA_) continue;
-		if (maxTwoTrackDOCA_>0 and l2_kaon2_doca > maxTwoTrackDOCA_) continue;
-		
-		bool goodBtoLLKK = true;
-		      
-		double kkll_mass = (lepton1.p4() + lepton2.p4() + kaonCand1.p4() + kaonCand2.p4()).mass();
-		if ( kkll_mass < minBKKllMass_ || kkll_mass > maxBKKllMass_ ) goodBtoLLKK = false;
-		  
-		// fill BtoLLKK candidate info
-		if (goodBtoLLKK){
-		  pat::CompositeCandidate btokkllCand;
-		  btokkllCand.addUserInt(dileptonCand.name() + "_index", ll_index);
-		  btokkllCand.addUserFloat("kaon1_l1_doca", l1_kaon_doca);
-		  btokkllCand.addUserFloat("kaon1_l2_doca", l2_kaon_doca);
-		  btokkllCand.addUserFloat("kaon2_l1_doca", l1_kaon2_doca);
-		  btokkllCand.addUserFloat("kaon2_l2_doca", l2_kaon2_doca);
-		    
-		  fillBtoKKllInfo(btokkllCand, iEvent, lepton1, lepton2, kaonCand1, kaonCand2);
-		  // FIXME
-		  // fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokkllCand,dileptonCand,iEvent,kinematicLLVertexFit,lepton1,lepton2,kaonCand1);
-
-		  if (dileptonCand.name() == "mm")
-		    btokkmm->push_back(btokkllCand);
-		  
-		  if (dileptonCand.name() == "ee")
-		    btokkee->push_back(btokkllCand);
-		}
-	      }
-	    }                  
 	  }
+
+	  // mmK and mmKK
+	  buildLLXCandidates(*btokmm, *btokkmm, iEvent, kinematicLLVertexFit, dimuonCand, 
+			     mm_index, muon1, muon2);
+
+	  // Dstar->D0pi->mmpi
+	  if (recoDstar_){
+	    for (unsigned int k = 0; k < nPFCands; ++k) {
+	      pat::PackedCandidate soft_pion((*pfCandHandle_)[k]);
+	      if ( not isGoodHadron(soft_pion) ) continue;
+    
+	      if (overlap(muon1, soft_pion) || overlap(muon2, soft_pion)) continue;
+
+	      soft_pion.setMass(PionMass_);
+
+	      double d0_mass = (muon1.p4() + muon2.p4()).mass();
+	      double dstar_mass = (muon1.p4() + muon2.p4() + soft_pion.p4()).mass();
+
+	      if (d0_mass > minD0Mass_ && d0_mass < maxD0Mass_ &&
+		  (dstar_mass - d0_mass) > min_dm_ && (dstar_mass - d0_mass) < max_dm_){
+		
+		fillDstarInfo(*dstar_collection, iEvent, kinematicLLVertexFit, dimuonCand, 
+			      soft_pion, mm_index, -1, muon1, muon2);
+	      }
+	    }
+	  }
+
+	  // save dimuon
+	  mm_collection->push_back(dimuonCand);
+	}
+      } 
+    }
+
+    // Build dielectron candidates
+    if ( good_electron_candidates.size() > 1 ){
+      for (unsigned int i = 0; i < good_electron_candidates.size(); ++i) {
+	const bmm::Candidate & electron1 = good_electron_candidates.at(i);
+	for (unsigned int j = 0; j < good_electron_candidates.size(); ++j) {
+	  const bmm::Candidate & electron2 = good_electron_candidates.at(j);
+	  if (i==j) continue;
+
+	  // Enforce momentum ordering
+	  if (electron2.pt() > electron1.pt()) continue;
+
+	  pat::CompositeCandidate dielectronCand(std::string("ee"));
+	  dielectronCand.addDaughter( electron1 , "electron1");
+	  dielectronCand.addDaughter( electron2 , "electron2");
+	  addP4.set( dielectronCand );
+
+	  if (not preprocess(dielectronCand, iEvent, electron1, electron2)) continue;
 	  
-	  if (dileptonCand.name() == "mm")
-	    dimuon->push_back(dileptonCand);
+	  // Kinematic Fits
+	  auto kinematicLLVertexFit = fillDileptonInfo(dielectronCand, iEvent, electron1, electron2);
+
+	  // dielectron + X
+	  int ee_index = ee_collection->size();
+	    
+	  // ElElK and ElElKK
+	  buildLLXCandidates(*btokee, *btokkee, iEvent, kinematicLLVertexFit, dielectronCand, ee_index, electron1, electron2);
+
+	  // save dielectron
+	  ee_collection->push_back(dielectronCand);
 	  
-	  if (dileptonCand.name() == "ee")
-	    dielectron->push_back(dileptonCand);
+	}
+      } 
+    }
+
+    // Build hh candidates
+    // - loop over all hh combinations
+    // - let individual studies fill hh_collection
+    // - no check for duplicate entries
+    if (nPFCands > 1){
+      for (unsigned int i=0; i < nPFCands - 1; ++i){
+	const auto& had1 = pfCandHandle_->at(i);
+	if (not isGoodHadron(had1)) continue;
+	for (unsigned int j=i + 1; j < nPFCands; ++j){
+	  const auto& had2 = pfCandHandle_->at(j);
+	  if (not isGoodHadron(had2)) continue;
 	  
-	  if (dileptonCand.name() == "hh")
-	    dihadron->push_back(dileptonCand);
+	  if (had1.charge() * had2.charge() > 0) continue;
+	  
+	  buildDstarCandidates(*dstar_collection, *hh_collection, iEvent, had1, had2);
+
+	  // // reco Btohh
+	  // if (dileptonCand.name() == "hh")
+	  //   if (not lepton1.from_gen() and not lepton2.from_gen())
+	  //     {
+	  // 	if (not kinematicLLVertexFit.valid()) continue;
+	  // 	if (kinematicLLVertexFit.vtxProb() < minBhhVtxProb_) continue;
+	  // 	if (kinematicLLVertexFit.sigLxy < minBhhSigLxy_) continue;
+	  //     }
+
 	}
       }
     }
-    
-    iEvent.put(std::move(dimuon),     "MuMu");
-    iEvent.put(std::move(dielectron), "ElEl");
-    iEvent.put(std::move(dihadron),   "HH");
+	  // // dilepton + X
+	  // if (dileptonCand.name() == "mm" || dileptonCand.name() == "ee"){
+	  //   int ll_index = -1;
+	  //   if (dileptonCand.name() == "mm") ll_index = dimuon->size();
+	  //   if (dileptonCand.name() == "ee") ll_index = dielectron->size();
+	    
+	  //   auto dilepton_p4(makeLorentzVectorFromPxPyPzM(kinematicLLVertexFit.p3().x(),
+	  // 						  kinematicLLVertexFit.p3().y(),
+	  // 						  kinematicLLVertexFit.p3().z(),
+	  // 						  kinematicLLVertexFit.mass()));
+	  //   // MuMuGamma
+	  //   if (recoMuMuGamma_ && dileptonCand.name() == "mm" && kinematicLLVertexFit.valid()){
+	  //     for (unsigned int k=0; k < nPhotons; ++k){
+	  // 	auto photon(photonHandle->at(k));
+	  // 	if (photon.pt() < minGammaPt_) continue;
+	  // 	const auto & vtx_point = kinematicLLVertexFit.refitVertex->vertexState().position();
+	  // 	photon.setVertex(reco::Photon::Point(vtx_point.x(), vtx_point.y(), vtx_point.z()));
+	  // 	double mmg_mass = (dilepton_p4 + photon.p4()).mass();
+	  // 	if (mmg_mass >= minLLGammaMass_ and mmg_mass <= maxLLGammaMass_){
+	  // 	  // fill BtoLLPhoton candidate info
+	  // 	  pat::CompositeCandidate mmgCand;
+	  // 	  mmgCand.addUserInt("mm_index", ll_index);
+	  // 	  mmgCand.addUserInt("ph_index", k);
+	  // 	  mmgCand.addUserFloat("mass", mmg_mass);
+		  
+	  // 	  fillLLGammaInfo(mmgCand,iEvent,lepton1,lepton2,photon);
+	  // 	  fillMvaInfoForLLGamma(mmgCand,dileptonCand,iEvent,kinematicLLVertexFit,lepton1,lepton2,photon);
+
+	  // 	  btommg->push_back(mmgCand);
+	  // 	}
+	  //     }
+	  //   }
+
+	  //   // MuMuGamma with photon conversion
+	  //   if (recoMuMuGammaConv_ && dileptonCand.name() == "mm" && kinematicLLVertexFit.valid()){
+	  //     for (unsigned int k=0; k < nConversions; ++k){
+	  // 	auto conversion(conversionHandle->at(k));
+	  // 	if (conversion.pt() < minGammaPt_) continue;
+	  // 	double mmg_mass = (dilepton_p4 + conversion.p4()).mass();
+	  // 	if (mmg_mass >= minLLGammaMass_ and mmg_mass <= maxLLGammaMass_){
+	  // 	  // fill BtoLLPhoton candidate info
+	  // 	  pat::CompositeCandidate mmgCand;
+	  // 	  mmgCand.addUserInt("mm_index", ll_index);
+	  // 	  mmgCand.addUserInt("ph_index", -1);
+	  // 	  mmgCand.addUserFloat("mass", mmg_mass);
+		  
+	  // 	  fillLLGammaConvInfo(mmgCand,iEvent, lepton1, lepton2, conversion);
+	  // 	  // fillMvaInfoForLLGamma(mmgCand,dileptonCand,iEvent,kinematicLLVertexFit,lepton1,lepton2,photon);
+
+	  // 	  btommg->push_back(mmgCand);
+	  // 	}
+	  //     }
+	  //   }
+
+	  //   // Dstar to D0 pi, D0 to MuMu
+	  //   if (recoDstar_ && dileptonCand.name() == "mm" && kinematicLLVertexFit.valid() &&
+	  // 	dilepton_p4.mass() > minD0Mass_ && dilepton_p4.mass() < maxD0Mass_){
+	  //     for (unsigned int k = 0; k < nPFCands; ++k) {
+	  // 	pat::PackedCandidate pionCand((*pfCandHandle_)[k]);
+	  // 	if ( abs(pionCand.pdgId()) != 211 ) continue;
+	  // 	if (pionCand.charge() == 0 ) continue;
+	  // 	if ( not pionCand.hasTrackDetails() ) continue;
+	  // 	pionCand.setMass(PionMass_);
+	  // 	if (overlap(lepton1, pionCand) || overlap(lepton2, pionCand)) continue;
+	  // 	double l1_pion_doca = distanceOfClosestApproach(lepton1.track(),
+	  // 							pionCand.bestTrack());
+	  // 	double l2_pion_doca = distanceOfClosestApproach(lepton2.track(),
+	  // 							pionCand.bestTrack());
+	  // 	if (maxTwoTrackDOCA_ > 0 and l1_pion_doca > maxTwoTrackDOCA_) continue;
+	  // 	if (maxTwoTrackDOCA_ > 0 and l2_pion_doca > maxTwoTrackDOCA_) continue;
+		
+	  // 	double mmpi_mass = (dilepton_p4 + pionCand.p4()).mass();
+	  // 	if (mmpi_mass < minDstarMass_ or mmpi_mass > maxDstarMass_) continue;
+		
+	  // 	pat::CompositeCandidate dstarCand;
+	  // 	dstarCand.addUserInt(dileptonCand.name() + "_index", ll_index);
+	  // 	dstarCand.addUserFloat("pion_l1_doca", l1_pion_doca);
+	  // 	dstarCand.addUserFloat("pion_l2_doca", l2_pion_doca);
+		
+	  // 	fillDstarInfo(dstarCand, iEvent, lepton1, lepton2, pionCand);
+
+	  // 	dstar2mmpi->push_back(dstarCand);
+	  //     }
+	  //   }
+	    
+	  //   // llK and llKK
+	  //   for (unsigned int k = 0; k < nPFCands; ++k) {
+	  //     pat::PackedCandidate kaonCand1((*pfCandHandle_)[k]);
+	  //     kaonCand1.setMass(KaonMass_);
+	  //     if (kaonCand1.charge() == 0 ) continue;
+	  //     if (!kaonCand1.hasTrackDetails()) continue;
+	  //     if (abs(kaonCand1.pdgId()) != 211) continue;
+	  //     if (kaonCand1.pt() < ptMinKaon_ or abs(kaonCand1.eta()) > etaMaxKaon_) continue;
+	  //     if (overlap(lepton1, kaonCand1) || overlap(lepton2, kaonCand1)) continue;
+	  //     double l1_kaon_doca = distanceOfClosestApproach(lepton1.track(),
+	  // 						       kaonCand1.bestTrack());
+	  //     double l2_kaon_doca = distanceOfClosestApproach(lepton2.track(),
+	  // 						       kaonCand1.bestTrack());
+	  //     if (maxTwoTrackDOCA_ > 0 and l1_kaon_doca > maxTwoTrackDOCA_) continue;
+	  //     if (maxTwoTrackDOCA_ > 0 and l2_kaon_doca > maxTwoTrackDOCA_) continue;
+	      
+	      
+	  //     bool goodBtoLLK = true;
+
+	  //     double kll_mass = (lepton1.p4() + lepton2.p4() + kaonCand1.p4()).mass();
+	  //     if (kll_mass < minBKllMass_ || kll_mass > maxBKllMass_) goodBtoLLK = false;
+	    
+	  //     // fill BtoLLK candidate info
+	  //     if (goodBtoLLK){
+	  // 	pat::CompositeCandidate btokllCand;
+	  // 	btokllCand.addUserInt(dileptonCand.name() + "_index", ll_index);
+	  // 	btokllCand.addUserFloat("kaon_l1_doca", l1_kaon_doca);
+	  // 	btokllCand.addUserFloat("kaon_l2_doca", l2_kaon_doca);
+		
+	  // 	fillBtoKllInfo(btokllCand, iEvent, lepton1, lepton2, kaonCand1);
+	  // 	fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokllCand, dileptonCand, iEvent, kinematicLLVertexFit, lepton1, lepton2, kaonCand1);
+
+	  // 	if (dileptonCand.name() == "mm")
+	  // 	  btokmm->push_back(btokllCand);
+		
+	  // 	if (dileptonCand.name() == "ee")
+	  // 	  btokee->push_back(btokllCand);
+	  //     }
+
+	  //     // Build BsToKKll
+	  //     for (unsigned int k2 = k+1; k2 < nPFCands; ++k2) { // only works if selection requirements for both kaons are identical
+	  // 	pat::PackedCandidate kaonCand2((*pfCandHandle_)[k2]);
+	  // 	kaonCand2.setMass(KaonMass_);
+	  // 	if (kaonCand2.charge() == 0 ) continue;
+	  // 	if (!kaonCand2.hasTrackDetails()) continue;
+	  // 	if (abs(kaonCand2.pdgId()) != 211) continue;
+	  // 	if (kaonCand2.pt() < ptMinKaon_ || abs(kaonCand2.eta()) > etaMaxKaon_) continue;
+	  // 	if (overlap(lepton1, kaonCand2) || overlap(lepton2, kaonCand2)) continue;
+	  // 	double l1_kaon2_doca = distanceOfClosestApproach(lepton1.track(),
+	  // 							 kaonCand2.bestTrack());
+	  // 	double l2_kaon2_doca = distanceOfClosestApproach(lepton2.track(),
+	  // 							 kaonCand2.bestTrack());
+	  // 	if (maxTwoTrackDOCA_>0 and l1_kaon2_doca > maxTwoTrackDOCA_) continue;
+	  // 	if (maxTwoTrackDOCA_>0 and l2_kaon2_doca > maxTwoTrackDOCA_) continue;
+		
+	  // 	bool goodBtoLLKK = true;
+		      
+	  // 	double kkll_mass = (lepton1.p4() + lepton2.p4() + kaonCand1.p4() + kaonCand2.p4()).mass();
+	  // 	if ( kkll_mass < minBKKllMass_ || kkll_mass > maxBKKllMass_ ) goodBtoLLKK = false;
+		  
+	  // 	// fill BtoLLKK candidate info
+	  // 	if (goodBtoLLKK){
+	  // 	  pat::CompositeCandidate btokkllCand;
+	  // 	  btokkllCand.addUserInt(dileptonCand.name() + "_index", ll_index);
+	  // 	  btokkllCand.addUserFloat("kaon1_l1_doca", l1_kaon_doca);
+	  // 	  btokkllCand.addUserFloat("kaon1_l2_doca", l2_kaon_doca);
+	  // 	  btokkllCand.addUserFloat("kaon2_l1_doca", l1_kaon2_doca);
+	  // 	  btokkllCand.addUserFloat("kaon2_l2_doca", l2_kaon2_doca);
+		    
+	  // 	  fillBtoKKllInfo(btokkllCand, iEvent, lepton1, lepton2, kaonCand1, kaonCand2);
+	  // 	  // FIXME
+	  // 	  // fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokkllCand,dileptonCand,iEvent,kinematicLLVertexFit,lepton1,lepton2,kaonCand1);
+
+	  // 	  if (dileptonCand.name() == "mm")
+	  // 	    btokkmm->push_back(btokkllCand);
+		  
+	  // 	  if (dileptonCand.name() == "ee")
+	  // 	    btokkee->push_back(btokkllCand);
+	  // 	}
+	  //     }
+	  //   }                  
+	  // }
+	  
+    iEvent.put(std::move(mm_collection),     "MuMu");
+    iEvent.put(std::move(ee_collection), "ElEl");
+    iEvent.put(std::move(hh_collection),   "HH");
     iEvent.put(std::move(btokmm), "BToKmumu");
     iEvent.put(std::move(btokee), "BToKee");
     iEvent.put(std::move(btokkmm),"BToKKmumu");
     iEvent.put(std::move(btokkee),"BToKKee");
     iEvent.put(std::move(btommg), "BToMuMuGamma");
-    iEvent.put(std::move(dstar2mmpi), "DstarToMuMuPi");
+    iEvent.put(std::move(dstar_collection), "Dstar");
 }
 
 KalmanVertexFitResult 
@@ -1925,8 +2353,8 @@ DileptonPlusXProducer::vertexWithKalmanFitter(std::vector<const reco::Track*> tr
 }
 
 KalmanVertexFitResult 
-DileptonPlusXProducer::vertexLeptonsWithKalmanFitter(const LeptonCandidate& lepton1,
-						     const LeptonCandidate& lepton2)
+DileptonPlusXProducer::vertexLeptonsWithKalmanFitter(const bmm::Candidate& lepton1,
+						     const bmm::Candidate& lepton2)
 {
   std::vector<const reco::Track*> trks;
   std::vector<float> masses;
@@ -1991,8 +2419,8 @@ DileptonPlusXProducer::vertexWithKinematicFitter(std::vector<const reco::Track*>
 
 
 KinematicFitResult
-DileptonPlusXProducer::vertexLeptonsWithKinematicFitter(const LeptonCandidate& lepton1,
-						      const LeptonCandidate& lepton2)
+DileptonPlusXProducer::vertexLeptonsWithKinematicFitter(const bmm::Candidate& lepton1,
+						      const bmm::Candidate& lepton2)
 {
   std::vector<const reco::Track*> trks;
   std::vector<float> masses;
@@ -2018,8 +2446,8 @@ DileptonPlusXProducer::vertexKaonsWithKinematicFitter(const pat::PackedCandidate
 
 
 KinematicFitResult
-DileptonPlusXProducer::vertexWithKinematicFitter(const LeptonCandidate& lepton1,
-						 const LeptonCandidate& lepton2,
+DileptonPlusXProducer::vertexWithKinematicFitter(const bmm::Candidate& lepton1,
+						 const bmm::Candidate& lepton2,
 						 const pat::PackedCandidate& pion)
 {
   std::vector<const reco::Track*> trks;
@@ -2034,8 +2462,8 @@ DileptonPlusXProducer::vertexWithKinematicFitter(const LeptonCandidate& lepton1,
 }
 
 KinematicFitResult
-DileptonPlusXProducer::fitDstar(const LeptonCandidate& lepton1,
-				const LeptonCandidate& lepton2,
+DileptonPlusXProducer::fitDstar(const bmm::Candidate& lepton1,
+				const bmm::Candidate& lepton2,
 				const pat::PackedCandidate& pion,
 				float mass_constraint)
 {
@@ -2110,8 +2538,8 @@ DileptonPlusXProducer::fitDstar(const LeptonCandidate& lepton1,
 
 
 KinematicFitResult
-DileptonPlusXProducer::fitBToKLL(const LeptonCandidate& lepton1,
-				 const LeptonCandidate& lepton2,
+DileptonPlusXProducer::fitBToKLL(const bmm::Candidate& lepton1,
+				 const bmm::Candidate& lepton2,
 				 const pat::PackedCandidate& kaon,
 				 float mass_constraint)
 {
@@ -2377,8 +2805,8 @@ DileptonPlusXProducer::fitLLGammaConv( RefCountedKinematicTree mmVertexTree,
 
 
 KinematicFitResult
-DileptonPlusXProducer::fitBToKKLL( const LeptonCandidate& lepton1,
-				   const LeptonCandidate& lepton2,
+DileptonPlusXProducer::fitBToKKLL( const bmm::Candidate& lepton1,
+				   const bmm::Candidate& lepton2,
 				   const pat::PackedCandidate& kaon1,
 				   const pat::PackedCandidate& kaon2,
 				   float ll_mass_constraint,
@@ -2469,8 +2897,8 @@ DileptonPlusXProducer::fitBToKKLL( const LeptonCandidate& lepton1,
 }
 
 KinematicFitResult
-DileptonPlusXProducer::vertexLeptonsWithPointingConstraint( const LeptonCandidate& lepton1,
-							    const LeptonCandidate& lepton2,
+DileptonPlusXProducer::vertexLeptonsWithPointingConstraint( const bmm::Candidate& lepton1,
+							    const bmm::Candidate& lepton2,
 							    const reco::Vertex& primaryVertex)
 {
   auto kinematicLLVertexFit = vertexLeptonsWithKinematicFitter(lepton1, lepton2);
@@ -2539,7 +2967,7 @@ pair<double,double> DileptonPlusXProducer::computeDCA(const pat::PackedCandidate
 namespace{
 }
 
-const reco::Candidate* DileptonPlusXProducer::getGenParticle(const LeptonCandidate& cand)
+const reco::Candidate* DileptonPlusXProducer::getGenParticle(const bmm::Candidate& cand)
 {
   
   if (cand.genParticle()) return cand.genParticle();
@@ -2551,8 +2979,8 @@ const reco::Candidate* DileptonPlusXProducer::getGenParticle(const LeptonCandida
   return nullptr;
 }
 
-GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const LeptonCandidate& lepton1,
-						     const LeptonCandidate& lepton2,
+GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepton1,
+						     const bmm::Candidate& lepton2,
 						     const pat::PackedCandidate* kaon1,
 						     const pat::PackedCandidate* kaon2,
 						     const reco::Candidate* photon)
@@ -2737,6 +3165,28 @@ DileptonPlusXProducer::distanceOfClosestApproach( const reco::Track* track,
   Measurement1D doca = distance3D.distance(VertexState(tsos.globalPosition(), tsos.cartesianError().position()), vertex);
   return doca;
 }
+
+KinematicFitResult 
+DileptonPlusXProducer::refitWithVertexConstraint(const reco::Track& track,
+						 int pvIndex)
+{
+  std::vector<const reco::Track*> tracks;
+  std::vector<float> masses;
+
+  tracks.push_back(&track);
+  masses.push_back(PionMass_);
+ 
+  for (const auto& pfCand: *pfCandHandle_.product()){
+    if (pfCand.charge() == 0 ) continue;
+    if (!pfCand.hasTrackDetails()) continue;
+    if (overlap(&track, pfCand.bestTrack())) continue;
+    if (int(pfCand.vertexRef().key()) != pvIndex) continue;
+    tracks.push_back(pfCand.bestTrack());
+    masses.push_back(PionMass_);
+  }
+  return vertexWithKinematicFitter(tracks, masses);
+}
+
 
 namespace {
   typedef ROOT::Math::SMatrix<double,3,3,ROOT::Math::MatRepSym<double,3> > cov33_t;
