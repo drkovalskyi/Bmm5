@@ -9,7 +9,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### Time per event for the event loop
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ |
-| NanoAODv10-V02 |     522           |    |           |
+| NanoAODv10-V02 |     522           |  0.039 sec/event  |  0.170 sec/event         |
 | NanoAODv10-V01 |     521           |    |           |
 | NanoAODv9-V03 |                    |  0.136 sec/event  |       0.189 sec/event    |
 | NanoAODv8-V02 |      516           |  0.078 sec/event  |       0.117 sec/event    |
@@ -21,6 +21,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### File size per event 
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ | 
+| NanoAODv9-V03 |                    |   1.1 kB/event    |         3.2 kB/event     | 
 | NanoAODv9-V03 |                    |   1.2 kB/event    |         2.4 kB/event     | 
 | NanoAODv6-V18 |      515           |                   |         1.9 kB/event     |
 | NanoAODv8-V01 |      514           |                   |         2.0 kB/event     |
