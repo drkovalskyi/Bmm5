@@ -21,7 +21,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### File size per event 
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ | 
-| NanoAODv9-V03 |                    |   1.1 kB/event    |         3.2 kB/event     | 
+| NanoAODv10-V02 |     522           |   1.1 kB/event    |         3.2 kB/event     | 
 | NanoAODv9-V03 |                    |   1.2 kB/event    |         2.4 kB/event     | 
 | NanoAODv6-V18 |      515           |                   |         1.9 kB/event     |
 | NanoAODv8-V01 |      514           |                   |         2.0 kB/event     |
@@ -31,6 +31,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### Memory Usage (RSS)
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv10-V02 |     522           |      1179 kB      |         1546 kB          |
 | NanoAODv9-V03 |                    |      1763 kB      |         1945 kB          |
 | NanoAODv8-V02 |      516           |                   |         1915 kB          |
 | NanoAODv6-V18 |      515           |                   |         1893 kB          |
@@ -72,9 +73,9 @@ cmsDriver and processing commands
 * Monte Carlo
    * BsToMuMu_RunIIAutumn18NanoAODv9
       * Standard NanoAODv9 + all Bmm customization
-         * ```cmsDriver.py step1 --filein /store/user/dmytro/tmp/store+mc+RunIISummer20UL18MiniAOD+BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+MINIAODSIM+106X_upgrade2018_realistic_v11_L1v1-v1+240000+A85F6114-1A37-2149-B06E-ABF1CEB9EC77.root --fileout file:BsToMuMu.root --mc --eventcontent NANOAODSIM --datatier NANOAODSIM --conditions 106X_upgrade2018_realistic_v15_L1v1 --step NANO --nThreads 1 --era Run2_2018,run2_nanoAOD_106Xv1 --python_filename BsToMuMu_RunIIAutumn18NanoAODv9.py --no_exec -n 10000 --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise Validation/Performance/TimeMemoryInfo.py --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))" --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.Timing.summaryOnly = cms.untracked.bool(True)"```
-         * ```cmsRun BsToMuMu_RunIIAutumn18NanoAODv9.py >& BsToMuMu_RunIIAutumn18NanoAODv9.log```
-         * ```python3 Bmm5/NanoAOD/performance/make_report.py BsToMuMu_RunIIAutumn18NanoAODv9.log```
+         * ```msDriver.py RECO --conditions 124X_mcRun3_2022_realistic_postEE_v1 --customise Configuration/DataProcessing/Utils.addMonitoring --datatier NANOAOD --era Run3 --eventcontent NANOAODSIM --filein /store/user/dmytro/tmp/store+mc+Run3Summer22EEMiniAODv3+BsToJPsiPhi_JPsiToMuMu_PhiToKK_EtaPtFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+MINIAODSIM+124X_mcRun3_2022_realistic_postEE_v1-v2+2550000+0f450e50-38cc-4dd3-a874-26b4a956b959.root --fileout file:BsToJPsiPhi_JPsiToMuMu_PhiToKK_NanoAODv10.root --nThreads 1 -n 10000 --no_exec --python_filename BsToJPsiPhi_JPsiToMuMu_PhiToKK_NanoAODv10.py --scenario pp --step NANO --mc --customise PhysicsTools/NanoAOD/V10/nano_cff.nanoAOD_customizeV10 --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))" --customise Validation/Performance/TimeMemoryInfo.py --customise_commands="process.Timing.summaryOnly = cms.untracked.bool(True)"```
+         * ```cmsRun BsToJPsiPhi_JPsiToMuMu_PhiToKK_NanoAODv10.py > & BsToJPsiPhi_JPsiToMuMu_PhiToKK_NanoAODv10.log```
+         * ```python3 Bmm5/NanoAOD/performance/make_report.py BsToJPsiPhi_JPsiToMuMu_PhiToKK_NanoAODv10.log```
 * Data:
    * Charmonium Run2018D
       * Standard NanoAODv9 + all Bmm customization
