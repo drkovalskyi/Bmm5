@@ -11,7 +11,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 | ------------- | ------------------ | ----------------- | ------------------------ |
 | NanoAODv10-V02 |     522           |  0.039 sec/event  |  0.170 sec/event         |
 | NanoAODv10-V01 |     521           |    |           |
-| NanoAODv9-V03 |                    |  0.136 sec/event  |       0.189 sec/event    |
+| NanoAODv9-V03 |      519           |  0.136 sec/event  |       0.189 sec/event    |
 | NanoAODv8-V02 |      516           |  0.078 sec/event  |       0.117 sec/event    |
 | NanoAODv6-V18 |      515           |  0.073 sec/event  |       0.112 sec/event    |
 | NanoAODv8-V01 |      514           |  0.074 sec/event  |       0.110 sec/event    |
@@ -22,7 +22,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ | 
 | NanoAODv10-V02 |     522           |   1.1 kB/event    |         3.2 kB/event     | 
-| NanoAODv9-V03 |                    |   1.2 kB/event    |         2.4 kB/event     | 
+| NanoAODv9-V03 |      519           |   1.2 kB/event    |         2.4 kB/event     | 
 | NanoAODv6-V18 |      515           |                   |         1.9 kB/event     |
 | NanoAODv8-V01 |      514           |                   |         2.0 kB/event     |
 | NanoAODv6-V17 |      513           |                   |         1.9 kB/event     |
@@ -32,7 +32,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ |
 | NanoAODv10-V02 |     522           |      1179 kB      |         1546 kB          |
-| NanoAODv9-V03 |                    |      1763 kB      |         1945 kB          |
+| NanoAODv9-V03 |      519           |      1763 kB      |         1945 kB          |
 | NanoAODv8-V02 |      516           |                   |         1915 kB          |
 | NanoAODv6-V18 |      515           |                   |         1893 kB          |
 | NanoAODv8-V01 |      514           |                   |         1839 kB          |
@@ -43,7 +43,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### Time per event for the event loop
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ |
-| NanoAODv9-V03 |                    |  0.067 sec/event  |       0.161 sec/event    |
+| NanoAODv9-V03 |      519           |  0.067 sec/event  |       0.161 sec/event    |
 | NanoAODv6-V18 |      515           |  0.076 sec/event  |       0.179 sec/event    |
 | NanoAODv8-V01 |      514           |  0.100 sec/event  |       0.201 sec/event    |
 | NanoAODv6-V17 |      513           |  0.076 sec/event  |       0.182 sec/event    |
@@ -52,7 +52,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### File size per event
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ |
-| NanoAODv9-V03 |                    |   1.2 kB/event    |       3.7 kB/event       | 
+| NanoAODv9-V03 |      519           |   1.2 kB/event    |       3.7 kB/event       | 
 | NanoAODv6-V18 |      515           |                   |       2.5 kB/event       |
 | NanoAODv8-V01 |      514           |                   |       2.6 kB/event       |
 | NanoAODv6-V17 |      513           |                   |       2.5 kB/event       |
@@ -61,7 +61,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### Memory Usage (RSS)
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ |
-| NanoAODv9-V03 |                    |      1466 kB      |         1645 kB          |
+| NanoAODv9-V03 |      519           |      1466 kB      |         1645 kB          |
 | NanoAODv6-V18 |      515           |                   |         1785 kB          |
 | NanoAODv8-V01 |      514           |                   |         1790 kB          |
 | NanoAODv6-V17 |      513           |                   |         1794 kB          |
