@@ -149,3 +149,21 @@ float KinematicFitResult::vtxProb() const
   if ( not valid() ) return -1.0;
   return TMath::Prob((double)refitVertex->chiSquared(), int(rint(refitVertex->degreesOfFreedom())));
 }
+
+float KinematicFitResult::sumPt() const
+{
+  float result(0);
+  for (const auto& dau: refitDaughters){
+    result += dau->currentState().globalMomentum().mag();
+  }
+  return result;
+}
+
+float KinematicFitResult::sumPt2() const
+{
+  float result(0);
+  for (const auto& dau: refitDaughters){
+    result += dau->currentState().globalMomentum().mag2();
+  }
+  return result;
+}

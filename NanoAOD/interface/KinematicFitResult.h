@@ -27,11 +27,17 @@ struct KinematicFitResult{
   float mass() const;
   float refit_mass(unsigned int i, unsigned int j) const;
   GlobalVector p3() const;
+  unsigned int number_of_daughters() const
+  {
+    return refitDaughters.size();
+  }
   GlobalVector dau_p3(unsigned int i) const;
   float massErr() const;
   float chi2() const;
   float ndof() const;
   float vtxProb() const;
+  float sumPt() const;
+  float sumPt2() const;
 };
 
 #endif
