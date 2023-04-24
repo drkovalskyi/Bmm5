@@ -742,7 +742,7 @@ DileptonPlusXProducer::computeTrkDileptonIsolation(const bmm::Candidate& lepton1
     if (deltaR(b_p4, pfCand) > dR) continue;
     sumPt += pfCand.pt();
   }
-
+  // DEBUGME: returns Nan for iso
   return b_p4.pt()/(b_p4.pt()+sumPt);
 }
 
@@ -784,21 +784,25 @@ DileptonPlusXProducer::otherVertexMaxProb(const bmm::Candidate& lepton1,
     if (lep1_doca < max_doca and lep1_doca < lep2_doca){
       // first  lepton is closer - check vertex probability
       transTrksForLep1Vertex.push_back((*theTTBuilder_).build(pfCand.bestTrack()));
-      TransientVertex tv = kvf.vertex(transTrksForLep1Vertex);
-      if ( tv.isValid() ){
-	float vtxProb = TMath::Prob(tv.totalChiSquared(), (int)tv.degreesOfFreedom());
-	if (vtxProb > bestLep1Vtx) bestLep1Vtx = vtxProb;
-      }
+      try {
+	TransientVertex tv = kvf.vertex(transTrksForLep1Vertex);
+	if ( tv.isValid() ){
+	  float vtxProb = TMath::Prob(tv.totalChiSquared(), (int)tv.degreesOfFreedom());
+	  if (vtxProb > bestLep1Vtx) bestLep1Vtx = vtxProb;
+	}
+      } catch (const std::exception& e) {}
       transTrksForLep1Vertex.pop_back();
     }
     if (lep2_doca < max_doca and lep2_doca < lep1_doca){
       // second  lepton is closer - check vertex probability
       transTrksForLep2Vertex.push_back((*theTTBuilder_).build(pfCand.bestTrack()));
-      TransientVertex tv = kvf.vertex(transTrksForLep2Vertex);
-      if ( tv.isValid() ){
-	float vtxProb = TMath::Prob(tv.totalChiSquared(), (int)tv.degreesOfFreedom());
-	if (vtxProb > bestLep2Vtx) bestLep2Vtx = vtxProb;
-      }
+      try {
+	TransientVertex tv = kvf.vertex(transTrksForLep2Vertex);
+	if ( tv.isValid() ){
+	  float vtxProb = TMath::Prob(tv.totalChiSquared(), (int)tv.degreesOfFreedom());
+	  if (vtxProb > bestLep2Vtx) bestLep2Vtx = vtxProb;
+	}
+      } catch (const std::exception& e) {}
       transTrksForLep2Vertex.pop_back();
     }
   }
