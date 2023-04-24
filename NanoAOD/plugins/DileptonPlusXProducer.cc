@@ -167,6 +167,7 @@ private:
 
 
   bool isGoodMuon(const pat::Muon& muon);
+  bool isGoodTrack(const pat::PackedCandidate& cand);
   bool isGoodMuonCandidateFromTrack(const pat::PackedCandidate& cand);
   bool isGoodHadron(const pat::PackedCandidate& cand);
   bool isGoodElectron(const pat::Electron& el);
@@ -535,22 +536,26 @@ bool DileptonPlusXProducer::isGoodMuon(const pat::Muon& muon){
   return true;
 }
 
-bool DileptonPlusXProducer::isGoodHadron(const pat::PackedCandidate& cand)
-{
+bool DileptonPlusXProducer::isGoodTrack(const pat::PackedCandidate& cand){
   if (cand.charge() == 0) return false;
   if (not cand.hasTrackDetails()) return false;
-  if (abs(cand.pdgId()) != 211) return false;
   if (not cand.bestTrack()->quality(reco::Track::highPurity)) return false;
+  if (isnan(cand.pt())) return false;
+  return true;
+}
+
+bool DileptonPlusXProducer::isGoodHadron(const pat::PackedCandidate& cand)
+{
+  if (not isGoodTrack(cand)) return false;
+  if (abs(cand.pdgId()) != 211) return false;
   return true;
 }  
 
 bool DileptonPlusXProducer::isGoodMuonCandidateFromTrack(const pat::PackedCandidate& cand)
 {
-  if (cand.charge() == 0) return false;
+  if (not isGoodTrack(cand)) return false; 
   if (cand.pt() < minJpsiHadronPt_) return false;
-  if (not cand.hasTrackDetails()) return false;
   if (abs(cand.pdgId()) != 211) return false;
-  if (not cand.bestTrack()->quality(reco::Track::highPurity)) return false;
   return true;
 }  
 
@@ -644,8 +649,7 @@ DileptonPlusXProducer::findTracksCompatibleWithTheVertex(const bmm::Candidate& l
   CloseTrackInfo result;
   if (not fit.valid()) return result;
   for (const auto& pfCand: *pfCandHandle_.product()){
-    if (pfCand.charge() == 0 ) continue;
-    if (!pfCand.hasTrackDetails()) continue;
+    if (not isGoodTrack(pfCand)) continue; 
     if (overlap(lepton1, pfCand) || overlap(lepton2, pfCand)) continue;
 
     bool ignore_track = false;
@@ -704,8 +708,7 @@ DileptonPlusXProducer::computeTrkLeptonIsolation(const bmm::Candidate& theLepton
       }
     }
     if (ignore_track) continue;
-    if (pfCand.charge() == 0 ) continue;
-    if (!pfCand.hasTrackDetails()) continue;
+    if (not isGoodTrack(pfCand)) continue; 
     if (pfCand.pt() < minPt) continue;
     if (pfCand.vertexRef().key() != primaryVertexIndex) continue;
     if (overlap(theLepton, pfCand) || overlap(theOtherLepton, pfCand)) continue;
@@ -734,15 +737,14 @@ DileptonPlusXProducer::computeTrkDileptonIsolation(const bmm::Candidate& lepton1
       }
     }
     if (ignore_track) continue;
-    if (pfCand.charge() == 0 ) continue;
-    if (!pfCand.hasTrackDetails()) continue;
-    if (pfCand.pt()<minPt) continue;
-    if (pfCand.vertexRef().key()!=primaryVertexIndex) continue;
+    if (not isGoodTrack(pfCand)) continue;
+    if (pfCand.pt() < minPt) continue;
+    if (pfCand.vertexRef().key() != primaryVertexIndex) continue;
     if (overlap(lepton1, pfCand) || overlap(lepton2, pfCand)) continue;
     if (deltaR(b_p4, pfCand) > dR) continue;
     sumPt += pfCand.pt();
   }
-  // DEBUGME: returns Nan for iso
+
   return b_p4.pt()/(b_p4.pt()+sumPt);
 }
 
@@ -763,9 +765,8 @@ DileptonPlusXProducer::otherVertexMaxProb(const bmm::Candidate& lepton1,
 
 
   for (const auto& pfCand: *pfCandHandle_.product()){
+    if (not isGoodTrack(pfCand)) continue; 
     if (pfCand.pt() < minPt) continue;
-    if (pfCand.charge() == 0 ) continue;
-    if (!pfCand.hasTrackDetails()) continue;
     if (overlap(lepton1, pfCand) || overlap(lepton2, pfCand)) continue;
 
     bool ignore_track = false;
@@ -1583,11 +1584,9 @@ DileptonPlusXProducer::injectBhhHadrons(std::vector<bmm::Candidate>& good_lepton
 
   // find reco tracks matching preselection requirements
   for (const auto& pfCand: *pfCandHandle_.product()){
-    if (pfCand.charge() == 0) continue;
+    if (not isGoodTrack(pfCand)) continue; 
     if (pfCand.pt() < minBhhTrkPt_) continue;
     if (abs(pfCand.eta()) > maxBhhTrkEta_) continue;
-    if (not pfCand.hasTrackDetails()) continue;
-    if (not pfCand.bestTrack()->quality(reco::Track::highPurity)) continue;
     good_lepton_candidates.push_back(bmm::Candidate(pfCand));
   }
 }
@@ -1741,8 +1740,7 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
   for (unsigned int k = 0; k < nPFCands; ++k) {
     pat::PackedCandidate kaonCand1((*pfCandHandle_)[k]);
     kaonCand1.setMass(KaonMass_);
-    if (kaonCand1.charge() == 0 ) continue;
-    if (!kaonCand1.hasTrackDetails()) continue;
+    if (not isGoodTrack(kaonCand1)) continue; 
     if (abs(kaonCand1.pdgId()) != 211) continue;
     if (kaonCand1.pt() < ptMinKaon_ or abs(kaonCand1.eta()) > etaMaxKaon_) continue;
     if (overlap(lepton1, kaonCand1) || overlap(lepton2, kaonCand1)) continue;
@@ -1778,8 +1776,7 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
       // only works if selection requirements for both kaons are identical
       pat::PackedCandidate kaonCand2((*pfCandHandle_)[k2]);
       kaonCand2.setMass(KaonMass_);
-      if (kaonCand2.charge() == 0 ) continue;
-      if (!kaonCand2.hasTrackDetails()) continue;
+      if (not isGoodTrack(kaonCand2)) continue; 
       if (abs(kaonCand2.pdgId()) != 211) continue;
       if (kaonCand2.pt() < ptMinKaon_ || abs(kaonCand2.eta()) > etaMaxKaon_) continue;
       if (overlap(lepton1, kaonCand2) || overlap(lepton2, kaonCand2)) continue;
@@ -3204,8 +3201,7 @@ DileptonPlusXProducer::refitWithVertexConstraint(const reco::Track& track,
   std::vector<float> masses;
 
   for (const auto& pfCand: *pfCandHandle_.product()){
-    if (pfCand.charge() == 0 ) continue;
-    if (!pfCand.hasTrackDetails()) continue;
+    if (not isGoodTrack(pfCand)) continue; 
     if (overlap(&track, pfCand.bestTrack())) continue;
     if (int(pfCand.vertexRef().key()) != pvIndex) continue;
     // keep only the tracks used in the PV fit
