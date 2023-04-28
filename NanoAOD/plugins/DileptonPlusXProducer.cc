@@ -51,6 +51,7 @@
 #include "Bmm5/NanoAOD/interface/XGBooster.h"
 #include "Bmm5/NanoAOD/interface/KinFitUtils.h"
 #include "Bmm5/NanoAOD/interface/KinematicFitResult.h"
+#include "Bmm5/NanoAOD/interface/Displacement.h"
 #include "Bmm5/NanoAOD/interface/CommonTools.h"
 #include "Bmm5/NanoAOD/interface/Candidate.h"
 
@@ -261,9 +262,8 @@ private:
   distanceOfClosestApproach( const reco::Track* track,
 			     const reco::Vertex& vertex);
 
-  DisplacementInformationIn3D 
+  bmm::Displacements
   compute3dDisplacement(const KinematicFitResult& fit,
-			const reco::VertexCollection& vertices,
 			bool closestIn3D = true);
 
   CloseTrackInfo 
@@ -566,7 +566,7 @@ bool DileptonPlusXProducer::isGoodElectron(const pat::Electron& el){
 
 namespace {
   void addFitInfo(pat::CompositeCandidate& cand, const KinematicFitResult& fit, std::string name, 
-		  const DisplacementInformationIn3D& displacement3d = DisplacementInformationIn3D(),
+		  const bmm::Displacements& displacements = bmm::Displacements(),
 		  int firstMuonDaughterIndex = -1, int secondMuonDaughterIndex = -1,
 		  int firstKaonDaughterIndex = -1, int secondKaonDaughterIndex = -1 ){
     cand.addUserInt(   name+"_valid",       fit.valid() );
@@ -576,8 +576,6 @@ namespace {
     cand.addUserFloat( name+"_massErr",     fit.massErr() );
     cand.addUserFloat( name+"_lxy",         fit.lxy );
     cand.addUserFloat( name+"_sigLxy",      fit.sigLxy );
-    cand.addUserFloat( name+"_alpha",       displacement3d.alpha);
-    cand.addUserFloat( name+"_alphaErr",    displacement3d.alphaErr);
     cand.addUserFloat( name+"_alphaBS",     fit.alphaBS);
     cand.addUserFloat( name+"_alphaBSErr",  fit.alphaBSErr);
     cand.addUserFloat( name+"_vtx_x",       fit.valid()?fit.refitVertex->position().x():0 );
@@ -590,30 +588,40 @@ namespace {
     cand.addUserFloat( name+"_eta",         fit.p3().eta() );
     cand.addUserFloat( name+"_phi",         fit.p3().phi() );
     
-    // IP info
-    cand.addUserFloat( name+"_l3d",         displacement3d.decayLength);
-    cand.addUserFloat( name+"_sl3d",        displacement3d.decayLengthErr>0?displacement3d.decayLength/displacement3d.decayLengthErr:0);
-    cand.addUserFloat( name+"_pv_z",        displacement3d.pv?displacement3d.pv->position().z():0);
-    cand.addUserFloat( name+"_pv_zErr",     displacement3d.pv?displacement3d.pv->zError():0);
-    cand.addUserFloat( name+"_pvip",        displacement3d.distaceOfClosestApproach);
-    cand.addUserFloat( name+"_spvip",       displacement3d.distaceOfClosestApproachSig);
-    cand.addUserFloat( name+"_pvipErr",     displacement3d.distaceOfClosestApproachErr);
-    cand.addUserFloat( name+"_pv2ip",       displacement3d.distaceOfClosestApproach2);
-    cand.addUserFloat( name+"_spv2ip",      displacement3d.distaceOfClosestApproach2Sig);
-    cand.addUserFloat( name+"_pv2ipErr",    displacement3d.distaceOfClosestApproach2Err);
-    cand.addUserFloat( name+"_pvlip",       displacement3d.longitudinalImpactParameter);
-    cand.addUserFloat( name+"_pvlipSig",    displacement3d.longitudinalImpactParameterSig);
-    cand.addUserFloat( name+"_pvlipErr",    displacement3d.longitudinalImpactParameterErr);
-    cand.addUserFloat( name+"_pv2lip",      displacement3d.longitudinalImpactParameter2);
-    cand.addUserFloat( name+"_pv2lipSig",   displacement3d.longitudinalImpactParameter2Sig);
-    cand.addUserFloat( name+"_pv2lipErr",   displacement3d.longitudinalImpactParameter2Err);
-    cand.addUserInt(   name+"_pvIndex",     displacement3d.pvIndex);
+    // displacement information
+    
+    for (const auto& displacement: displacements){
+      std::string prefix = name;
+      if (displacement.name() != "pv")
+	prefix += displacement.name();
+      cand.addUserFloat( prefix + "_alpha",       displacement.alpha());
+      cand.addUserFloat( prefix + "_alphaErr",    displacement.alphaErr());
 
-    // DecayTime
-    cand.addUserFloat( name+"_tau",         displacement3d.decayTime);
-    cand.addUserFloat( name+"_taue",        displacement3d.decayTimeError);
-    cand.addUserFloat( name+"_tauxy",       displacement3d.decayTimeXY);
-    cand.addUserFloat( name+"_tauxye",      displacement3d.decayTimeXYError);
+      // IP info
+      cand.addUserFloat( prefix + "_l3d",         displacement.decayLength());
+      cand.addUserFloat( prefix + "_sl3d",        displacement.decayLengthSig());
+      cand.addUserFloat( prefix + "_pv_z",        displacement.prodVertex().z());
+      cand.addUserFloat( prefix + "_pv_zErr",     displacement.prodVertex().zError());
+      cand.addUserFloat( prefix + "_pvip",        displacement.distaceOfClosestApproach());
+      cand.addUserFloat( prefix + "_spvip",       displacement.distaceOfClosestApproachSig());
+      cand.addUserFloat( prefix + "_pvipErr",     displacement.distaceOfClosestApproachErr());
+      // cand.addUserFloat( prefix + "_pv2ip",       displacement.distaceOfClosestApproach2());
+      // cand.addUserFloat( prefix + "_spv2ip",      displacement.distaceOfClosestApproach2Sig());
+      // cand.addUserFloat( prefix + "_pv2ipErr",    displacement.distaceOfClosestApproach2Err());
+      cand.addUserFloat( prefix + "_pvlip",       displacement.longitudinalImpactParameter());
+      cand.addUserFloat( prefix + "_pvlipSig",    displacement.longitudinalImpactParameterSig());
+      cand.addUserFloat( prefix + "_pvlipErr",    displacement.longitudinalImpactParameterErr());
+      // cand.addUserFloat( prefix + "_pv2lip",      displacement.longitudinalImpactParameter2());
+      // cand.addUserFloat( prefix + "_pv2lipSig",   displacement.longitudinalImpactParameter2Sig());
+      // cand.addUserFloat( prefix + "_pv2lipErr",   displacement.longitudinalImpactParameter2Err());
+      cand.addUserInt(   prefix + "_pvIndex",     displacement.pvIndex());
+
+      // DecayTime
+      cand.addUserFloat( prefix + "_tau",         displacement.decayTime());
+      cand.addUserFloat( prefix + "_taue",        displacement.decayTimeError());
+      cand.addUserFloat( prefix + "_tauxy",       displacement.decayTimeXY());
+      cand.addUserFloat( prefix + "_tauxye",      displacement.decayTimeXYError());
+    }
 
     // Refitted daughter information
     if (firstMuonDaughterIndex>=0){
@@ -837,8 +845,8 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
   auto kinematicLLVertexFit = vertexLeptonsWithKinematicFitter(lepton1, lepton2);
   kinematicLLVertexFit.postprocess(*beamSpot_);
   
-  auto displacement3D = compute3dDisplacement(kinematicLLVertexFit, *pvHandle_.product(), true);
-  addFitInfo(dileptonCand, kinematicLLVertexFit, "kin", displacement3D, 0, 1);
+  auto displacements = compute3dDisplacement(kinematicLLVertexFit);
+  addFitInfo(dileptonCand, kinematicLLVertexFit, "kin", displacements, 0, 1);
   
   if (isMC_){
     auto gen_ll = getGenMatchInfo(lepton1, lepton2);
@@ -872,9 +880,9 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
       TVector3 p_gen(gen_ll.match->px(),
 		     gen_ll.match->py(),
 		     gen_ll.match->pz());
-      TVector3 ip_reco(displacement3D.pv->x(),
-		       displacement3D.pv->y(),
-		       displacement3D.pv->z());
+      TVector3 ip_reco(displacements.get("pv").prodVertex().x(),
+		       displacements.get("pv").prodVertex().y(),
+		       displacements.get("pv").prodVertex().z());
       TVector3 ip_gen(gen_ll.ll_prod_vtx.x(),
 		      gen_ll.ll_prod_vtx.y(),
 		      gen_ll.ll_prod_vtx.z());
@@ -905,7 +913,7 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
     
   }
 
-  int pvIndex = displacement3D.pvIndex;
+  int pvIndex = displacements.get("pv").pvIndex();
 
   // Look for additional tracks compatible with the dilepton vertex
   auto closeTracks = findTracksCompatibleWithTheVertex(lepton1,lepton2,kinematicLLVertexFit);
@@ -952,7 +960,7 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
   dileptonCand.addUserFloat("mva", xgBoosters_.at(xg_index).predict());
 
   // Refit with pointing constraint
-  auto bToLL_PC = vertexLeptonsWithPointingConstraint(lepton1,lepton2,*displacement3D.pv);
+  auto bToLL_PC = vertexLeptonsWithPointingConstraint(lepton1,lepton2,displacements.get("pv").prodVertex());
   addFitInfo(dileptonCand, bToLL_PC, "kinpc");
   
   return kinematicLLVertexFit;
@@ -998,26 +1006,26 @@ void DileptonPlusXProducer::fillBtoKllInfo(pat::CompositeCandidate& btokllCand,
   
   auto bToKJPsiLL_NoMassConstraint = fitBToKLL(lepton1, lepton2, kaon, -1.0);
   bToKJPsiLL_NoMassConstraint.postprocess(*beamSpot_);
-  auto bToKJPsiLL_NoMassConstraint_displacement = compute3dDisplacement(bToKJPsiLL_NoMassConstraint, *pvHandle_.product(),true);
+  auto bToKJPsiLL_NoMassConstraint_displacement = compute3dDisplacement(bToKJPsiLL_NoMassConstraint);
   addFitInfo(btokllCand, bToKJPsiLL_NoMassConstraint, "nomc", bToKJPsiLL_NoMassConstraint_displacement, -1, -1, 1);
 
   // JpsiK
   KinematicFitResult bToKJPsiLL_MassConstraint;
-  DisplacementInformationIn3D bToKJPsiLL_MassConstraint_displacement;
+  bmm::Displacements bToKJPsiLL_MassConstraint_displacement;
   if (fabs((lepton1.p4() + lepton2.p4()).mass()-3.1) < 0.2) {
     bToKJPsiLL_MassConstraint = fitBToKLL(lepton1, lepton2, kaon, JPsiMass_);
     bToKJPsiLL_MassConstraint.postprocess(*beamSpot_);
-    bToKJPsiLL_MassConstraint_displacement = compute3dDisplacement(bToKJPsiLL_MassConstraint, *pvHandle_.product(),true);
+    bToKJPsiLL_MassConstraint_displacement = compute3dDisplacement(bToKJPsiLL_MassConstraint);
   }
   addFitInfo(btokllCand, bToKJPsiLL_MassConstraint, "jpsimc", bToKJPsiLL_MassConstraint_displacement,-1,-1,1);
 
   // Psi(2S)K
   KinematicFitResult bToKPsi2SLL_MassConstraint;
-  DisplacementInformationIn3D bToKPsi2SLL_MassConstraint_displacement;
+  bmm::Displacements bToKPsi2SLL_MassConstraint_displacement;
   if (fabs((lepton1.p4() + lepton2.p4()).mass()-3.7) < 0.2) {
     bToKPsi2SLL_MassConstraint = fitBToKLL(lepton1, lepton2, kaon, Psi2SMass_);
     bToKPsi2SLL_MassConstraint.postprocess(*beamSpot_);
-    bToKPsi2SLL_MassConstraint_displacement = compute3dDisplacement(bToKPsi2SLL_MassConstraint, *pvHandle_.product(),true);
+    bToKPsi2SLL_MassConstraint_displacement = compute3dDisplacement(bToKPsi2SLL_MassConstraint);
   }
   addFitInfo(btokllCand, bToKPsi2SLL_MassConstraint, "psimc", bToKPsi2SLL_MassConstraint_displacement,-1,-1,1);
   
@@ -1117,8 +1125,6 @@ DileptonPlusXProducer::fillDstarInfo(pat::CompositeCandidateCollection& dstar_co
 						 PionMass_));
       dm_prompt = (refit_p4 + d0_p4).mass() - d0_p4.mass();
 
-      // FIXME
-      // add soft pion compatibility with the vertex information
       pv_with_pion_prob = pv_refit_with_soft_pion.vtxProb();
     }
 
@@ -1187,18 +1193,18 @@ void DileptonPlusXProducer::fillBtoKKllInfo(pat::CompositeCandidate& bCand,
   // Inclusive
   auto bToKKll = fitBToKKLL(lepton1, lepton2, kaon1, kaon2);
   bToKKll.postprocess(*beamSpot_);
-  auto bToKKll_displacement = compute3dDisplacement(bToKKll, *pvHandle_.product(),true);
+  auto bToKKll_displacement = compute3dDisplacement(bToKKll);
   addFitInfo(bCand, bToKKll, "kin", bToKKll_displacement,-1,-1,1,2);
   bCand.addUserFloat("kin_kk_mass",    bToKKll.refit_mass(1,2));
 
   // Jpsi KK
   
   KinematicFitResult bToJpsiKK;
-  DisplacementInformationIn3D bToJpsiKK_displacement;
+  bmm::Displacements bToJpsiKK_displacement;
   if (fabs((lepton1.p4() + lepton2.p4()).mass() - JPsiMass_) < 0.2) { 
     bToJpsiKK = fitBToKKLL(lepton1, lepton2, kaon1, kaon2, JPsiMass_);
     bToJpsiKK.postprocess(*beamSpot_);
-    bToJpsiKK_displacement = compute3dDisplacement(bToJpsiKK, *pvHandle_.product(),true);
+    bToJpsiKK_displacement = compute3dDisplacement(bToJpsiKK);
   }
   addFitInfo(bCand, bToJpsiKK, "jpsikk", bToJpsiKK_displacement, -1, -1, 1, 2);
   bCand.addUserFloat("jpsikk_kk_mass",    bToJpsiKK.refit_mass(1,2));
@@ -1206,11 +1212,11 @@ void DileptonPlusXProducer::fillBtoKKllInfo(pat::CompositeCandidate& bCand,
   // Phi ll
   
   KinematicFitResult bToPhill;
-  DisplacementInformationIn3D bToPhill_displacement;
+  bmm::Displacements bToPhill_displacement;
   if (fabs((kaon1.p4() + kaon2.p4()).mass() - PhiMass_) < 0.01) { 
     bToPhill = fitBToKKLL(lepton1, lepton2, kaon1, kaon2, -1, PhiMass_);
     bToPhill.postprocess(*beamSpot_);
-    bToPhill_displacement = compute3dDisplacement(bToPhill, *pvHandle_.product(),true);
+    bToPhill_displacement = compute3dDisplacement(bToPhill);
   }
   addFitInfo(bCand, bToPhill, "phill", bToPhill_displacement,-1,-1,1,2);
   
@@ -1261,18 +1267,18 @@ void DileptonPlusXProducer::fillLLGammaInfo(pat::CompositeCandidate& llgCand,
   fillLLGammaGenInfo(llgCand, iEvent, lepton1, lepton2, photon);
 
   KinematicFitResult jpsiGamma_NoMassConstraint;
-  DisplacementInformationIn3D jpsiGamma_NoMassConstraint_displacement;
+  bmm::Displacements jpsiGamma_NoMassConstraint_displacement;
   jpsiGamma_NoMassConstraint = fitLLGamma(llVertexFit.refitTree, photon);
   jpsiGamma_NoMassConstraint.postprocess(*beamSpot_);
-  jpsiGamma_NoMassConstraint_displacement = compute3dDisplacement(jpsiGamma_NoMassConstraint, *pvHandle_.product(), true);
+  jpsiGamma_NoMassConstraint_displacement = compute3dDisplacement(jpsiGamma_NoMassConstraint);
   addFitInfo(llgCand, jpsiGamma_NoMassConstraint, "nomc", jpsiGamma_NoMassConstraint_displacement, -1, -1, 1);
 
   KinematicFitResult jpsiGamma_MassConstraint;
-  DisplacementInformationIn3D jpsiGamma_MassConstraint_displacement;
+  bmm::Displacements jpsiGamma_MassConstraint_displacement;
   if (fabs(llVertexFit.mass()-3.1) < 0.2) {
     jpsiGamma_MassConstraint = fitLLGamma(llVertexFit.refitTree, photon, JPsiMass_);
     jpsiGamma_MassConstraint.postprocess(*beamSpot_);
-    jpsiGamma_MassConstraint_displacement = compute3dDisplacement(jpsiGamma_MassConstraint, *pvHandle_.product(), true);
+    jpsiGamma_MassConstraint_displacement = compute3dDisplacement(jpsiGamma_MassConstraint);
   }
   addFitInfo(llgCand, jpsiGamma_MassConstraint, "jpsimc", jpsiGamma_MassConstraint_displacement, -1, -1, 1);
 
@@ -1281,7 +1287,7 @@ void DileptonPlusXProducer::fillLLGammaInfo(pat::CompositeCandidate& llgCand,
   // FIXME add relevant info that normally is added by addFitInfo
   // - not all of it is needed, because everything vertex related should be
   //   extracted from mm vertex
-  // - most of the variables are etracted using DisplacementInformationIn3D info
+  // - most of the variables are etracted using bmm::Displacements info
   //   computed with compute3dDisplacement
   // - massErr - this is something non-trivial
   // - pt,eta,phi
@@ -1331,18 +1337,18 @@ void DileptonPlusXProducer::fillLLGammaConvInfo(pat::CompositeCandidate& llgCand
   // Kinematic fits
   
   KinematicFitResult jpsiGamma_NoMassConstraint;
-  DisplacementInformationIn3D jpsiGamma_NoMassConstraint_displacement;
+  bmm::Displacements jpsiGamma_NoMassConstraint_displacement;
   jpsiGamma_NoMassConstraint = fitLLGammaConv(llVertexFit.refitTree, photon);
   jpsiGamma_NoMassConstraint.postprocess(*beamSpot_);
-  jpsiGamma_NoMassConstraint_displacement = compute3dDisplacement(jpsiGamma_NoMassConstraint, *pvHandle_.product(), true);
+  jpsiGamma_NoMassConstraint_displacement = compute3dDisplacement(jpsiGamma_NoMassConstraint);
   addFitInfo(llgCand, jpsiGamma_NoMassConstraint, "nomc", jpsiGamma_NoMassConstraint_displacement, -1, -1, 1);
 
   KinematicFitResult jpsiGamma_MassConstraint;
-  DisplacementInformationIn3D jpsiGamma_MassConstraint_displacement;
+  bmm::Displacements jpsiGamma_MassConstraint_displacement;
   if (fabs(llVertexFit.mass()-3.1) < 0.2) {
     jpsiGamma_MassConstraint = fitLLGammaConv(llVertexFit.refitTree, photon, JPsiMass_);
     jpsiGamma_MassConstraint.postprocess(*beamSpot_);
-    jpsiGamma_MassConstraint_displacement = compute3dDisplacement(jpsiGamma_MassConstraint, *pvHandle_.product(), true);
+    jpsiGamma_MassConstraint_displacement = compute3dDisplacement(jpsiGamma_MassConstraint);
   }
   addFitInfo(llgCand, jpsiGamma_MassConstraint, "jpsimc", jpsiGamma_MassConstraint_displacement, -1, -1, 1);
 
@@ -3221,88 +3227,89 @@ DileptonPlusXProducer::refitWithVertexConstraint(const reco::Track& track,
 }
 
 
-namespace {
-  typedef ROOT::Math::SMatrix<double,3,3,ROOT::Math::MatRepSym<double,3> > cov33_t;
-  typedef ROOT::Math::SMatrix<double,6,6,ROOT::Math::MatRepSym<double,6> > cov66_t;
-  typedef ROOT::Math::SMatrix<double,7,7,ROOT::Math::MatRepSym<double,7> > cov77_t;
-  typedef ROOT::Math::SMatrix<double,9,9,ROOT::Math::MatRepSym<double,9> > cov99_t;
-  typedef ROOT::Math::SVector<double,9> jac9_t;
+// namespace {
+//   typedef ROOT::Math::SMatrix<double,3,3,ROOT::Math::MatRepSym<double,3> > cov33_t;
+//   typedef ROOT::Math::SMatrix<double,6,6,ROOT::Math::MatRepSym<double,6> > cov66_t;
+//   typedef ROOT::Math::SMatrix<double,7,7,ROOT::Math::MatRepSym<double,7> > cov77_t;
+//   typedef ROOT::Math::SMatrix<double,9,9,ROOT::Math::MatRepSym<double,9> > cov99_t;
+//   typedef ROOT::Math::SVector<double,9> jac9_t;
   
-  cov33_t GlobalError2SMatrix_33(GlobalError m_in) 
-  {
-    cov33_t m_out;
-    for (int i=0; i<3; i++) {
-      for (int j=i; j<3; j++)  {
-	m_out(i,j) = m_in.matrix()(i,j);
-      }
-    }
-    return m_out;
-  }
+//   cov33_t GlobalError2SMatrix_33(GlobalError m_in) 
+//   {
+//     cov33_t m_out;
+//     for (int i=0; i<3; i++) {
+//       for (int j=i; j<3; j++)  {
+// 	m_out(i,j) = m_in.matrix()(i,j);
+//       }
+//     }
+//     return m_out;
+//   }
   
-  cov99_t makeCovarianceMatrix(const cov33_t cov_vtx1,
-			       const cov77_t cov_vtx2) 
-  {
-    cov99_t cov;
-    cov.Place_at(cov_vtx1,0,0);
-    cov.Place_at(cov_vtx2.Sub<cov66_t>(0,0),3,3);
-    return cov;
-  }
+//   cov99_t makeCovarianceMatrix(const cov33_t cov_vtx1,
+// 			       const cov77_t cov_vtx2) 
+//   {
+//     cov99_t cov;
+//     cov.Place_at(cov_vtx1,0,0);
+//     cov.Place_at(cov_vtx2.Sub<cov66_t>(0,0),3,3);
+//     return cov;
+//   }
 
-  jac9_t makeJacobianVector3d(const AlgebraicVector3 &vtx1, 
-			      const AlgebraicVector3 &vtx2, 
-			      const AlgebraicVector3 &momentum) 
-  {
-    jac9_t jac;
-    const AlgebraicVector3 dist = vtx2 - vtx1;
-    const double factor2 = 1. / ROOT::Math::Mag2(momentum);
-    const double lifetime = ROOT::Math::Dot(dist, momentum) * factor2;
-    jac.Place_at(-momentum*factor2,0);
-    jac.Place_at( momentum*factor2,3);
-    jac.Place_at( factor2*(dist-2*lifetime*momentum*factor2),6);
-    return jac;
-  }
+//   jac9_t makeJacobianVector3d(const AlgebraicVector3 &vtx1, 
+// 			      const AlgebraicVector3 &vtx2, 
+// 			      const AlgebraicVector3 &momentum) 
+//   {
+//     jac9_t jac;
+//     const AlgebraicVector3 dist = vtx2 - vtx1;
+//     const double factor2 = 1. / ROOT::Math::Mag2(momentum);
+//     const double lifetime = ROOT::Math::Dot(dist, momentum) * factor2;
+//     jac.Place_at(-momentum*factor2,0);
+//     jac.Place_at( momentum*factor2,3);
+//     jac.Place_at( factor2*(dist-2*lifetime*momentum*factor2),6);
+//     return jac;
+//   }
   
-  jac9_t makeJacobianVector3d(const ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>,
-			      ROOT::Math::DefaultCoordinateSystemTag> &vtx1,
-			      const GlobalPoint &vtx2, const TVector3 &tv3momentum) 
-  {
-    return makeJacobianVector3d(AlgebraicVector3(vtx1.X(),vtx1.Y(),vtx1.Z()),
-				AlgebraicVector3(vtx2.x(),vtx2.y(),vtx2.z()),
-				AlgebraicVector3(tv3momentum.x(),tv3momentum.y(),tv3momentum.z()));
-  }
+//   jac9_t makeJacobianVector3d(const ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>,
+// 			      ROOT::Math::DefaultCoordinateSystemTag> &vtx1,
+// 			      const GlobalPoint &vtx2, const TVector3 &tv3momentum) 
+//   {
+//     return makeJacobianVector3d(AlgebraicVector3(vtx1.X(),vtx1.Y(),vtx1.Z()),
+// 				AlgebraicVector3(vtx2.x(),vtx2.y(),vtx2.z()),
+// 				AlgebraicVector3(tv3momentum.x(),tv3momentum.y(),tv3momentum.z()));
+//   }
 
-  jac9_t makeJacobianVector2d(const AlgebraicVector3 &vtx1, const AlgebraicVector3 &vtx2,
-			      const AlgebraicVector3 &momentum) {
-    jac9_t jac;
-    const double momentumMag = ROOT::Math::Mag(momentum);
-    const AlgebraicVector3 dist = vtx2 - vtx1;
-    const double distMag = ROOT::Math::Mag(dist);
-    const double factorPositionComponent = 1./(distMag*momentumMag);
-    const double factorMomentumComponent = 1./pow(momentumMag,3);
-    jac(0)=-dist(0)*factorPositionComponent;
-    jac(1)=-dist(1)*factorPositionComponent;
-    jac(3)= dist(0)*factorPositionComponent;
-    jac(4)= dist(1)*factorPositionComponent;
-    jac(6)= momentum(0)*factorMomentumComponent;
-    jac(7)= momentum(1)*factorMomentumComponent;
-    return jac;
-  }
+//   jac9_t makeJacobianVector2d(const AlgebraicVector3 &vtx1, const AlgebraicVector3 &vtx2,
+// 			      const AlgebraicVector3 &momentum) {
+//     jac9_t jac;
+//     const double momentumMag = ROOT::Math::Mag(momentum);
+//     const AlgebraicVector3 dist = vtx2 - vtx1;
+//     const double distMag = ROOT::Math::Mag(dist);
+//     const double factorPositionComponent = 1./(distMag*momentumMag);
+//     const double factorMomentumComponent = 1./pow(momentumMag,3);
+//     jac(0)=-dist(0)*factorPositionComponent;
+//     jac(1)=-dist(1)*factorPositionComponent;
+//     jac(3)= dist(0)*factorPositionComponent;
+//     jac(4)= dist(1)*factorPositionComponent;
+//     jac(6)= momentum(0)*factorMomentumComponent;
+//     jac(7)= momentum(1)*factorMomentumComponent;
+//     return jac;
+//   }
   
-  jac9_t makeJacobianVector2d(const ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>,
-			      ROOT::Math::DefaultCoordinateSystemTag> &vtx1,
-			      const GlobalPoint &vtx2, const TVector3 &tv3momentum) {
-    return makeJacobianVector2d(AlgebraicVector3(vtx1.X(),vtx1.Y(),vtx1.Z()),
-				AlgebraicVector3(vtx2.x(),vtx2.y(),vtx2.z()),
-				AlgebraicVector3(tv3momentum.x(),tv3momentum.y(),tv3momentum.z()));
-  }
-}
+//   jac9_t makeJacobianVector2d(const ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>,
+// 			      ROOT::Math::DefaultCoordinateSystemTag> &vtx1,
+// 			      const GlobalPoint &vtx2, const TVector3 &tv3momentum) {
+//     return makeJacobianVector2d(AlgebraicVector3(vtx1.X(),vtx1.Y(),vtx1.Z()),
+// 				AlgebraicVector3(vtx2.x(),vtx2.y(),vtx2.z()),
+// 				AlgebraicVector3(tv3momentum.x(),tv3momentum.y(),tv3momentum.z()));
+//   }
+// }
 
-DisplacementInformationIn3D DileptonPlusXProducer::compute3dDisplacement(const KinematicFitResult& fit,
-								    const reco::VertexCollection& vertices,
-								    bool closestIn3D)
+bmm::Displacements
+DileptonPlusXProducer::compute3dDisplacement(const KinematicFitResult& fit, bool closestIn3D)
 {
-  DisplacementInformationIn3D result;
+  bmm::Displacements result;
   if (not fit.valid()) return result;
+
+  const auto& vertices = *pvHandle_.product();
 
   // Potential issue: tracks used to build the candidate could 
   // also be used in the primary vertex fit. One can refit the vertices
@@ -3310,6 +3317,9 @@ DisplacementInformationIn3D DileptonPlusXProducer::compute3dDisplacement(const K
   // due to non-trivial linkig between primary vertex and its tracks 
   // in MiniAOD. Also not all muons associated to a vertex are really 
   // used in the fit, so the potential bias most likely small.
+
+  // FIXME
+  // add refitted PV without candidate tracks
   
   auto candTransientTrack = fit.refitMother->refittedTransientTrack();
 
@@ -3341,6 +3351,11 @@ DisplacementInformationIn3D DileptonPlusXProducer::compute3dDisplacement(const K
     }
   }
 
+  if (bestVertex)
+    result.push_back(bmm::Displacement("pv", fit, *bestVertex, bestVertexIndex));
+  else
+    result.push_back(bmm::Displacement("pv"));
+
   // find second best vertex
   const reco::Vertex* bestVertex2(0);
   int bestVertexIndex2(-1);
@@ -3365,98 +3380,101 @@ DisplacementInformationIn3D DileptonPlusXProducer::compute3dDisplacement(const K
     }
   }
 
-  if (! bestVertex) return result;
+  if (bestVertex2)
+    result.push_back(bmm::Displacement("_pv2", fit, *bestVertex2, bestVertexIndex2));
+  else
+    result.push_back(bmm::Displacement("_pv2"));
 
-  auto impactParameter3D = IPTools::absoluteImpactParameter3D(candTransientTrack, *bestVertex);
-  auto impactParameterZ  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), *bestVertex);
-  result.pv = bestVertex;
-  result.pvIndex = bestVertexIndex;
-  if (impactParameterZ.first) {
-    result.longitudinalImpactParameter    = impactParameterZ.second.value();
-    result.longitudinalImpactParameterSig = impactParameterZ.second.significance();
-    result.longitudinalImpactParameterErr = impactParameterZ.second.error();
-  }
-  if (impactParameter3D.first and not isnan(impactParameter3D.second.error())) {
-    result.distaceOfClosestApproach       = impactParameter3D.second.value();
-    result.distaceOfClosestApproachSig    = impactParameter3D.second.significance();
-    result.distaceOfClosestApproachErr    = impactParameter3D.second.error();
-  }
+  // auto impactParameter3D = IPTools::absoluteImpactParameter3D(candTransientTrack, *bestVertex);
+  // auto impactParameterZ  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), *bestVertex);
+  // result.pv = bestVertex;
+  // result.pvIndex = bestVertexIndex;
+  // if (impactParameterZ.first) {
+  //   result.longitudinalImpactParameter    = impactParameterZ.second.value();
+  //   result.longitudinalImpactParameterSig = impactParameterZ.second.significance();
+  //   result.longitudinalImpactParameterErr = impactParameterZ.second.error();
+  // }
+  // if (impactParameter3D.first and not isnan(impactParameter3D.second.error())) {
+  //   result.distaceOfClosestApproach       = impactParameter3D.second.value();
+  //   result.distaceOfClosestApproachSig    = impactParameter3D.second.significance();
+  //   result.distaceOfClosestApproachErr    = impactParameter3D.second.error();
+  // }
 
-  // compute decay length
-  VertexDistance3D distance3D;
-  auto dist = distance3D.distance(*bestVertex, fit.refitVertex->vertexState() );
-  result.decayLength    = dist.value();
-  result.decayLengthErr = dist.error();
+  // // compute decay length
+  // VertexDistance3D distance3D;
+  // auto dist = distance3D.distance(*bestVertex, fit.refitVertex->vertexState() );
+  // result.decayLength    = dist.value();
+  // result.decayLengthErr = dist.error();
   
-  VertexDistanceXY distanceXY;
-  auto distXY = distanceXY.distance(*bestVertex, fit.refitVertex->vertexState() );
+  // VertexDistanceXY distanceXY;
+  // auto distXY = distanceXY.distance(*bestVertex, fit.refitVertex->vertexState() );
 
-  if (bestVertex2){
-    auto impactParameter3D2 = IPTools::absoluteImpactParameter3D(candTransientTrack, *bestVertex2);
-    auto impactParameterZ2  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), *bestVertex2);
-    result.pv2 = bestVertex2;
-    result.pv2Index = bestVertexIndex2;
-    if (impactParameterZ2.first) {
-      result.longitudinalImpactParameter2    = impactParameterZ2.second.value();
-      result.longitudinalImpactParameter2Sig = impactParameterZ2.second.significance();
-      result.longitudinalImpactParameter2Err = impactParameterZ2.second.error();
-    }
-    if (impactParameter3D2.first) {
-      result.distaceOfClosestApproach2       = impactParameter3D2.second.value();
-      result.distaceOfClosestApproach2Sig    = impactParameter3D2.second.value();
-      result.distaceOfClosestApproach2Err    = impactParameter3D2.second.error();
-    }
+  // if (bestVertex2){
+  //   auto impactParameter3D2 = IPTools::absoluteImpactParameter3D(candTransientTrack, *bestVertex2);
+  //   auto impactParameterZ2  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), *bestVertex2);
+  //   result.pv2 = bestVertex2;
+  //   result.pv2Index = bestVertexIndex2;
+  //   if (impactParameterZ2.first) {
+  //     result.longitudinalImpactParameter2    = impactParameterZ2.second.value();
+  //     result.longitudinalImpactParameter2Sig = impactParameterZ2.second.significance();
+  //     result.longitudinalImpactParameter2Err = impactParameterZ2.second.error();
+  //   }
+  //   if (impactParameter3D2.first) {
+  //     result.distaceOfClosestApproach2       = impactParameter3D2.second.value();
+  //     result.distaceOfClosestApproach2Sig    = impactParameter3D2.second.value();
+  //     result.distaceOfClosestApproach2Err    = impactParameter3D2.second.error();
+  //   }
 
-    // compute decay length
-    VertexDistance3D distance3D;
-    auto dist = distance3D.distance(*bestVertex2, fit.refitVertex->vertexState() );
-    result.decayLength2    = dist.value();
-    result.decayLength2Err = dist.error();
+  //   // compute decay length
+  //   VertexDistance3D distance3D;
+  //   auto dist = distance3D.distance(*bestVertex2, fit.refitVertex->vertexState() );
+  //   result.decayLength2    = dist.value();
+  //   result.decayLength2Err = dist.error();
 
-  }
+  // }
 
-  //
-  // Pointing angle
-  //
-  auto alpha = getAlpha(fit.refitVertex->vertexState().position(),
-			fit.refitVertex->vertexState().error(),
-			GlobalPoint(Basic3DVector<float>(bestVertex->position())),
-			GlobalError(bestVertex->covariance()),
-			fit.refitMother->currentState().globalMomentum());
+  // //
+  // // Pointing angle
+  // //
+  // auto alpha = getAlpha(fit.refitVertex->vertexState().position(),
+  // 			fit.refitVertex->vertexState().error(),
+  // 			GlobalPoint(Basic3DVector<float>(bestVertex->position())),
+  // 			GlobalError(bestVertex->covariance()),
+  // 			fit.refitMother->currentState().globalMomentum());
 
-  auto alphaXY = getAlpha(fit.refitVertex->vertexState().position(),
-			  fit.refitVertex->vertexState().error(),
-			  GlobalPoint(Basic3DVector<float>(bestVertex->position())),
-			  GlobalError(bestVertex->covariance()),
-			  fit.refitMother->currentState().globalMomentum(),
-			  true);
+  // auto alphaXY = getAlpha(fit.refitVertex->vertexState().position(),
+  // 			  fit.refitVertex->vertexState().error(),
+  // 			  GlobalPoint(Basic3DVector<float>(bestVertex->position())),
+  // 			  GlobalError(bestVertex->covariance()),
+  // 			  fit.refitMother->currentState().globalMomentum(),
+  // 			  true);
 
-  result.alpha    = alpha.first;
-  result.alphaErr = alpha.second;
+  // result.alpha    = alpha.first;
+  // result.alphaErr = alpha.second;
 
-  result.alphaXY    = alphaXY.first;
-  result.alphaXYErr = alphaXY.second;
+  // result.alphaXY    = alphaXY.first;
+  // result.alphaXYErr = alphaXY.second;
 
   
-  //
-  // Decay time information
-  //
-  TVector3 plab(fit.refitMother->currentState().globalMomentum().x(),
-		fit.refitMother->currentState().globalMomentum().y(),
-                fit.refitMother->currentState().globalMomentum().z());
-  const double massOverC = fit.mass()/TMath::Ccgs();
+  // //
+  // // Decay time information
+  // //
+  // TVector3 plab(fit.refitMother->currentState().globalMomentum().x(),
+  // 		fit.refitMother->currentState().globalMomentum().y(),
+  //               fit.refitMother->currentState().globalMomentum().z());
+  // const double massOverC = fit.mass()/TMath::Ccgs();
 
-  // get covariance matrix for error propagation in decayTime calculation
-  auto vtxDistanceCov = makeCovarianceMatrix(GlobalError2SMatrix_33(bestVertex->error()),
-					     fit.refitMother->currentState().kinematicParametersError().matrix());
-  auto vtxDistanceJac3d = makeJacobianVector3d(bestVertex->position(), fit.refitVertex->vertexState().position(), plab);
-  auto vtxDistanceJac2d = makeJacobianVector2d(bestVertex->position(), fit.refitVertex->vertexState().position(), plab);
+  // // get covariance matrix for error propagation in decayTime calculation
+  // auto vtxDistanceCov = makeCovarianceMatrix(GlobalError2SMatrix_33(bestVertex->error()),
+  // 					     fit.refitMother->currentState().kinematicParametersError().matrix());
+  // auto vtxDistanceJac3d = makeJacobianVector3d(bestVertex->position(), fit.refitVertex->vertexState().position(), plab);
+  // auto vtxDistanceJac2d = makeJacobianVector2d(bestVertex->position(), fit.refitVertex->vertexState().position(), plab);
 
-  result.decayTime = dist.value() / plab.Mag() * cos(result.alpha) * massOverC;
-  result.decayTimeError = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac3d)) * massOverC;
+  // result.decayTime = dist.value() / plab.Mag() * cos(result.alpha) * massOverC;
+  // result.decayTimeError = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac3d)) * massOverC;
 
-  result.decayTimeXY = distXY.value() / plab.Perp() * cos(result.alphaXY) * massOverC;
-  result.decayTimeXYError = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac2d)) * massOverC;
+  // result.decayTimeXY = distXY.value() / plab.Perp() * cos(result.alphaXY) * massOverC;
+  // result.decayTimeXYError = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac2d)) * massOverC;
     
   return result;
 }

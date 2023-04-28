@@ -110,7 +110,7 @@ DileptonsMc = Dileptons.clone( isMC = cms.bool(True) )
 ###
 ##################################################################################
 
-kinematic_pset = cms.PSet(
+kinematic_common_pset = cms.PSet(
     kin_valid    = Var("userInt('kin_valid')",         int,   doc = "Kinematic fit: vertex validity"),
     kin_vtx_prob = Var("userFloat('kin_vtx_prob')",    float, doc = "Kinematic fit: vertex probability"),
     kin_vtx_chi2dof = Var("userFloat('kin_vtx_chi2dof')", float, doc = "Kinematic fit: vertex normalized Chi^2"),
@@ -123,34 +123,38 @@ kinematic_pset = cms.PSet(
     kin_slxy     = Var("userFloat('kin_sigLxy')",      float, doc = "Kinematic fit: vertex displacement significance in XY plane wrt Beam Spot"),
     kin_alphaBS  = Var("userFloat('kin_alphaBS')",     float, doc = "Kinematic fit: pointing angle in XY wrt BS"),
     kin_alphaBSErr = Var("userFloat('kin_alphaBSErr')", float, doc = "Kinematic fit: pointing angle in XY wrt BS"),
-    kin_alpha    = Var("userFloat('kin_alpha')",       float, doc = "Kinematic fit: pointing angle in 3D wrt PV"),
-    kin_alphaErr = Var("userFloat('kin_alphaErr')",    float, doc = "Kinematic fit: pointing angle uncertainty in 3D wrt PV"),
     kin_vtx_x    = Var("userFloat('kin_vtx_x')",       float, doc = "Kinematic fit: vertex x"),
     kin_vtx_xErr = Var("userFloat('kin_vtx_xErr')",    float, doc = "Kinematic fit: vertex x-error"),
     kin_vtx_y    = Var("userFloat('kin_vtx_y')",       float, doc = "Kinematic fit: vertex y"),
     kin_vtx_yErr = Var("userFloat('kin_vtx_yErr')",    float, doc = "Kinematic fit: vertex y-error"),
     kin_vtx_z    = Var("userFloat('kin_vtx_z')",       float, doc = "Kinematic fit: vertex y"),
     kin_vtx_zErr = Var("userFloat('kin_vtx_zErr')",    float, doc = "Kinematic fit: vertex y-error"),
-    kin_pv_z     = Var("userFloat('kin_pv_z')",        float, doc = "Kinematic fit: primary vertex z"),
-    kin_pv_zErr  = Var("userFloat('kin_pv_zErr')",     float, doc = "Kinematic fit: primary vertex z-error"),
+)
+
+kinematic_displacement_pset = cms.PSet(
+    kin_alpha    = Var("userFloat('kin_alpha')",       float, doc = "Kinematic fit: pointing angle in 3D wrt PV"),
+    kin_alphaErr = Var("userFloat('kin_alphaErr')",    float, doc = "Kinematic fit: pointing angle uncertainty in 3D wrt PV"),
     kin_l3d      = Var("userFloat('kin_l3d')",         float, doc = "Kinematic fit: decay length wrt Primary Vertex in 3D"),
     kin_sl3d     = Var("userFloat('kin_sl3d')",        float, doc = "Kinematic fit: decay length significance wrt Primary Vertex in 3D"),
+    kin_pv_z     = Var("userFloat('kin_pv_z')",        float, doc = "Kinematic fit: primary vertex z"),
+    kin_pv_zErr  = Var("userFloat('kin_pv_zErr')",     float, doc = "Kinematic fit: primary vertex z-error"),
+    kin_pvip     = Var("userFloat('kin_pvip')",        float, doc = "Kinematic fit: impact parameter wrt Primary Vertex in 3D"),
+    kin_spvip    = Var("userFloat('kin_spvip')",       float, doc = "Kinematic fit: impact parameter significance wrt Primary Vertex in 3D"),
+    kin_pvipErr  = Var("userFloat('kin_pvipErr')",     float, doc = "Kinematic fit: impact parameter uncertainty wrt Primary Vertex in 3D"),
+    kin_pvlip    = Var("userFloat('kin_pvlip')",       float, doc = "Kinematic fit: longitudinal impact parameter wrt Primary Vertex"),
+    kin_pvlipSig = Var("userFloat('kin_pvlipSig')",    float, doc = "Kinematic fit: longitudinal impact parameter significance wrt Primary Vertex"),
+    kin_pvlipErr = Var("userFloat('kin_pvlipErr')",    float, doc = "Kinematic fit: longitudinal impact parameter uncertainty wrt Primary Vertex"),
+    kin_pvIndex  = Var("userInt('kin_pvIndex')",         int, doc = "Kinematic fit: primary vertex index"),
     kin_tau      = Var("userFloat('kin_tau')",         float, doc = "Kinematic fit: decay time wrt Primary Vertex in 3D"),
     kin_taue     = Var("userFloat('kin_taue')",        float, doc = "Kinematic fit: decay time error wrt Primary Vertex in 3D"),
     kin_tauxy    = Var("userFloat('kin_tauxy')",       float, doc = "Kinematic fit: decay time wrt Primary Vertex in XY"),
     kin_tauxye   = Var("userFloat('kin_tauxye')",      float, doc = "Kinematic fit: decay time error wrt Primary Vertex in XY"),
-    kin_pvip     = Var("userFloat('kin_pvip')",        float, doc = "Kinematic fit: impact parameter wrt Primary Vertex in 3D"),
-    kin_spvip    = Var("userFloat('kin_spvip')",       float, doc = "Kinematic fit: impact parameter significance wrt Primary Vertex in 3D"),
-    kin_pvipErr  = Var("userFloat('kin_pvipErr')",     float, doc = "Kinematic fit: impact parameter uncertainty wrt Primary Vertex in 3D"),
-    kin_pv2ip    = Var("userFloat('kin_pv2ip')",       float, doc = "Kinematic fit: impact parameter wrt Second best Primary Vertex in 3D"),
-    kin_spv2ip   = Var("userFloat('kin_spv2ip')",      float, doc = "Kinematic fit: impact parameter significance wrt Second best Primary Vertex in 3D"),
-    kin_pv2ipErr = Var("userFloat('kin_pv2ipErr')",    float, doc = "Kinematic fit: impact parameter uncertainty wrt Second best Primary Vertex in 3D"),
-    kin_pvlip    = Var("userFloat('kin_pvlip')",       float, doc = "Kinematic fit: longitudinal impact parameter wrt Primary Vertex"),
-    kin_pvlipSig = Var("userFloat('kin_pvlipSig')",    float, doc = "Kinematic fit: longitudinal impact parameter significance wrt Primary Vertex"),
-    kin_pvlipErr = Var("userFloat('kin_pvlipErr')",    float, doc = "Kinematic fit: longitudinal impact parameter uncertainty wrt Primary Vertex"),
-    kin_pv2lip   = Var("userFloat('kin_pv2lip')",       float, doc = "Kinematic fit: longitudinal impact parameter wrt Second best Primary Vertex"),
-    kin_pv2lipSig = Var("userFloat('kin_pv2lipSig')",    float, doc = "Kinematic fit: longitudinal impact parameter significance wrt Second best Primary Vertex"),
-    kin_pv2lipErr = Var("userFloat('kin_pv2lipErr')",    float, doc = "Kinematic fit: longitudinal impact parameter uncertainty wrt Second best Primary Vertex"),
+)
+
+kinematic_pset = merge_psets(
+    kinematic_common_pset,
+    kinematic_displacement_pset,
+    copy_pset(kinematic_displacement_pset, {"kin_":"kin_pv2_"}),
 )
 
 isolation_pset = cms.PSet(
@@ -201,7 +205,7 @@ DileptonsDiMuonTableVariables = merge_psets(
         kin_mu2_phi   = Var("userFloat('kin_mu2phi')",      float, doc = "Kinematic fit: refitted muon 2 phi"),
         ),
     kinematic_pset,
-    copy_pset(kinematic_pset,{"kin_":"kinpc_"}),
+    copy_pset(kinematic_common_pset, {"kin_":"kinpc_"}),
     isolation_pset    
 )
 
