@@ -80,7 +80,7 @@ namespace {
 
 void bmm::Displacement::compute_displacement()
 {
-  auto candTransientTrack = fit_.refitMother->refittedTransientTrack();
+  auto candTransientTrack = fit_.particle()->refittedTransientTrack();
   auto impactParameter3D = IPTools::absoluteImpactParameter3D(candTransientTrack, prodVertex_);
   auto impactParameterZ  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), prodVertex_);
   
@@ -98,27 +98,27 @@ void bmm::Displacement::compute_displacement()
 
   // compute decay length
   VertexDistance3D distance3D;
-  auto dist = distance3D.distance(prodVertex_, fit_.refitVertex->vertexState() );
+  auto dist = distance3D.distance(prodVertex_, fit_.vtx_state() );
   decayLength_    = dist.value();
   decayLengthErr_ = dist.error();
   
   VertexDistanceXY distanceXY;
-  auto distXY = distanceXY.distance(prodVertex_, fit_.refitVertex->vertexState() );
+  auto distXY = distanceXY.distance(prodVertex_, fit_.vtx_state() );
 
   //
   // Pointing angle
   //
-  auto alpha = getAlpha(fit_.refitVertex->vertexState().position(),
-			fit_.refitVertex->vertexState().error(),
+  auto alpha = getAlpha(fit_.vtx_position(),
+			fit_.vtx_error(),
 			GlobalPoint(Basic3DVector<float>(prodVertex_.position())),
 			GlobalError(prodVertex_.covariance()),
-			fit_.refitMother->currentState().globalMomentum());
+			fit_.p3());
 
-  auto alphaXY = getAlpha(fit_.refitVertex->vertexState().position(),
-			  fit_.refitVertex->vertexState().error(),
+  auto alphaXY = getAlpha(fit_.vtx_position(),
+			  fit_.vtx_error(),
 			  GlobalPoint(Basic3DVector<float>(prodVertex_.position())),
 			  GlobalError(prodVertex_.covariance()),
-			  fit_.refitMother->currentState().globalMomentum(),
+			  fit_.p3(),
 			  true);
 
   alpha_    = alpha.first;
@@ -131,16 +131,14 @@ void bmm::Displacement::compute_displacement()
   //
   // Decay time information
   //
-  TVector3 plab(fit_.refitMother->currentState().globalMomentum().x(),
-		fit_.refitMother->currentState().globalMomentum().y(),
-                fit_.refitMother->currentState().globalMomentum().z());
+  TVector3 plab(fit_.p3().x(), fit_.p3().y(), fit_.p3().z());
   const double massOverC = fit_.mass()/TMath::Ccgs();
 
   // get covariance matrix for error propagation in decayTime calculation
   auto vtxDistanceCov = makeCovarianceMatrix(GlobalError2SMatrix_33(prodVertex_.error()),
-					     fit_.refitMother->currentState().kinematicParametersError().matrix());
-  auto vtxDistanceJac3d = makeJacobianVector3d(prodVertex_.position(), fit_.refitVertex->vertexState().position(), plab);
-  auto vtxDistanceJac2d = makeJacobianVector2d(prodVertex_.position(), fit_.refitVertex->vertexState().position(), plab);
+					     fit_.particle()->currentState().kinematicParametersError().matrix());
+  auto vtxDistanceJac3d = makeJacobianVector3d(prodVertex_.position(), fit_.vtx_position(), plab);
+  auto vtxDistanceJac2d = makeJacobianVector2d(prodVertex_.position(), fit_.vtx_position(), plab);
 
   decayTime_ = dist.value() / plab.Mag() * cos(alpha_) * massOverC;
   decayTimeError_ = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac3d)) * massOverC;

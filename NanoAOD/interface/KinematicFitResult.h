@@ -9,19 +9,15 @@ getAlpha(const GlobalPoint& vtx_position, const GlobalError& vtx_error,
 			     const GlobalVector &momentum,
 	 bool transverse = true);
 
-struct KinematicFitResult{
-  bool treeIsValid;
-  bool vertexIsValid;
-  RefCountedKinematicVertex      refitVertex;
-  RefCountedKinematicParticle    refitMother;
-  RefCountedKinematicTree        refitTree;
-  std::vector<RefCountedKinematicParticle> refitDaughters;
-  float lxy, lxyErr, sigLxy, alphaBS, alphaBSErr;
-  KinematicFitResult():treeIsValid(false),vertexIsValid(false),
-		       lxy(-1.0), lxyErr(-1.0), sigLxy(-1.0),
-		       alphaBS(-999.), alphaBSErr(-999.)
+class KinematicFitResult{
+ public:
+  KinematicFitResult() : lxy_(-1.0), lxyErr_(-1.0), sigLxy_(-1.0),
+    alphaBS_(-999.), alphaBSErr_(-999.),
+    treeIsValid(false)
   {}
 
+  void set_tree(RefCountedKinematicTree tree);
+  
   bool valid() const;
   void postprocess(const reco::BeamSpot& beamSpot);
   float mass() const;
@@ -36,8 +32,29 @@ struct KinematicFitResult{
   float chi2() const;
   float ndof() const;
   float vtxProb() const;
+  GlobalPoint vtx_position() const;
+  VertexState vtx_state() const;
+  GlobalError vtx_error() const;
+  reco::Vertex vertex() const;
   float sumPt() const;
   float sumPt2() const;
+  float lxy() const {return lxy_;}
+  float lxyErr() const {return lxyErr_;}
+  float sigLxy() const {return sigLxy_;}
+  float alphaBS() const {return alphaBS_;}
+  float alphaBSErr() const {return alphaBSErr_;}
+  RefCountedKinematicTree tree(){return refitTree;}
+  const RefCountedKinematicParticle particle() const {return refitMother;}
+
+  std::vector<const reco::Track*> tracks;
+
+ private:
+  float lxy_, lxyErr_, sigLxy_, alphaBS_, alphaBSErr_;
+  bool treeIsValid;
+  RefCountedKinematicVertex      refitVertex;
+  RefCountedKinematicParticle    refitMother;
+  RefCountedKinematicTree        refitTree;
+  std::vector<RefCountedKinematicParticle> refitDaughters;
 };
 
 #endif

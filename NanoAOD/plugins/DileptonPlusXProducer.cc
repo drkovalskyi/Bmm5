@@ -198,6 +198,12 @@ private:
 			    const bmm::Candidate& lepton2,
 			    const pat::PackedCandidate& pfCand);
 
+  template <typename T> std::vector<const reco::Track*>
+  getGoodTracksToRefitPV(int pvIndex, T track_to_ignore);
+  
+  template <typename T> std::vector<const reco::Track*>
+  getGoodTracksToRefitPV(int pvIndex, std::vector<T> ignoreTracks);
+
   std::pair<KinematicFitResult, KinematicFitResult>
   refitWithVertexConstraint(const reco::Track& track,
 			    int pvIndex);
@@ -257,7 +263,7 @@ private:
   // Track to vertex DOCA
   Measurement1D
   distanceOfClosestApproach( const reco::Track* track,
-			     RefCountedKinematicVertex vertex);
+			     const VertexState& vertex_state);
   Measurement1D 
   distanceOfClosestApproach( const reco::Track* track,
 			     const reco::Vertex& vertex);
@@ -574,16 +580,18 @@ namespace {
     cand.addUserFloat( name+"_vtx_chi2dof", fit.chi2()>0?fit.chi2()/fit.ndof():-1);
     cand.addUserFloat( name+"_mass",        fit.mass() );
     cand.addUserFloat( name+"_massErr",     fit.massErr() );
-    cand.addUserFloat( name+"_lxy",         fit.lxy );
-    cand.addUserFloat( name+"_sigLxy",      fit.sigLxy );
-    cand.addUserFloat( name+"_alphaBS",     fit.alphaBS);
-    cand.addUserFloat( name+"_alphaBSErr",  fit.alphaBSErr);
-    cand.addUserFloat( name+"_vtx_x",       fit.valid()?fit.refitVertex->position().x():0 );
-    cand.addUserFloat( name+"_vtx_xErr",    fit.valid()?sqrt(fit.refitVertex->error().cxx()):0 );
-    cand.addUserFloat( name+"_vtx_y",       fit.valid()?fit.refitVertex->position().y():0 );
-    cand.addUserFloat( name+"_vtx_yErr",    fit.valid()?sqrt(fit.refitVertex->error().cyy()):0 );
-    cand.addUserFloat( name+"_vtx_z",       fit.valid()?fit.refitVertex->position().z():0 );
-    cand.addUserFloat( name+"_vtx_zErr",    fit.valid()?sqrt(fit.refitVertex->error().czz()):0 );
+    cand.addUserFloat( name+"_lxy",         fit.lxy() );
+    cand.addUserFloat( name+"_sigLxy",      fit.sigLxy() );
+    cand.addUserFloat( name+"_alphaBS",     fit.alphaBS() );
+    cand.addUserFloat( name+"_alphaBSErr",  fit.alphaBSErr() );
+    auto vtx_position = fit.vtx_position();
+    auto vtx_error = fit.vtx_error();
+    cand.addUserFloat( name+"_vtx_x",       vtx_position.x() );
+    cand.addUserFloat( name+"_vtx_xErr",    sqrt(vtx_error.cxx()) );
+    cand.addUserFloat( name+"_vtx_y",       vtx_position.y() );
+    cand.addUserFloat( name+"_vtx_yErr",    sqrt(vtx_error.cyy()) );
+    cand.addUserFloat( name+"_vtx_z",       vtx_position.z() );
+    cand.addUserFloat( name+"_vtx_zErr",    sqrt(vtx_error.czz()) );
     cand.addUserFloat( name+"_pt",          fit.p3().perp() );
     cand.addUserFloat( name+"_eta",         fit.p3().eta() );
     cand.addUserFloat( name+"_phi",         fit.p3().phi() );
@@ -677,7 +685,7 @@ DileptonPlusXProducer::findTracksCompatibleWithTheVertex(const bmm::Candidate& l
     
     CloseTrack track;
     track.pfCand = &pfCand;
-    auto doca = distanceOfClosestApproach(pfCand.bestTrack(),fit.refitVertex);
+    auto doca = distanceOfClosestApproach(pfCand.bestTrack(),fit.vtx_state());
     track.svDoca = doca.value();
     track.svDocaErr = doca.error();
 
@@ -871,12 +879,8 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
     dileptonCand.addUserFloat("gen_lxy",        (gen_ll.ll_prod_vtx-gen_ll.ll_vtx).rho());
     dileptonCand.addUserFloat("gen_tau",        computeDecayTime(gen_ll));
     if (gen_ll.match and kinematicLLVertexFit.valid()){
-      dileptonCand.addUserFloat("gen_alpha_p_phi",
-				kinematicLLVertexFit.refitMother->currentState().globalMomentum().phi() -
-				gen_ll.match->phi());
-      dileptonCand.addUserFloat("gen_alpha_p_theta",
-				kinematicLLVertexFit.refitMother->currentState().globalMomentum().theta() -
-				gen_ll.match->theta());
+      dileptonCand.addUserFloat("gen_alpha_p_phi", kinematicLLVertexFit.p3().phi() - gen_ll.match->phi());
+      dileptonCand.addUserFloat("gen_alpha_p_theta", kinematicLLVertexFit.p3().theta() - gen_ll.match->theta());
       TVector3 p_gen(gen_ll.match->px(),
 		     gen_ll.match->py(),
 		     gen_ll.match->pz());
@@ -886,9 +890,9 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
       TVector3 ip_gen(gen_ll.ll_prod_vtx.x(),
 		      gen_ll.ll_prod_vtx.y(),
 		      gen_ll.ll_prod_vtx.z());
-      TVector3 vtx_reco(kinematicLLVertexFit.refitVertex->vertexState().position().x(), 
-			kinematicLLVertexFit.refitVertex->vertexState().position().y(), 
-			kinematicLLVertexFit.refitVertex->vertexState().position().z());
+      TVector3 vtx_reco(kinematicLLVertexFit.vtx_position().x(), 
+			kinematicLLVertexFit.vtx_position().y(), 
+			kinematicLLVertexFit.vtx_position().z());
       TVector3 vtx_gen(gen_ll.ll_vtx.x(),
 		       gen_ll.ll_vtx.y(),
 		       gen_ll.ll_vtx.z());
@@ -1011,22 +1015,20 @@ void DileptonPlusXProducer::fillBtoKllInfo(pat::CompositeCandidate& btokllCand,
 
   // JpsiK
   KinematicFitResult bToKJPsiLL_MassConstraint;
-  bmm::Displacements bToKJPsiLL_MassConstraint_displacement;
   if (fabs((lepton1.p4() + lepton2.p4()).mass()-3.1) < 0.2) {
     bToKJPsiLL_MassConstraint = fitBToKLL(lepton1, lepton2, kaon, JPsiMass_);
     bToKJPsiLL_MassConstraint.postprocess(*beamSpot_);
-    bToKJPsiLL_MassConstraint_displacement = compute3dDisplacement(bToKJPsiLL_MassConstraint);
   }
+  auto bToKJPsiLL_MassConstraint_displacement = compute3dDisplacement(bToKJPsiLL_MassConstraint);
   addFitInfo(btokllCand, bToKJPsiLL_MassConstraint, "jpsimc", bToKJPsiLL_MassConstraint_displacement,-1,-1,1);
 
   // Psi(2S)K
   KinematicFitResult bToKPsi2SLL_MassConstraint;
-  bmm::Displacements bToKPsi2SLL_MassConstraint_displacement;
   if (fabs((lepton1.p4() + lepton2.p4()).mass()-3.7) < 0.2) {
     bToKPsi2SLL_MassConstraint = fitBToKLL(lepton1, lepton2, kaon, Psi2SMass_);
     bToKPsi2SLL_MassConstraint.postprocess(*beamSpot_);
-    bToKPsi2SLL_MassConstraint_displacement = compute3dDisplacement(bToKPsi2SLL_MassConstraint);
   }
+  auto bToKPsi2SLL_MassConstraint_displacement = compute3dDisplacement(bToKPsi2SLL_MassConstraint);
   addFitInfo(btokllCand, bToKPsi2SLL_MassConstraint, "psimc", bToKPsi2SLL_MassConstraint_displacement,-1,-1,1);
   
   // broken pointing constraint
@@ -1200,24 +1202,22 @@ void DileptonPlusXProducer::fillBtoKKllInfo(pat::CompositeCandidate& bCand,
   // Jpsi KK
   
   KinematicFitResult bToJpsiKK;
-  bmm::Displacements bToJpsiKK_displacement;
   if (fabs((lepton1.p4() + lepton2.p4()).mass() - JPsiMass_) < 0.2) { 
     bToJpsiKK = fitBToKKLL(lepton1, lepton2, kaon1, kaon2, JPsiMass_);
     bToJpsiKK.postprocess(*beamSpot_);
-    bToJpsiKK_displacement = compute3dDisplacement(bToJpsiKK);
   }
+  auto bToJpsiKK_displacement = compute3dDisplacement(bToJpsiKK);
   addFitInfo(bCand, bToJpsiKK, "jpsikk", bToJpsiKK_displacement, -1, -1, 1, 2);
   bCand.addUserFloat("jpsikk_kk_mass",    bToJpsiKK.refit_mass(1,2));
 
   // Phi ll
   
   KinematicFitResult bToPhill;
-  bmm::Displacements bToPhill_displacement;
   if (fabs((kaon1.p4() + kaon2.p4()).mass() - PhiMass_) < 0.01) { 
     bToPhill = fitBToKKLL(lepton1, lepton2, kaon1, kaon2, -1, PhiMass_);
     bToPhill.postprocess(*beamSpot_);
-    bToPhill_displacement = compute3dDisplacement(bToPhill);
   }
+  auto bToPhill_displacement = compute3dDisplacement(bToPhill);
   addFitInfo(bCand, bToPhill, "phill", bToPhill_displacement,-1,-1,1,2);
   
 }
@@ -1257,7 +1257,7 @@ void DileptonPlusXProducer::fillLLGammaInfo(pat::CompositeCandidate& llgCand,
   // when the tree is used in subsequent fits
   auto llVertexFit = vertexLeptonsWithKinematicFitter(lepton1, lepton2);
   
-  llVertexFit.refitTree->movePointerToTheTop();
+  llVertexFit.tree()->movePointerToTheTop();
   
   llgCand.addUserFloat("ph_pt",     photon.pt());
   llgCand.addUserFloat("ph_eta",    photon.eta());
@@ -1267,19 +1267,25 @@ void DileptonPlusXProducer::fillLLGammaInfo(pat::CompositeCandidate& llgCand,
   fillLLGammaGenInfo(llgCand, iEvent, lepton1, lepton2, photon);
 
   KinematicFitResult jpsiGamma_NoMassConstraint;
-  bmm::Displacements jpsiGamma_NoMassConstraint_displacement;
-  jpsiGamma_NoMassConstraint = fitLLGamma(llVertexFit.refitTree, photon);
+  jpsiGamma_NoMassConstraint = fitLLGamma(llVertexFit.tree(), photon);
+  if (lepton1.track()) 
+    jpsiGamma_NoMassConstraint.tracks.push_back(lepton1.track());
+  if (lepton2.track()) 
+    jpsiGamma_NoMassConstraint.tracks.push_back(lepton2.track());
   jpsiGamma_NoMassConstraint.postprocess(*beamSpot_);
-  jpsiGamma_NoMassConstraint_displacement = compute3dDisplacement(jpsiGamma_NoMassConstraint);
+  auto jpsiGamma_NoMassConstraint_displacement = compute3dDisplacement(jpsiGamma_NoMassConstraint);
   addFitInfo(llgCand, jpsiGamma_NoMassConstraint, "nomc", jpsiGamma_NoMassConstraint_displacement, -1, -1, 1);
 
   KinematicFitResult jpsiGamma_MassConstraint;
-  bmm::Displacements jpsiGamma_MassConstraint_displacement;
   if (fabs(llVertexFit.mass()-3.1) < 0.2) {
-    jpsiGamma_MassConstraint = fitLLGamma(llVertexFit.refitTree, photon, JPsiMass_);
+    jpsiGamma_MassConstraint = fitLLGamma(llVertexFit.tree(), photon, JPsiMass_);
+    if (lepton1.track()) 
+      jpsiGamma_MassConstraint.tracks.push_back(lepton1.track());
+    if (lepton2.track()) 
+      jpsiGamma_MassConstraint.tracks.push_back(lepton2.track());
     jpsiGamma_MassConstraint.postprocess(*beamSpot_);
-    jpsiGamma_MassConstraint_displacement = compute3dDisplacement(jpsiGamma_MassConstraint);
   }
+  auto jpsiGamma_MassConstraint_displacement = compute3dDisplacement(jpsiGamma_MassConstraint);
   addFitInfo(llgCand, jpsiGamma_MassConstraint, "jpsimc", jpsiGamma_MassConstraint_displacement, -1, -1, 1);
 
   // need bestVertex
@@ -1324,7 +1330,7 @@ void DileptonPlusXProducer::fillLLGammaConvInfo(pat::CompositeCandidate& llgCand
   // when the tree is used in subsequent fits
   auto llVertexFit = vertexLeptonsWithKinematicFitter(lepton1, lepton2);
   
-  llVertexFit.refitTree->movePointerToTheTop();
+  llVertexFit.tree()->movePointerToTheTop();
   
   llgCand.addUserFloat("ph_pt",     photon.pt());
   llgCand.addUserFloat("ph_eta",    photon.eta());
@@ -1337,19 +1343,25 @@ void DileptonPlusXProducer::fillLLGammaConvInfo(pat::CompositeCandidate& llgCand
   // Kinematic fits
   
   KinematicFitResult jpsiGamma_NoMassConstraint;
-  bmm::Displacements jpsiGamma_NoMassConstraint_displacement;
-  jpsiGamma_NoMassConstraint = fitLLGammaConv(llVertexFit.refitTree, photon);
+  jpsiGamma_NoMassConstraint = fitLLGammaConv(llVertexFit.tree(), photon);
+  if (lepton1.track()) 
+    jpsiGamma_NoMassConstraint.tracks.push_back(lepton1.track());
+  if (lepton2.track()) 
+    jpsiGamma_NoMassConstraint.tracks.push_back(lepton2.track());
   jpsiGamma_NoMassConstraint.postprocess(*beamSpot_);
-  jpsiGamma_NoMassConstraint_displacement = compute3dDisplacement(jpsiGamma_NoMassConstraint);
+  auto jpsiGamma_NoMassConstraint_displacement = compute3dDisplacement(jpsiGamma_NoMassConstraint);
   addFitInfo(llgCand, jpsiGamma_NoMassConstraint, "nomc", jpsiGamma_NoMassConstraint_displacement, -1, -1, 1);
 
   KinematicFitResult jpsiGamma_MassConstraint;
-  bmm::Displacements jpsiGamma_MassConstraint_displacement;
   if (fabs(llVertexFit.mass()-3.1) < 0.2) {
-    jpsiGamma_MassConstraint = fitLLGammaConv(llVertexFit.refitTree, photon, JPsiMass_);
+    jpsiGamma_MassConstraint = fitLLGammaConv(llVertexFit.tree(), photon, JPsiMass_);
+    if (lepton1.track())
+      jpsiGamma_MassConstraint.tracks.push_back(lepton1.track());
+    if (lepton2.track())
+      jpsiGamma_MassConstraint.tracks.push_back(lepton2.track());
     jpsiGamma_MassConstraint.postprocess(*beamSpot_);
-    jpsiGamma_MassConstraint_displacement = compute3dDisplacement(jpsiGamma_MassConstraint);
   }
+  auto jpsiGamma_MassConstraint_displacement = compute3dDisplacement(jpsiGamma_MassConstraint);
   addFitInfo(llgCand, jpsiGamma_MassConstraint, "jpsimc", jpsiGamma_MassConstraint_displacement, -1, -1, 1);
 
 }
@@ -2041,7 +2053,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	  for (unsigned int k=0; k < nPhotons; ++k){
 	    auto photon(photonHandle->at(k));
 	    if (photon.pt() < minGammaPt_) continue;
-	    const auto & vtx_point = kinematicLLVertexFit.refitVertex->vertexState().position();
+	    const auto & vtx_point = kinematicLLVertexFit.vtx_position();
 	    photon.setVertex(reco::Photon::Point(vtx_point.x(), vtx_point.y(), vtx_point.z()));
 	    double mmg_mass = (dimuon_p4 + photon.p4()).mass();
 	    if (mmg_mass >= minLLGammaMass_ and mmg_mass <= maxLLGammaMass_){
@@ -2422,30 +2434,13 @@ DileptonPlusXProducer::vertexWithKinematicFitter(std::vector<const reco::Track*>
 
   RefCountedKinematicTree vertexFitTree;
   KinematicFitResult result;
+  result.tracks = trks;
   try {
     vertexFitTree = fitter.fit(particles);
   } catch (const std::exception& e) {
     return result;
   }
-
-  if ( !vertexFitTree->isValid()) return result;
-  
-  result.treeIsValid = true;
-
-  vertexFitTree->movePointerToTheTop();
-  result.refitVertex = vertexFitTree->currentDecayVertex();
-  result.refitMother = vertexFitTree->currentParticle();
-  result.refitTree   = vertexFitTree;
-  if ( !result.refitVertex->vertexIsValid()) return result;
-  result.vertexIsValid = true;
-
-  // extract the re-fitted tracks
-  vertexFitTree->movePointerToTheTop();
-  if ( vertexFitTree->movePointerToTheFirstChild() ){
-    do {
-      result.refitDaughters.push_back(vertexFitTree->currentParticle());
-    } while (vertexFitTree->movePointerToTheNextChild());
-  }
+  result.set_tree(vertexFitTree);
   return result;
 }
 
@@ -2503,9 +2498,13 @@ DileptonPlusXProducer::fitDstar(const bmm::Candidate& lepton1,
   // consistent and no elements get out of scope or get deleted
   // when the tree is used in subsequent fits
   auto llVertexFit = vertexLeptonsWithKinematicFitter(lepton1, lepton2);
-  auto tree = llVertexFit.refitTree;
+  auto tree = llVertexFit.tree();
   
   KinematicFitResult result; 
+  if (lepton1.track()) result.tracks.push_back(lepton1.track());
+  if (lepton2.track()) result.tracks.push_back(lepton2.track());
+  if (pion.bestTrack()) result.tracks.push_back(pion.bestTrack());
+
   if ( not llVertexFit.valid()) return result;
 
   KinematicConstraint* mc(0);
@@ -2544,27 +2543,8 @@ DileptonPlusXProducer::fitDstar(const bmm::Candidate& lepton1,
     return result;
   }
 
-  if ( !vertexFitTree->isValid()) return result;
+  result.set_tree(vertexFitTree);
 
-  result.treeIsValid = true;
-
-  vertexFitTree->movePointerToTheTop();
-  result.refitVertex = vertexFitTree->currentDecayVertex();
-  result.refitMother = vertexFitTree->currentParticle();
-  result.refitTree   = vertexFitTree;
-
-  if ( !result.refitVertex->vertexIsValid()) return result;
-
-  result.vertexIsValid = true;
-
-  // extract the re-fitted tracks
-  vertexFitTree->movePointerToTheTop();
-
-  if ( vertexFitTree->movePointerToTheFirstChild() ){
-    do {
-      result.refitDaughters.push_back(vertexFitTree->currentParticle());
-    } while (vertexFitTree->movePointerToTheNextChild());
-  }
   return result;
 }
 
@@ -2579,9 +2559,13 @@ DileptonPlusXProducer::fitBToKLL(const bmm::Candidate& lepton1,
   // consistent and no elements get out of scope or get deleted
   // when the tree is used in subsequent fits
   auto llVertexFit = vertexLeptonsWithKinematicFitter(lepton1, lepton2);
-  auto tree = llVertexFit.refitTree;
+  auto tree = llVertexFit.tree();
   
-  KinematicFitResult result; 
+  KinematicFitResult result;
+  if (lepton1.track()) result.tracks.push_back(lepton1.track());
+  if (lepton2.track()) result.tracks.push_back(lepton2.track());
+  if (kaon.bestTrack()) result.tracks.push_back(kaon.bestTrack());
+
   if ( not llVertexFit.valid()) return result;
 
   KinematicConstraint* mc(0);
@@ -2620,27 +2604,7 @@ DileptonPlusXProducer::fitBToKLL(const bmm::Candidate& lepton1,
     return result;
   }
 
-  if ( !vertexFitTree->isValid()) return result;
-
-  result.treeIsValid = true;
-
-  vertexFitTree->movePointerToTheTop();
-  result.refitVertex = vertexFitTree->currentDecayVertex();
-  result.refitMother = vertexFitTree->currentParticle();
-  result.refitTree   = vertexFitTree;
-
-  if ( !result.refitVertex->vertexIsValid()) return result;
-
-  result.vertexIsValid = true;
-
-  // extract the re-fitted tracks
-  vertexFitTree->movePointerToTheTop();
-
-  if ( vertexFitTree->movePointerToTheFirstChild() ){
-    do {
-      result.refitDaughters.push_back(vertexFitTree->currentParticle());
-    } while (vertexFitTree->movePointerToTheNextChild());
-  }
+  result.set_tree(vertexFitTree);
   return result;
 }
 
@@ -2689,28 +2653,8 @@ DileptonPlusXProducer::fitLLGamma( RefCountedKinematicTree tree,
   } catch (const std::exception& e) {
     return result;
   }
-  
-  if ( !vertexFitTree->isValid()) return result;
 
-  result.treeIsValid = true;
-
-  vertexFitTree->movePointerToTheTop();
-  result.refitVertex = vertexFitTree->currentDecayVertex();
-  result.refitMother = vertexFitTree->currentParticle();
-  result.refitTree   = vertexFitTree;
-  
-  if ( !result.refitVertex->vertexIsValid()) return result;
-  
-  result.vertexIsValid = true;
-
-  // extract the re-fitted tracks
-  // vertexFitTree->movePointerToTheTop();
-
-  // if ( vertexFitTree->movePointerToTheFirstChild() ){
-  //   do {
-  //     result.refitDaughters.push_back(vertexFitTree->currentParticle());
-  //   } while (vertexFitTree->movePointerToTheNextChild());
-  // }
+  result.set_tree(vertexFitTree);
   return result;
 }
 
@@ -2810,27 +2754,7 @@ DileptonPlusXProducer::fitLLGammaConv( RefCountedKinematicTree mmVertexTree,
     return result;
   }
   
-  if ( !mmgVertexTree->isValid()) return result;
-    
-  result.treeIsValid = true;
-
-  mmgVertexTree->movePointerToTheTop();
-  result.refitVertex = mmgVertexTree->currentDecayVertex();
-  result.refitMother = mmgVertexTree->currentParticle();
-  result.refitTree   = mmgVertexTree;
-  
-  if ( !result.refitVertex->vertexIsValid()) return result;
-  
-  result.vertexIsValid = true;
-
-  // extract the re-fitted tracks
-  // mmgVertexTree->movePointerToTheTop();
-
-  // if ( mmgVertexTree->movePointerToTheFirstChild() ){
-  //   do {
-  //     result.refitDaughters.push_back(mmgVertexTree->currentParticle());
-  //   } while (mmgVertexTree->movePointerToTheNextChild());
-  // }
+  result.set_tree(mmgVertexTree);
   return result;
 }
 
@@ -2848,13 +2772,18 @@ DileptonPlusXProducer::fitBToKKLL( const bmm::Candidate& lepton1,
   // consistent and no elements get out of scope or get deleted
   // when the tree is used in subsequent fits
   auto llVertexFit = vertexLeptonsWithKinematicFitter(lepton1, lepton2);
-  auto ll_tree = llVertexFit.refitTree;
+  auto ll_tree = llVertexFit.tree();
 
   KinematicFitResult result; 
+  if (lepton1.track()) result.tracks.push_back(lepton1.track());
+  if (lepton2.track()) result.tracks.push_back(lepton2.track());
+  if (kaon1.bestTrack()) result.tracks.push_back(kaon1.bestTrack());
+  if (kaon2.bestTrack()) result.tracks.push_back(kaon2.bestTrack());
+
   if ( not llVertexFit.valid()) return result;
 
   auto kkVertexFit = vertexKaonsWithKinematicFitter(kaon1, kaon2);
-  auto kk_tree = kkVertexFit.refitTree;
+  auto kk_tree = kkVertexFit.tree();
 
   if ( not kkVertexFit.valid()) return result;
   
@@ -2904,27 +2833,7 @@ DileptonPlusXProducer::fitBToKKLL( const bmm::Candidate& lepton1,
     return result;
   }
 
-  if ( !vertexFitTree->isValid()) return result;
-
-  result.treeIsValid = true;
-
-  vertexFitTree->movePointerToTheTop();
-  result.refitVertex = vertexFitTree->currentDecayVertex();
-  result.refitMother = vertexFitTree->currentParticle();
-  result.refitTree   = vertexFitTree;
-
-  if ( !result.refitVertex->vertexIsValid()) return result;
-
-  result.vertexIsValid = true;
-
-  // extract the re-fitted tracks
-  vertexFitTree->movePointerToTheTop();
-
-  if ( vertexFitTree->movePointerToTheFirstChild() ){
-    do {
-      result.refitDaughters.push_back(vertexFitTree->currentParticle());
-    } while (vertexFitTree->movePointerToTheNextChild());
-  }
+  result.set_tree(vertexFitTree);
   return result;
 }
 
@@ -2933,11 +2842,15 @@ DileptonPlusXProducer::vertexLeptonsWithPointingConstraint( const bmm::Candidate
 							    const bmm::Candidate& lepton2,
 							    const reco::Vertex& primaryVertex)
 {
+  KinematicFitResult result; 
+  if (lepton1.track()) result.tracks.push_back(lepton1.track());
+  if (lepton2.track()) result.tracks.push_back(lepton2.track());
+
   auto kinematicLLVertexFit = vertexLeptonsWithKinematicFitter(lepton1, lepton2);
   kinematicLLVertexFit.postprocess(*beamSpot_);
-  if ( !kinematicLLVertexFit.valid()) return KinematicFitResult();
-  auto tree = kinematicLLVertexFit.refitTree;
-  if ( !tree->isValid()) return KinematicFitResult();
+  if ( !kinematicLLVertexFit.valid()) return result;
+  auto tree = kinematicLLVertexFit.tree();
+  if ( !tree->isValid()) return result;
 
   GlobalPoint pv(primaryVertex.position().x(), 
 		 primaryVertex.position().y(), 
@@ -2953,31 +2866,9 @@ DileptonPlusXProducer::vertexLeptonsWithPointingConstraint( const bmm::Candidate
   try {
     refittedTree = fitter.fit(pointing_constraint,tree);
   } catch (const VertexException &e) {
-    return KinematicFitResult();
+    return result;
   }
-
-  if ( !refittedTree->isValid()) return KinematicFitResult();
-
-  KinematicFitResult result; 
-  result.treeIsValid = true;
-
-  refittedTree->movePointerToTheTop();
-  result.refitVertex = refittedTree->currentDecayVertex();
-  result.refitMother = refittedTree->currentParticle();
-  result.refitTree   = refittedTree;
-
-  if ( !result.refitVertex->vertexIsValid()) return result;
-
-  result.vertexIsValid = true;
-
-  // extract the re-fitted tracks
-  refittedTree->movePointerToTheTop();
-
-  if ( refittedTree->movePointerToTheFirstChild() ){
-    do {
-      result.refitDaughters.push_back(refittedTree->currentParticle());
-    } while (refittedTree->movePointerToTheNextChild());
-  }
+  result.set_tree(refittedTree);
   return result;
 }
 
@@ -3174,15 +3065,14 @@ float DileptonPlusXProducer::distanceOfClosestApproach( const reco::Track* track
 
 Measurement1D 
 DileptonPlusXProducer::distanceOfClosestApproach( const reco::Track* track,
-						  RefCountedKinematicVertex vertex)
+						  const VertexState& vertex_state)
 {
-  if (not vertex->vertexIsValid()) return Measurement1D(-1.0,-1.0);
   VertexDistance3D distance3D;
   const reco::TransientTrack tt = theTTBuilder_->build(track);
   assert(impactPointExtrapolator_);
-  auto tsos = impactPointExtrapolator_->extrapolate(tt.initialFreeState(), vertex->position());
+  auto tsos = impactPointExtrapolator_->extrapolate(tt.initialFreeState(), vertex_state.position());
   if ( not tsos.isValid()) return Measurement1D(-1.0,-1.0);
-  Measurement1D doca = distance3D.distance(VertexState(tsos.globalPosition(), tsos.cartesianError().position()), vertex->vertexState());
+  Measurement1D doca = distance3D.distance(VertexState(tsos.globalPosition(), tsos.cartesianError().position()), vertex_state);
   return doca;
 }
 
@@ -3199,22 +3089,43 @@ DileptonPlusXProducer::distanceOfClosestApproach( const reco::Track* track,
   return doca;
 }
 
+template <typename T> std::vector<const reco::Track*>
+DileptonPlusXProducer::getGoodTracksToRefitPV(int pvIndex, T track_to_ignore)
+{
+  return getGoodTracksToRefitPV(pvIndex, std::vector<T>(1,track_to_ignore));
+}
+
+template <typename T> std::vector<const reco::Track*>
+DileptonPlusXProducer::getGoodTracksToRefitPV(int pvIndex, std::vector<T> ignoreTracks)
+{
+  std::vector<const reco::Track*> tracks;
+
+  for (const auto& pfCand: *pfCandHandle_.product()){
+    if (not isGoodTrack(pfCand)) continue; 
+    if (int(pfCand.vertexRef().key()) != pvIndex) continue;
+    // keep only the tracks used in the PV fit
+    if (pfCand.pvAssociationQuality() != pat::PackedCandidate::UsedInFitTight) continue;
+    bool keep_track = true;
+    for (const auto& track: ignoreTracks){
+      if (overlap(track, pfCand.bestTrack())) {
+	keep_track = false;
+	break;
+      }
+    }
+    if (keep_track)
+      tracks.push_back(pfCand.bestTrack());
+  }
+  return tracks;
+}
+
+
 std::pair<KinematicFitResult, KinematicFitResult>
 DileptonPlusXProducer::refitWithVertexConstraint(const reco::Track& track,
 						 int pvIndex)
 {
-  std::vector<const reco::Track*> tracks;
-  std::vector<float> masses;
+  std::vector<const reco::Track*> tracks(getGoodTracksToRefitPV(pvIndex, &track));
+  std::vector<float> masses(tracks.size(), PionMass_);
 
-  for (const auto& pfCand: *pfCandHandle_.product()){
-    if (not isGoodTrack(pfCand)) continue; 
-    if (overlap(&track, pfCand.bestTrack())) continue;
-    if (int(pfCand.vertexRef().key()) != pvIndex) continue;
-    // keep only the tracks used in the PV fit
-    if (pfCand.pvAssociationQuality() != pat::PackedCandidate::UsedInFitTight) continue;
-    tracks.push_back(pfCand.bestTrack());
-    masses.push_back(PionMass_);
-  }
   auto pv_refit = vertexWithKinematicFitter(tracks, masses);
 
 
@@ -3226,127 +3137,66 @@ DileptonPlusXProducer::refitWithVertexConstraint(const reco::Track& track,
   return std::make_pair(pv_refit, pv_refit_with_track);
 }
 
-
-// namespace {
-//   typedef ROOT::Math::SMatrix<double,3,3,ROOT::Math::MatRepSym<double,3> > cov33_t;
-//   typedef ROOT::Math::SMatrix<double,6,6,ROOT::Math::MatRepSym<double,6> > cov66_t;
-//   typedef ROOT::Math::SMatrix<double,7,7,ROOT::Math::MatRepSym<double,7> > cov77_t;
-//   typedef ROOT::Math::SMatrix<double,9,9,ROOT::Math::MatRepSym<double,9> > cov99_t;
-//   typedef ROOT::Math::SVector<double,9> jac9_t;
-  
-//   cov33_t GlobalError2SMatrix_33(GlobalError m_in) 
-//   {
-//     cov33_t m_out;
-//     for (int i=0; i<3; i++) {
-//       for (int j=i; j<3; j++)  {
-// 	m_out(i,j) = m_in.matrix()(i,j);
-//       }
-//     }
-//     return m_out;
-//   }
-  
-//   cov99_t makeCovarianceMatrix(const cov33_t cov_vtx1,
-// 			       const cov77_t cov_vtx2) 
-//   {
-//     cov99_t cov;
-//     cov.Place_at(cov_vtx1,0,0);
-//     cov.Place_at(cov_vtx2.Sub<cov66_t>(0,0),3,3);
-//     return cov;
-//   }
-
-//   jac9_t makeJacobianVector3d(const AlgebraicVector3 &vtx1, 
-// 			      const AlgebraicVector3 &vtx2, 
-// 			      const AlgebraicVector3 &momentum) 
-//   {
-//     jac9_t jac;
-//     const AlgebraicVector3 dist = vtx2 - vtx1;
-//     const double factor2 = 1. / ROOT::Math::Mag2(momentum);
-//     const double lifetime = ROOT::Math::Dot(dist, momentum) * factor2;
-//     jac.Place_at(-momentum*factor2,0);
-//     jac.Place_at( momentum*factor2,3);
-//     jac.Place_at( factor2*(dist-2*lifetime*momentum*factor2),6);
-//     return jac;
-//   }
-  
-//   jac9_t makeJacobianVector3d(const ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>,
-// 			      ROOT::Math::DefaultCoordinateSystemTag> &vtx1,
-// 			      const GlobalPoint &vtx2, const TVector3 &tv3momentum) 
-//   {
-//     return makeJacobianVector3d(AlgebraicVector3(vtx1.X(),vtx1.Y(),vtx1.Z()),
-// 				AlgebraicVector3(vtx2.x(),vtx2.y(),vtx2.z()),
-// 				AlgebraicVector3(tv3momentum.x(),tv3momentum.y(),tv3momentum.z()));
-//   }
-
-//   jac9_t makeJacobianVector2d(const AlgebraicVector3 &vtx1, const AlgebraicVector3 &vtx2,
-// 			      const AlgebraicVector3 &momentum) {
-//     jac9_t jac;
-//     const double momentumMag = ROOT::Math::Mag(momentum);
-//     const AlgebraicVector3 dist = vtx2 - vtx1;
-//     const double distMag = ROOT::Math::Mag(dist);
-//     const double factorPositionComponent = 1./(distMag*momentumMag);
-//     const double factorMomentumComponent = 1./pow(momentumMag,3);
-//     jac(0)=-dist(0)*factorPositionComponent;
-//     jac(1)=-dist(1)*factorPositionComponent;
-//     jac(3)= dist(0)*factorPositionComponent;
-//     jac(4)= dist(1)*factorPositionComponent;
-//     jac(6)= momentum(0)*factorMomentumComponent;
-//     jac(7)= momentum(1)*factorMomentumComponent;
-//     return jac;
-//   }
-  
-//   jac9_t makeJacobianVector2d(const ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<double>,
-// 			      ROOT::Math::DefaultCoordinateSystemTag> &vtx1,
-// 			      const GlobalPoint &vtx2, const TVector3 &tv3momentum) {
-//     return makeJacobianVector2d(AlgebraicVector3(vtx1.X(),vtx1.Y(),vtx1.Z()),
-// 				AlgebraicVector3(vtx2.x(),vtx2.y(),vtx2.z()),
-// 				AlgebraicVector3(tv3momentum.x(),tv3momentum.y(),tv3momentum.z()));
-//   }
-// }
-
 bmm::Displacements
-DileptonPlusXProducer::compute3dDisplacement(const KinematicFitResult& fit, bool closestIn3D)
+DileptonPlusXProducer::compute3dDisplacement(const KinematicFitResult& fit, 
+					     bool closestIn3D)
 {
+  // WARNING: all variables need to be filled for even if the fit is not valid
+
   bmm::Displacements result;
-  if (not fit.valid()) return result;
 
-  const auto& vertices = *pvHandle_.product();
-
-  // Potential issue: tracks used to build the candidate could 
-  // also be used in the primary vertex fit. One can refit the vertices
-  // excluding tracks from the cadndidate. It's not done at the moment 
-  // due to non-trivial linkig between primary vertex and its tracks 
-  // in MiniAOD. Also not all muons associated to a vertex are really 
-  // used in the fit, so the potential bias most likely small.
-
-  // FIXME
-  // add refitted PV without candidate tracks
-  
-  auto candTransientTrack = fit.refitMother->refittedTransientTrack();
-
-  // auto fts = fit.refitMother->currentState().freeTrajectoryState();
-  // std::cout << fts << std::endl;
-  // std::cout << "Charge: " << candTransientTrack.charge() << std::endl;
-  
   const reco::Vertex* bestVertex(0);
   int bestVertexIndex(-1);
-  double minDistance(999.);
+  const reco::Vertex* bestVertex2(0);
+  int bestVertexIndex2(-1);
 
-  for ( unsigned int i = 0; i<vertices.size(); ++i ){
-    const auto & vertex = vertices.at(i);
-    if (closestIn3D){
-      auto impactParameter3D = IPTools::absoluteImpactParameter3D(candTransientTrack, vertex);
-      if (impactParameter3D.first and impactParameter3D.second.value() < minDistance){
-	minDistance = impactParameter3D.second.value();
-	bestVertex = &vertex;
-	bestVertexIndex = i;
+  if (fit.valid()){
+
+    const auto& vertices = *pvHandle_.product();
+
+    auto candTransientTrack = fit.particle()->refittedTransientTrack();
+    
+    // find best matching primary vertex
+    double minDistance(999.);
+    for ( unsigned int i = 0; i<vertices.size(); ++i ){
+      const auto & vertex = vertices.at(i);
+      if (closestIn3D){
+	auto impactParameter3D = IPTools::absoluteImpactParameter3D(candTransientTrack, vertex);
+	if (impactParameter3D.first and impactParameter3D.second.value() < minDistance){
+	  minDistance = impactParameter3D.second.value();
+	  bestVertex = &vertex;
+	  bestVertexIndex = i;
+	}
+      } else{
+	auto impactParameterZ  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), vertex);
+	double distance = fabs(impactParameterZ.second.value());
+	if (impactParameterZ.first and distance < minDistance){
+	  minDistance = distance;
+	  bestVertex = &vertex;
+	  bestVertexIndex = i;
+	}
       }
-    } else{
-      auto impactParameterZ  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), vertex);
-      double distance = fabs(impactParameterZ.second.value());
-      if (impactParameterZ.first and distance < minDistance){
-	minDistance = distance;
-	bestVertex = &vertex;
-	bestVertexIndex = i;
+    }
+
+    // find second best vertex
+    double minDistance2(999.);
+    for ( unsigned int i = 0; i<vertices.size(); ++i ){
+      const auto & vertex = vertices.at(i);
+      if (closestIn3D){
+	auto impactParameter3D = IPTools::absoluteImpactParameter3D(candTransientTrack, vertex);
+	if (impactParameter3D.first and impactParameter3D.second.value() < minDistance2 and impactParameter3D.second.value() > minDistance){
+	  minDistance2 = impactParameter3D.second.value();
+	  bestVertex2 = &vertex;
+	  bestVertexIndex2 = i;
+	}
+      } else{
+	auto impactParameterZ  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), vertex);
+	double distance = fabs(impactParameterZ.second.value());
+	if (impactParameterZ.first and distance < minDistance2 and distance > minDistance){
+	  minDistance2 = distance;
+	  bestVertex2 = &vertex;
+	  bestVertexIndex2 = i;
+	}
       }
     }
   }
@@ -3356,125 +3206,21 @@ DileptonPlusXProducer::compute3dDisplacement(const KinematicFitResult& fit, bool
   else
     result.push_back(bmm::Displacement("pv"));
 
-  // find second best vertex
-  const reco::Vertex* bestVertex2(0);
-  int bestVertexIndex2(-1);
-  double minDistance2(999.);
-  for ( unsigned int i = 0; i<vertices.size(); ++i ){
-    const auto & vertex = vertices.at(i);
-    if (closestIn3D){
-      auto impactParameter3D = IPTools::absoluteImpactParameter3D(candTransientTrack, vertex);
-      if (impactParameter3D.first and impactParameter3D.second.value() < minDistance2 and impactParameter3D.second.value() > minDistance){
-	minDistance2 = impactParameter3D.second.value();
-	bestVertex2 = &vertex;
-	bestVertexIndex2 = i;
-      }
-    } else{
-      auto impactParameterZ  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), vertex);
-      double distance = fabs(impactParameterZ.second.value());
-      if (impactParameterZ.first and distance < minDistance2 and distance > minDistance){
-	minDistance2 = distance;
-	bestVertex2 = &vertex;
-	bestVertexIndex2 = i;
-      }
-    }
-  }
-
   if (bestVertex2)
     result.push_back(bmm::Displacement("_pv2", fit, *bestVertex2, bestVertexIndex2));
   else
     result.push_back(bmm::Displacement("_pv2"));
 
-  // auto impactParameter3D = IPTools::absoluteImpactParameter3D(candTransientTrack, *bestVertex);
-  // auto impactParameterZ  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), *bestVertex);
-  // result.pv = bestVertex;
-  // result.pvIndex = bestVertexIndex;
-  // if (impactParameterZ.first) {
-  //   result.longitudinalImpactParameter    = impactParameterZ.second.value();
-  //   result.longitudinalImpactParameterSig = impactParameterZ.second.significance();
-  //   result.longitudinalImpactParameterErr = impactParameterZ.second.error();
-  // }
-  // if (impactParameter3D.first and not isnan(impactParameter3D.second.error())) {
-  //   result.distaceOfClosestApproach       = impactParameter3D.second.value();
-  //   result.distaceOfClosestApproachSig    = impactParameter3D.second.significance();
-  //   result.distaceOfClosestApproachErr    = impactParameter3D.second.error();
-  // }
-
-  // // compute decay length
-  // VertexDistance3D distance3D;
-  // auto dist = distance3D.distance(*bestVertex, fit.refitVertex->vertexState() );
-  // result.decayLength    = dist.value();
-  // result.decayLengthErr = dist.error();
-  
-  // VertexDistanceXY distanceXY;
-  // auto distXY = distanceXY.distance(*bestVertex, fit.refitVertex->vertexState() );
-
-  // if (bestVertex2){
-  //   auto impactParameter3D2 = IPTools::absoluteImpactParameter3D(candTransientTrack, *bestVertex2);
-  //   auto impactParameterZ2  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), *bestVertex2);
-  //   result.pv2 = bestVertex2;
-  //   result.pv2Index = bestVertexIndex2;
-  //   if (impactParameterZ2.first) {
-  //     result.longitudinalImpactParameter2    = impactParameterZ2.second.value();
-  //     result.longitudinalImpactParameter2Sig = impactParameterZ2.second.significance();
-  //     result.longitudinalImpactParameter2Err = impactParameterZ2.second.error();
-  //   }
-  //   if (impactParameter3D2.first) {
-  //     result.distaceOfClosestApproach2       = impactParameter3D2.second.value();
-  //     result.distaceOfClosestApproach2Sig    = impactParameter3D2.second.value();
-  //     result.distaceOfClosestApproach2Err    = impactParameter3D2.second.error();
-  //   }
-
-  //   // compute decay length
-  //   VertexDistance3D distance3D;
-  //   auto dist = distance3D.distance(*bestVertex2, fit.refitVertex->vertexState() );
-  //   result.decayLength2    = dist.value();
-  //   result.decayLength2Err = dist.error();
-
-  // }
-
-  // //
-  // // Pointing angle
-  // //
-  // auto alpha = getAlpha(fit.refitVertex->vertexState().position(),
-  // 			fit.refitVertex->vertexState().error(),
-  // 			GlobalPoint(Basic3DVector<float>(bestVertex->position())),
-  // 			GlobalError(bestVertex->covariance()),
-  // 			fit.refitMother->currentState().globalMomentum());
-
-  // auto alphaXY = getAlpha(fit.refitVertex->vertexState().position(),
-  // 			  fit.refitVertex->vertexState().error(),
-  // 			  GlobalPoint(Basic3DVector<float>(bestVertex->position())),
-  // 			  GlobalError(bestVertex->covariance()),
-  // 			  fit.refitMother->currentState().globalMomentum(),
-  // 			  true);
-
-  // result.alpha    = alpha.first;
-  // result.alphaErr = alpha.second;
-
-  // result.alphaXY    = alphaXY.first;
-  // result.alphaXYErr = alphaXY.second;
-
-  
-  // //
-  // // Decay time information
-  // //
-  // TVector3 plab(fit.refitMother->currentState().globalMomentum().x(),
-  // 		fit.refitMother->currentState().globalMomentum().y(),
-  //               fit.refitMother->currentState().globalMomentum().z());
-  // const double massOverC = fit.mass()/TMath::Ccgs();
-
-  // // get covariance matrix for error propagation in decayTime calculation
-  // auto vtxDistanceCov = makeCovarianceMatrix(GlobalError2SMatrix_33(bestVertex->error()),
-  // 					     fit.refitMother->currentState().kinematicParametersError().matrix());
-  // auto vtxDistanceJac3d = makeJacobianVector3d(bestVertex->position(), fit.refitVertex->vertexState().position(), plab);
-  // auto vtxDistanceJac2d = makeJacobianVector2d(bestVertex->position(), fit.refitVertex->vertexState().position(), plab);
-
-  // result.decayTime = dist.value() / plab.Mag() * cos(result.alpha) * massOverC;
-  // result.decayTimeError = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac3d)) * massOverC;
-
-  // result.decayTimeXY = distXY.value() / plab.Perp() * cos(result.alphaXY) * massOverC;
-  // result.decayTimeXYError = TMath::Sqrt(ROOT::Math::Similarity(vtxDistanceCov, vtxDistanceJac2d)) * massOverC;
+  // Refit the primary vertex
+  if (bestVertex)
+    {
+      std::vector<const reco::Track*> tracks(getGoodTracksToRefitPV(bestVertexIndex, fit.tracks));
+      std::vector<float> masses(tracks.size(), PionMass_);
+      auto pv_refit = vertexWithKinematicFitter(tracks, masses);
+      result.push_back(bmm::Displacement("_refit", fit, pv_refit.vertex(), bestVertexIndex));
+    }
+  else
+    result.push_back(bmm::Displacement("_refit"));
     
   return result;
 }

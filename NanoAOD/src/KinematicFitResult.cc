@@ -51,7 +51,7 @@ getAlpha(const GlobalPoint& vtx_position, const GlobalError& vtx_error,
 }
 
 bool KinematicFitResult::valid() const {
-  return treeIsValid and vertexIsValid;
+  return treeIsValid and refitVertex->vertexIsValid();
 }
 
 void KinematicFitResult::postprocess(const reco::BeamSpot& beamSpot)
@@ -74,9 +74,9 @@ void KinematicFitResult::postprocess(const reco::BeamSpot& beamSpot)
   errBS(1,0) = beamSpot.covariance()(1,0);
   errBS(1,1) = beamSpot.covariance()(1,1);
   
-  lxy = sqrt(v.Norm2Sqr());
-  lxyErr = sqrt( v*(errVtx*v) + v*(errBS*v) ) / lxy;
-  if (lxyErr > 0) sigLxy = lxy/lxyErr;
+  lxy_ = sqrt(v.Norm2Sqr());
+  lxyErr_ = sqrt( v*(errVtx*v) + v*(errBS*v) ) / lxy_;
+  if (lxyErr_ > 0) sigLxy_ = lxy_/lxyErr_;
     
   // compute pointing angle wrt BeamSpot (2D)
 
@@ -89,8 +89,8 @@ void KinematicFitResult::postprocess(const reco::BeamSpot& beamSpot)
 			  GlobalError(beamSpot.rotatedCovariance3D()),
 			  refitMother->currentState().globalMomentum(),
 			  true);
-  alphaBS    = alphaXY.first;
-  alphaBSErr = alphaXY.second;
+  alphaBS_    = alphaXY.first;
+  alphaBSErr_ = alphaXY.second;
 }
   
 float KinematicFitResult::mass() const
@@ -166,4 +166,58 @@ float KinematicFitResult::sumPt2() const
     result += dau->currentState().globalMomentum().mag2();
   }
   return result;
+}
+
+reco::Vertex KinematicFitResult::vertex() const
+{
+//   if (not valid()) return reco::Vertex();
+//   return *refitVertex;
+// }
+  if (not valid()) return reco::Vertex();
+
+  // Extract position, error, and chi-squared from the KinematicVertex
+  const auto& position_global = refitVertex->position();
+  math::XYZPoint position(position_global.x(), position_global.y(), position_global.z()); // Convert GlobalPoint to math::XYZPoint
+  const auto& error = refitVertex->error().matrix(); // Convert GlobalError to AlgebraicSymMatrix33
+  double chi2 = refitVertex->chiSquared();
+  double ndof = refitVertex->degreesOfFreedom();
+  
+  return reco::Vertex(position, error, chi2, ndof, 0);
+}
+
+void KinematicFitResult::set_tree(RefCountedKinematicTree tree)
+{
+  if (not tree->isValid()) return;
+
+  treeIsValid = true;
+
+  // extract the re-fitted tracks  
+  if ( tree->movePointerToTheFirstChild() ){
+    do {
+      refitDaughters.push_back(tree->currentParticle());
+    } while (tree->movePointerToTheNextChild());
+  }
+
+  tree->movePointerToTheTop();
+  refitVertex = tree->currentDecayVertex();
+  refitMother = tree->currentParticle();
+  refitTree   = tree;
+}
+
+GlobalPoint KinematicFitResult::vtx_position() const
+{
+  if (not valid()) return GlobalPoint();
+  return refitVertex->vertexState().position();
+}
+
+GlobalError KinematicFitResult::vtx_error() const
+{
+  if (not valid()) return GlobalError();
+  return refitVertex->vertexState().error();
+}
+
+VertexState KinematicFitResult::vtx_state() const
+{
+  if (not valid()) return VertexState();
+  return refitVertex->vertexState();
 }
