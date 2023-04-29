@@ -155,6 +155,7 @@ kinematic_pset = merge_psets(
     kinematic_common_pset,
     kinematic_displacement_pset,
     copy_pset(kinematic_displacement_pset, {"kin_":"kin_pv2_"}),
+    copy_pset(kinematic_displacement_pset, {"kin_":"kin_refit_"}),
 )
 
 isolation_pset = cms.PSet(
