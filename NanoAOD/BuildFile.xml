@@ -4,6 +4,7 @@
 <use   name="MagneticField/Engine"/>
 <use   name="RecoVertex/KinematicFitPrimitives"/>
 <use   name="RecoVertex/KinematicFit"/>
+<use   name="TrackingTools/IPTools"/>
 <use   name="boost"/>
 <use   name="clhep"/>
 <export>
