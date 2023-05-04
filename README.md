@@ -10,7 +10,7 @@ NanoAOD samples produced by the CMS Central Production infrastructure.
 * scram p CMSSW CMSSW_12_4_10
 * cd CMSSW_12_4_10/src/
 * cmsenv
-* git clone git@github.com:drkovalskyi/Bmm5.git --branch NanoAODv10-V02
+* git clone git@github.com:drkovalskyi/Bmm5.git --branch NanoAODv10-V03
 * scram b -j 8
 
 ## cmsDriver Options

@@ -2,6 +2,14 @@
 
 ## New developments
 
+## [NanoAODv10-V03] - 2023/05/04
+### Changes
+	- added primary vertex information
+	- refactored code handling displacement calculations
+	- added primary vertex fit excluding signal tracks
+	- added PV refit information for Dstar decays
+	- bug fixes
+
 ## [NanoAODv10-V02] - 2023/03/26
 ### Changes
 	- Revised code organization and handling of different final states
