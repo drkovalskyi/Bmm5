@@ -613,15 +613,9 @@ namespace {
       cand.addUserFloat( prefix + "_pvip",        displacement.distaceOfClosestApproach());
       cand.addUserFloat( prefix + "_spvip",       displacement.distaceOfClosestApproachSig());
       cand.addUserFloat( prefix + "_pvipErr",     displacement.distaceOfClosestApproachErr());
-      // cand.addUserFloat( prefix + "_pv2ip",       displacement.distaceOfClosestApproach2());
-      // cand.addUserFloat( prefix + "_spv2ip",      displacement.distaceOfClosestApproach2Sig());
-      // cand.addUserFloat( prefix + "_pv2ipErr",    displacement.distaceOfClosestApproach2Err());
       cand.addUserFloat( prefix + "_pvlip",       displacement.longitudinalImpactParameter());
       cand.addUserFloat( prefix + "_pvlipSig",    displacement.longitudinalImpactParameterSig());
       cand.addUserFloat( prefix + "_pvlipErr",    displacement.longitudinalImpactParameterErr());
-      // cand.addUserFloat( prefix + "_pv2lip",      displacement.longitudinalImpactParameter2());
-      // cand.addUserFloat( prefix + "_pv2lipSig",   displacement.longitudinalImpactParameter2Sig());
-      // cand.addUserFloat( prefix + "_pv2lipErr",   displacement.longitudinalImpactParameter2Err());
       cand.addUserInt(   prefix + "_pvIndex",     displacement.pvIndex());
 
       // DecayTime
