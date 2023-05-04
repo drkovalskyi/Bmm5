@@ -40,6 +40,56 @@ def copy_pset(pset,replace_dict):
             setattr(result,new_name,value)
     return result
 
+PrimaryVertexInfo = cms.EDProducer(
+    "PrimaryVertexInformation",
+    vertexCollection = cms.InputTag("offlineSlimmedPrimaryVertices"),
+    vertexScores = cms.InputTag("offlineSlimmedPrimaryVertices"),
+    PFCandCollection = cms.InputTag("packedPFCandidates"),
+    isMC = cms.bool(False),
+)
+
+PrimaryVertexInfoMc = PrimaryVertexInfo.clone( isMC = cms.bool(True) ) 
+
+PrimaryVertexInfoTableVariables = cms.PSet(
+    ntrks        = Var("userInt('ntrks')",         int, doc = "Number of tracks used in PV fit with tight association"),
+    ndof         = Var("userFloat('ndof')",      float, doc = "number of degree of freedom for the vertex fit"),
+    score        = Var("userFloat('score')",     float, doc = "Score of the primary vertex"),
+    x            = Var("userFloat('x')",         float, doc = "Vertex position: x"),
+    xErr         = Var("userFloat('xErr')",      float, doc = "Vertex position: xErr"),
+    y            = Var("userFloat('y')",         float, doc = "Vertex position: y"),
+    yErr         = Var("userFloat('yErr')",      float, doc = "Vertex position: yErr"),
+    z            = Var("userFloat('z')",         float, doc = "Vertex position: z"),
+    zErr         = Var("userFloat('zErr')",      float, doc = "Vertex position: zErr"),
+    sumpt        = Var("userFloat('sumpt')",     float, doc = "Sum pt of tracks used in the vertex fit"),
+    sumpt2       = Var("userFloat('sumpt2')",    float, doc = "Sum pt^2 of tracks used in the vertex fit"),
+)
+
+PrimaryVertexInfoMcTableVariables = merge_psets(
+    PrimaryVertexInfoTableVariables,
+)
+
+PrimaryVertexInfoTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("PrimaryVertexInfo","pvs"),
+    cut=cms.string(""),
+    name=cms.string("pvs"),
+    doc=cms.string("PrimaryVertexInfo"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = PrimaryVertexInfoTableVariables
+)
+
+PrimaryVertexInfoMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("PrimaryVertexInfoMc","pvs"),
+    cut=cms.string(""),
+    name=cms.string("pvs"),
+    doc=cms.string("PrimaryVertexInfo"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = PrimaryVertexInfoMcTableVariables
+)
+
+###########################################################################################
+
 Dileptons = cms.EDProducer(
     "DileptonPlusXProducer",
     beamSpot=cms.InputTag("offlineBeamSpot"),
@@ -844,14 +894,14 @@ prescaleTable = cms.EDProducer("TriggerPrescaleProducer",
                                   'HLT_DoubleMu4_3_Jpsi_Displaced')
 )
 
-DileptonPlusXSequence   = cms.Sequence(Dileptons)
-DileptonPlusXMcSequence = cms.Sequence(DileptonsMc * BxToMuMuGen * DstarGen )
+DileptonPlusXSequence   = cms.Sequence(Dileptons * PrimaryVertexInfo)
+DileptonPlusXMcSequence = cms.Sequence(DileptonsMc * PrimaryVertexInfoMc * BxToMuMuGen * DstarGen )
 DileptonPlusXTables     = cms.Sequence(DileptonsDiMuonTable   * DileptonsHHTable    * DileptonsElElTable     *
                                        DileptonsKmumuTable    * DileptonsKeeTable   * DileptonsKKmumuTable   * DileptonsKKeeTable *
                                        DileptonsDstarTable    *
-                                       DileptonsMuMuGammaTable * prescaleTable)
+                                       DileptonsMuMuGammaTable * PrimaryVertexInfoTable * prescaleTable)
 DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTable  * DileptonsElElMcTable   *
                                        DileptonsKmumuMcTable  * DileptonsKeeMcTable * DileptonsKKmumuMcTable * DileptonsKKeeMcTable *
-                                       DileptonsDstarMcTable  *
+                                       DileptonsDstarMcTable  * PrimaryVertexInfoMcTable *
                                        DileptonsMuMuGammaMcTable * BxToMuMuGenTable * BxToMuMuGenSummaryTable * DstarGenTable *
                                        prescaleTable)
