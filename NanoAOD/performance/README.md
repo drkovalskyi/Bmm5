@@ -5,10 +5,13 @@ peformance of NanoAOD production in various configurations
 Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 
 ## Results
+Reference machine: vocms0118
+
 ### Monte Carlo: BsToMuMu
 #### Time per event for the event loop
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv10-V03 |     523           |  0.053 sec/event  |       0.130 sec/event    |
 | NanoAODv10-V02 |     522           |  0.039 sec/event  |  0.170 sec/event         |
 | NanoAODv10-V01 |     521           |    |           |
 | NanoAODv9-V03 |      519           |  0.136 sec/event  |       0.189 sec/event    |
@@ -21,6 +24,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### File size per event 
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ | 
+| NanoAODv10-V03 |     523           |   1.3 kB/event    |         3.4 kB/event     | 
 | NanoAODv10-V02 |     522           |   1.1 kB/event    |         3.2 kB/event     | 
 | NanoAODv9-V03 |      519           |   1.2 kB/event    |         2.4 kB/event     | 
 | NanoAODv6-V18 |      515           |                   |         1.9 kB/event     |
@@ -31,6 +35,7 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 #### Memory Usage (RSS)
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv10-V03 |     523           |      1728 kB      |         1960 kB          |
 | NanoAODv10-V02 |     522           |      1179 kB      |         1546 kB          |
 | NanoAODv9-V03 |      519           |      1763 kB      |         1945 kB          |
 | NanoAODv8-V02 |      516           |                   |         1915 kB          |
