@@ -10,20 +10,23 @@
 class XGBooster
 {       
 public:
-    XGBooster(std::string model_file);
-
-    /// Features need to be entered in the order they are used
-    /// in the model
-    void addFeature(std::string name);
+  XGBooster(std::string model_file);
+  
+  /// Features need to be entered in the order they are used
+  /// in the model
+  void addFeature(std::string name);
+  
+  /// Reset feature values
+  void reset();
     
-    void set(std::string name, float value);
-    
-    float predict();
+  void set(std::string name, float value);
+  
+  float predict();
 
 private:
-    std::vector<float> features_;
-    std::map<std::string,unsigned int> feature_name_to_index_;
-    BoosterHandle  booster_;
+  std::vector<float> features_;
+  std::map<std::string,unsigned int> feature_name_to_index_;
+  BoosterHandle  booster_;
 };
 
 #endif

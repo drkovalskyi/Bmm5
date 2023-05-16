@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdexcept>
+#include <algorithm>
 
 XGBooster::XGBooster(std::string model_file)
 {
@@ -12,19 +13,32 @@ XGBooster::XGBooster(std::string model_file)
   XGBoosterSetParam(booster_, "nthread", "1");
 };
 
+void XGBooster::reset()
+{
+  std::fill(features_.begin(), features_.end(), std::nan(""));
+}
+
+
 void XGBooster::addFeature(std::string name){
   features_.push_back(0);
   feature_name_to_index_[name] = features_.size()-1;
 }
 
 void XGBooster::set(std::string name, float value){
-  if (isnan(value))
-    throw std::runtime_error(" NaN is used as value for " + name);
   features_.at(feature_name_to_index_[name]) = value;
 }
 
 float XGBooster::predict()
 {
+  float result(-999.);
+
+  // check if all feature values are set properly
+  for (auto feature: features_)
+    if (isnan(feature)){
+      reset();
+      return result;
+    }
+  
   DMatrixHandle dvalues;
   XGDMatrixCreateFromMat(&features_[0], 1, features_.size(), 0., &dvalues);
     
@@ -37,8 +51,10 @@ float XGBooster::predict()
 
   if (ret==0) {
     assert(out_len==1 && "Unexpected prediction format");
-    return score[0];
+    result = score[0];
   }
-    
-  return -999;    
+  
+  reset();
+  
+  return result;    
 }
