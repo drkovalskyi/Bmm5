@@ -7,7 +7,10 @@ Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 ## Results
 Reference machine: vocms0118
 
-### Monte Carlo: BsToMuMu
+### Monte Carlo
+
+Dataset: /BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM
+
 #### Time per event for the event loop
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ |
