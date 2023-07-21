@@ -359,8 +359,19 @@ DileptonsElElMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer",
     variables = DileptonsElElMcTableVariables
 )
 
-DileptonsElMuTableVariables = copy_pset(DileptonsDiMuonTableVariables, {"mu1_":"el1_"})
-DileptonsElMuMcTableVariables = copy_pset(DileptonsDiMuonMcTableVariables, {"mu1_":"el1_"})
+def fix_parameter_names(pset):
+    new_pset = cms.PSet()
+    for p in pset.parameters_():
+        new_name = p
+        if "el1_" in p:
+            new_name = p.replace("el1_", "el_")
+        elif "mu2_" in p:
+            new_name = p.replace("mu2_", "mu_")
+        setattr(new_pset, new_name, getattr(pset, p))
+    return new_pset
+
+DileptonsElMuTableVariables = fix_parameter_names(copy_pset(DileptonsDiMuonTableVariables, {"mu1_":"el1_"}))
+DileptonsElMuMcTableVariables = fix_parameter_names(copy_pset(DileptonsDiMuonMcTableVariables, {"mu1_":"el1_"}))
 print(DileptonsElMuMcTableVariables)
 
 
