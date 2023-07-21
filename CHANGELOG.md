@@ -2,6 +2,14 @@
 
 ## New developments
 
+## [NanoAODv10-V04] - 2023/07/21
+### Changes
+	- added extra muon variables
+	- added Muon POG mva id trained for muons with Pt > 10 GeV
+	- added e-mu final state
+	- lowered minimal muon pt to 2 GeV
+	- bug fixes
+
 ## [NanoAODv10-V03] - 2023/05/04
 ### Changes
 	- added primary vertex information
