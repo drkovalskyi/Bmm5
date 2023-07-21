@@ -67,6 +67,7 @@ BmmMuonIdVariables = cms.PSet(
     staNormChi2         = Var("userFloat('staNormChi2')",         float, doc = "Normalized chi2 of the outter fit"),
     trkNormChi2         = Var("userFloat('trkNormChi2')",         float, doc = "Normalized chi2 of the inner fit"),
     trkValidFrac        = Var("userFloat('trkValidFrac')",        float, doc = "Fraction of valid hits for inner track"),
+    mvaId               = Var("userFloat('mvaId')",               float, doc = "Standard POG MVA id"),
     
     match1_dX           = Var("userFloat('match1_dX')",           float, doc = "Station 1 local segment-track dX"),
     match1_pullX        = Var("userFloat('match1_pullX')",        float, doc = "Station 1 local segment-track dX/dErr"),

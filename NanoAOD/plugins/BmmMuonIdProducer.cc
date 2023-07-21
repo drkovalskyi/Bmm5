@@ -162,6 +162,7 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
       mu_cand.addUserFloat("chi2LocalMomentum",   muon.combinedQuality().chi2LocalMomentum);
       mu_cand.addUserFloat("trkRelChi2",          muon.combinedQuality().trkRelChi2);
       mu_cand.addUserFloat("staRelChi2",          muon.combinedQuality().staRelChi2);
+      mu_cand.addUserFloat("mvaId",               muon.mvaIDValue());
       
       if (muon.isGlobalMuon()){
 	mu_cand.addUserFloat("glbNormChi2", muon.globalTrack()->normalizedChi2());

@@ -29,6 +29,9 @@ def nanoAOD_customizeBmmMuonId(process):
     process.nanoSequence   = cms.Sequence(process.nanoSequence + process.BmmMuonIdSequence + process.BmmMuonIdTables)
     # MC
     process.nanoSequenceMC = cms.Sequence(process.nanoSequenceMC + process.BmmMuonIdMcSequence + process.BmmMuonIdMcTables)
+
+    process.load('PhysicsTools.NanoAOD.muons_cff')
+    # process.muonTable.variables.mvaMuID = Var("mvaIDValue()",float,doc="MVA-based ID score ",precision=6)
     return process
 
 def nanoAOD_keepLowPtMuons(process):

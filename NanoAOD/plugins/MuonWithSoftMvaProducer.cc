@@ -27,6 +27,7 @@
 #include "FWCore/Utilities/interface/StreamID.h"
 
 #include "PhysicsTools/PatAlgos/interface/SoftMuonMvaEstimator.h"
+#include "PhysicsTools/PatAlgos/interface/MuonMvaIDEstimator.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
 
 class MuonWithSoftMvaProducer : public edm::stream::EDProducer<> {
@@ -42,6 +43,8 @@ private:
   // ----------member data ---------------------------
   edm::EDGetTokenT<std::vector<pat::Muon>> muonToken_;
   std::unique_ptr<const pat::SoftMuonMvaEstimator> softMuonMvaEstimator_;
+  std::unique_ptr<const pat::MuonMvaIDEstimator> muonMvaIDEstimator_;
+  bool computeMuonIDMVA_ = false;
 };
 
 
@@ -52,6 +55,13 @@ MuonWithSoftMvaProducer::MuonWithSoftMvaProducer(const edm::ParameterSet& iConfi
   edm::FileInPath softMvaTrainingFile = iConfig.getParameter<edm::FileInPath>("softMvaTrainingFile");
   softMuonMvaEstimator_ = std::make_unique<pat::SoftMuonMvaEstimator>(softMvaTrainingFile);
 
+  // Muon POG MVA Id for pt > 10 GeV
+  computeMuonIDMVA_ = iConfig.getParameter<bool>("computeMuonIDMVA");
+  if ( computeMuonIDMVA_ ) {
+    edm::FileInPath mvaIDTrainingFile = iConfig.getParameter<edm::FileInPath>("mvaIDTrainingFile");
+    muonMvaIDEstimator_ = std::make_unique<pat::MuonMvaIDEstimator>(mvaIDTrainingFile);
+  }
+  
   produces<std::vector<pat::Muon>>();
 }
 
@@ -72,6 +82,16 @@ MuonWithSoftMvaProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSet
     float mva = softMuonMvaEstimator_->computeMva(muon);
     muon.setSoftMvaValue(mva);
     muon.setSelector(reco::Muon::SoftMvaId,  muon.softMvaValue() >   0.58  ); //WP choose for bmm4
+
+    // Muon POG MVA id for muons with pt > 10
+    float mvaID = 0.0;
+    if (computeMuonIDMVA_) {
+      if (muon.isLooseMuon()) {
+        mvaID = muonMvaIDEstimator_->computeMVAID(muon)[1];
+      }
+    }
+    muon.setMvaIDValue(mvaID);
+    
     updated_muons->push_back(muon);
   }
   iEvent.put(std::move(updated_muons));
