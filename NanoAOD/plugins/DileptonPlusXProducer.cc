@@ -419,6 +419,7 @@ private:
   bool   injectBtohh_;
   bool   injectJpsiTracks_;
   bool   recoElElX_;
+  bool   recoElMu_;
   bool   recoMuMuGamma_;
   bool   recoMuMuGammaConv_;
   bool   recoDstar_;
@@ -484,6 +485,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   injectBtohh_(        iConfig.getParameter<bool>( "injectBtohh" ) ),
   injectJpsiTracks_(  iConfig.getParameter<bool>( "injectJpsiTracks" ) ),
   recoElElX_(      iConfig.getParameter<bool>( "recoElElX" ) ),
+  recoElMu_(       iConfig.getParameter<bool>( "recoElMu" ) ),
   recoMuMuGamma_(      iConfig.getParameter<bool>( "recoMuMuGamma" ) ),
   recoMuMuGammaConv_(  iConfig.getParameter<bool>( "recoMuMuGammaConv" ) ),
   recoDstar_(      iConfig.getParameter<bool>( "recoDstar" ) ),
@@ -508,6 +510,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
 {
   produces<pat::CompositeCandidateCollection>("MuMu");
   produces<pat::CompositeCandidateCollection>("ElEl");
+  produces<pat::CompositeCandidateCollection>("ElMu");
   produces<pat::CompositeCandidateCollection>("HH");
   produces<pat::CompositeCandidateCollection>("BToKmumu");
   produces<pat::CompositeCandidateCollection>("BToKee");
@@ -1970,6 +1973,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   // Output collection
   auto mm_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto ee_collection = std::make_unique<pat::CompositeCandidateCollection>();
+  auto em_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto hh_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto btokmm  = std::make_unique<pat::CompositeCandidateCollection>();
   auto btokee  = std::make_unique<pat::CompositeCandidateCollection>();
@@ -1991,7 +1995,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
     
   // Good electrons
   std::vector<bmm::Candidate> good_electron_candidates;
-  if ( recoElElX_ ){
+  if ( recoElElX_ || recoElMu_){
     for (unsigned int i = 0; i < electronHandle->size(); ++i) {
       const pat::Electron & el = electronHandle->at(i);
       if (not isGoodElectron(el)) continue;
@@ -2119,7 +2123,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   }
 
   // Build dielectron candidates
-  if ( good_electron_candidates.size() > 1 ){
+  if ( recoElElX_ && good_electron_candidates.size() > 1 ){
     for (unsigned int i = 0; i < good_electron_candidates.size(); ++i) {
       const bmm::Candidate & electron1 = good_electron_candidates.at(i);
       for (unsigned int j = 0; j < good_electron_candidates.size(); ++j) {
@@ -2152,6 +2156,29 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
     } 
   }
 
+  // Build emu candidates
+  if ( recoElMu_ ){
+    for (unsigned int i = 0; i < good_electron_candidates.size(); ++i) {
+      const bmm::Candidate & electron = good_electron_candidates.at(i);
+      for (unsigned int j = 0; j < good_muon_candidates.size(); ++j) {
+	const bmm::Candidate & muon = good_muon_candidates.at(j);
+
+	pat::CompositeCandidate emuCand(std::string("emu"));
+	emuCand.addDaughter( electron , "electron");
+	emuCand.addDaughter( muon , "muon");
+	addP4.set( emuCand );
+
+	if (not preprocess(emuCand, iEvent, electron, muon)) continue;
+	  
+	// Kinematic Fits
+	auto kinematicLLVertexFit = fillDileptonInfo(emuCand, iEvent, electron, muon);
+
+	// save dielectron
+	em_collection->push_back(emuCand);
+      }
+    } 
+  }
+  
   // Build hh candidates
   // - loop over all hh combinations
   // - let individual studies fill hh_collection
@@ -2350,6 +2377,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	  
   iEvent.put(std::move(mm_collection),     "MuMu");
   iEvent.put(std::move(ee_collection), "ElEl");
+  iEvent.put(std::move(em_collection), "ElMu");
   iEvent.put(std::move(hh_collection),   "HH");
   iEvent.put(std::move(btokmm), "BToKmumu");
   iEvent.put(std::move(btokee), "BToKee");

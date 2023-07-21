@@ -46,6 +46,7 @@ PrimaryVertexInfo = cms.EDProducer(
     vertexScores = cms.InputTag("offlineSlimmedPrimaryVertices"),
     PFCandCollection = cms.InputTag("packedPFCandidates"),
     isMC = cms.bool(False),
+    storeTracks = cms.bool(False),
 )
 
 PrimaryVertexInfoMc = PrimaryVertexInfo.clone( isMC = cms.bool(True) ) 
@@ -133,6 +134,7 @@ Dileptons = cms.EDProducer(
     recoMuMuGamma = cms.bool(True),
     recoMuMuGammaConv = cms.bool(True),
     recoElElX = cms.bool(False),
+    recoElMu = cms.bool(True),
     recoDstar = cms.bool(True),
     recoD0pipi = cms.bool(True),
     recoD0Kpi = cms.bool(True),
@@ -357,6 +359,30 @@ DileptonsElElMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer",
     variables = DileptonsElElMcTableVariables
 )
 
+DileptonsElMuTableVariables = copy_pset(DileptonsDiMuonTableVariables, {"mu1_":"el1_"})
+DileptonsElMuMcTableVariables = copy_pset(DileptonsDiMuonMcTableVariables, {"mu1_":"el1_"})
+print(DileptonsElMuMcTableVariables)
+
+
+DileptonsElMuTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","ElMu"),
+    cut=cms.string(""),
+    name=cms.string("em"),
+    doc=cms.string("em Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsElMuTableVariables
+)
+
+DileptonsElMuMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","ElMu"),
+    cut=cms.string(""),
+    name=cms.string("em"),
+    doc=cms.string("em Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsElMuMcTableVariables
+)
 
 
 ##################################################################################
@@ -897,11 +923,11 @@ prescaleTable = cms.EDProducer("TriggerPrescaleProducer",
 DileptonPlusXSequence   = cms.Sequence(Dileptons * PrimaryVertexInfo)
 DileptonPlusXMcSequence = cms.Sequence(DileptonsMc * PrimaryVertexInfoMc * BxToMuMuGen * DstarGen )
 DileptonPlusXTables     = cms.Sequence(DileptonsDiMuonTable   * DileptonsHHTable    * DileptonsElElTable     *
-                                       DileptonsKmumuTable    * DileptonsKeeTable   * DileptonsKKmumuTable   * DileptonsKKeeTable *
-                                       DileptonsDstarTable    *
+                                       DileptonsElMuTable     * DileptonsKmumuTable * DileptonsKeeTable      *
+                                       DileptonsKKmumuTable   * DileptonsKKeeTable  * DileptonsDstarTable    *
                                        DileptonsMuMuGammaTable * PrimaryVertexInfoTable * prescaleTable)
-DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTable  * DileptonsElElMcTable   *
-                                       DileptonsKmumuMcTable  * DileptonsKeeMcTable * DileptonsKKmumuMcTable * DileptonsKKeeMcTable *
-                                       DileptonsDstarMcTable  * PrimaryVertexInfoMcTable *
-                                       DileptonsMuMuGammaMcTable * BxToMuMuGenTable * BxToMuMuGenSummaryTable * DstarGenTable *
-                                       prescaleTable)
+DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTable     * DileptonsElElMcTable *
+                                       DileptonsElMuMcTable   * DileptonsKmumuMcTable  * DileptonsKeeMcTable  *
+                                       DileptonsKKmumuMcTable * DileptonsKKeeMcTable   * DileptonsDstarMcTable *
+                                       PrimaryVertexInfoMcTable * DileptonsMuMuGammaMcTable * BxToMuMuGenTable *
+                                       BxToMuMuGenSummaryTable * DstarGenTable * prescaleTable)
