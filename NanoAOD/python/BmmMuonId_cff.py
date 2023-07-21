@@ -60,7 +60,12 @@ BmmMuonIdVariables = cms.PSet(
     trkKink             = Var("userFloat('trkKink')",             float, doc = "Inner track kink chi2"),
     glbTrackProbability = Var("userFloat('glbTrackProbability')", float, doc = "Log probability of the global fit"),
     chi2LocalPosition   = Var("userFloat('chi2LocalPosition')",   float, doc = "chi2 for STA-TK matching by local position"),
+    chi2LocalMomentum   = Var("userFloat('chi2LocalMomentum')",   float, doc = "chi2 for STA-TK matching by momentum"),
+    trkRelChi2          = Var("userFloat('trkRelChi2')",          float, doc = "chi2 value for the inner track stub with respect to the global track"),
+    staRelChi2          = Var("userFloat('staRelChi2')",          float, doc = "chi2 value for the outer track stub with respect to the global track"),
     glbNormChi2         = Var("userFloat('glbNormChi2')",         float, doc = "Normalized chi2 of the global fit"),
+    staNormChi2         = Var("userFloat('staNormChi2')",         float, doc = "Normalized chi2 of the outter fit"),
+    trkNormChi2         = Var("userFloat('trkNormChi2')",         float, doc = "Normalized chi2 of the inner fit"),
     trkValidFrac        = Var("userFloat('trkValidFrac')",        float, doc = "Fraction of valid hits for inner track"),
     
     match1_dX           = Var("userFloat('match1_dX')",           float, doc = "Station 1 local segment-track dX"),
@@ -78,9 +83,11 @@ BmmMuonIdVariables = cms.PSet(
 
     nPixels             = Var("userInt('nPixels')",                 int, doc = "Number of valid pixel hits"),
     nValidHits          = Var("userInt('nValidHits')",              int, doc = "Number of valid hits"),
+    staValidHits        = Var("userInt('staValidHits')",            int, doc = "Number of valid hits for outter track"),
     nLostHitsInner      = Var("userInt('nLostHitsInner')",          int, doc = "Number of lost hits before tracker track"),
     nLostHitsOn         = Var("userInt('nLostHitsOn')",             int, doc = "Number of lost hits on tracker track"),
     nLostHitsOuter      = Var("userInt('nLostHitsOuter')",          int, doc = "Number of lost hits after tracker track"),
+    chargeProduct       = Var("userInt('chargeProduct')",           int, doc = "Product of the inner fit charge and outter fit charge"),
     
     trkLayers           = Var("userInt('trkLayers')",               int, doc = "Number of layers with measurements in tracker track"),
     trkLostLayersInner  = Var("userInt('trkLostLayersInner')",      int, doc = "Number of lost layers befor tracker track"),
