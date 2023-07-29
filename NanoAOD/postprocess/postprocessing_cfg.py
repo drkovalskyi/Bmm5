@@ -2,10 +2,10 @@
 from resources_cfg import resources
 
 workdir = "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv8/src/Bmm5/NanoAOD/postprocess/"
-version = 518
-input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD"
-output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing-NEW"
-# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing"
+version = 523
+input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD"
+# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing-NEW"
+output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing"
 xrootd_prefix = "root://eoscms.cern.ch:/"
 web_report_path = "/afs/cern.ch/user/d/dmytro/www/public_html/bmm5/postprocessing/"
 
@@ -16,13 +16,24 @@ require_log_for_success = True
 # Test RegEx at https://www.regextester.com/
 
 active_tasks = {
+    # Skims with NanoAOD event content
     'NanoAOD-skims':[
         ## 'bkmm', 'trig', 'ks', 'lambda', 'phi', 'ds'
         # 'mm', 'ks', 'phi', 'lambda', 'bkmm',
         # 'trig', # 'mm'
         # 'mm-vtx'
         # 'bmm'
+        # 'ks', 'lambda', 'phi'
     ],
+
+    # Skims with task specific content
+    'Skims':[
+        # 'ks','phi', 'dstar', 'dstar2'
+        # 'ks', 'phi', 'dstar'
+        # 'ksmm'
+    ],
+
+    # Flat ntuples with task specific content
     'FlatNtuples':[
         ## bmm_mva_jpsik, muon_mva, bmm_mva
         # 'fit', 'fit-bkmm', 'bmm_mva_jpsik', 'bmm_mva', 'muon_mva'
@@ -33,7 +44,8 @@ active_tasks = {
         # 'trig-info'
         # 'fit-bkmm',
         # 'fit'
-        'fit-bkkmm'
+        # 'fit-bkkmm'
+        'muon_mva'
 
     ]
 }
@@ -88,6 +100,7 @@ cuts = {
     "abs(bkkmm_jpsikk_kk_mass-1.02)<0.03"
 }
 
+common_branches = 'PV_npvs|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock'
 
 tasks = [
 
@@ -155,6 +168,16 @@ tasks = [
         'files_per_job':100
     },
     {
+        'input_pattern':'DoubleElectron|EGamma|DoubleEG|SingleElectron|SinglePhoton|MINIAODSIM',
+        # 'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton',
+        'processor':'SimpleSkimmer',
+        'cut':'ks_kin_sipPV<3 && ks_kin_slxy>3 && ks_trk1_sip>5 && ks_trk2_sip>5 && ks_kin_cosAlphaXY>0.999',
+        'name':'ks',
+        "keep": "^(ks_.*|nks|Muon_.*|nMuon|run|event|luminosityBlock|HLT_Ele30_WPTight_Gsf)$",
+        'type':'Skims',
+        'files_per_job':100
+    },
+    {
         'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton|MINIAODSIM',
         # 'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton',
         'processor':'Skimmer',
@@ -173,6 +196,33 @@ tasks = [
         'files_per_job':100
     },
     {
+        'input_pattern':'DoubleElectron|EGamma|DoubleEG|SingleElectron|SinglePhoton|MINIAODSIM',
+        'processor':'SimpleSkimmer',
+        'cut':'((phi_trk1_pt > 4 && phi_trk2_pt > 3.0) || ( phi_trk2_pt > 4 && phi_trk1_pt > 3.0)) &&  phi_kin_vtx_prob>0.3 && phi_kin_sipPV<1  && phi_doca<0.004 && phi_kin_lxy<4',
+        'name':'phi',
+        'type':'Skims',
+        "keep": "^(phi_.*|nphi|Muon_.*|nMuon|" + common_branches + ")$",
+        'files_per_job':200
+    },
+    # {
+    #     'input_pattern':'DoubleMuon|MINIAODSIM',
+    #     'processor':'SimpleSkimmer',
+    #     'cut':'d0_dstar_pion_pt > 0',
+    #     'name':'dstar',
+    #     'type':'Skims',
+    #     "keep": "^(d0_.*|nd0|mm_.*|nmm|Muon_.*|nMuon|run|event|luminosityBlock)$",
+    #     'files_per_job':100
+    # },
+    {
+        'input_pattern':'DoubleMuon|ZeroBias|MINIAODSIM',
+        'processor':'SimpleSkimmer',
+        'cut':'dstar_dm_pv > 0',
+        'name':'dstar',
+        'type':'Skims',
+        "keep": "^(dstar_.*|ndstar|d0_.*|nd0|mm_.*|nmm|Muon_.*|nMuon|hh_.*|nhh|run|event|luminosityBlock)$",
+        'files_per_job':50
+    },
+    {
         'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton|MINIAODSIM',
         # 'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton',
         'processor':'Skimmer',
@@ -189,7 +239,33 @@ tasks = [
         'type':'NanoAOD-skims',
         'files_per_job':100
     },
-
+    {
+        'input_pattern':'InclusiveDileptonMinBias',
+        'processor':'SimpleSkimmer',
+        'cut':'mm_mass > 0',
+        'name':'mm',
+        'type':'Skims',
+        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + common_branches + ")$",
+        'files_per_job':100
+    },
+    {
+        'input_pattern':'ParkingDoubleMuonLowMass',
+        'processor':'SimpleSkimmer',
+        'cut':'mm_mass > 0',
+        'name':'mm',
+        'type':'Skims',
+        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + common_branches + ")$",
+        'files_per_job':20
+    },
+    {
+        'input_pattern':'ParkingDoubleMuonLowMass',
+        'processor':'SimpleSkimmer',
+        'cut':'mm_kin_slxy>10&&mm_kin_lxy>1&&mm_kin_alpha<0.01&&mm_mu1_pdgId==-mm_mu2_pdgId&&abs(mm_kin_mass-0.5)<0.2',
+        'name':'ksmm',
+        'type':'Skims',
+        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + common_branches + ")$",
+        'files_per_job':200
+    },
     {
         'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton',
         'processor':'Skimmer',
@@ -770,7 +846,7 @@ tasks = [
         
     ################ muon_mva ################
     {
-        'input_pattern':'QCD_Pt.*?_MuEnriched|Charmonium|BuToJpsiK',
+        'input_pattern':'InclusiveDileptonMinBias', # 'QCD_Pt.*?_MuEnriched|Charmonium|BuToJpsiK',
         'processor':'FlatNtupleForMuonMVA',
         'name':'muon_mva',
         'type':'FlatNtuples',

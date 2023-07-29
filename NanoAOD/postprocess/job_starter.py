@@ -11,6 +11,7 @@ from FlatNtupleForMuonMVA import FlatNtupleForMuonMVA
 from FlatNtupleForTrigEfficiency import FlatNtupleForTrigEfficiency
 from FlatNtupleForTrigInfo import FlatNtupleForTrigInfo
 from Skimmer import Skimmer
+from SimpleSkimmer import SimpleSkimmer
 import sys
 
 if len(sys.argv)==3:
