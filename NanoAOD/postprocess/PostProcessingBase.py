@@ -1,7 +1,7 @@
 import re
 import tempfile
 import os
-import subprocess, commands
+import subprocess, subprocess
 import json
 import time
 import platform
@@ -40,7 +40,7 @@ class Processor(object):
             raise Exception("Incorrect input name:\n%s" % job_filename)
 
     def _prepare(self):
-        print "processing %s at %s " % (self.job_filename, platform.node())
+        print("processing %s at %s " % (self.job_filename, platform.node()))
         
         # Create a lock
         self._update_lock(self.take_ownership)
@@ -122,15 +122,15 @@ class FlatNtupleBase(Processor):
 
         # process files
         results = []
-        t0 = time.clock()
+        t0 = time.perf_counter()
         n_events = 0
         for f in self.job_info['input']:
             result, n = self.process_file(f)
             n_events += n
             results.append(result)
-        print n_events//(time.clock()-t0), "Hz"
+        print(n_events//(time.perf_counter() - t0), "Hz")
 
-        print "Merging output."
+        print("Merging output.")
         # merge results
         good_files = []
         for rfile in results:
@@ -139,7 +139,7 @@ class FlatNtupleBase(Processor):
         status = subprocess.call(command, shell=True)
 
         if status==0:
-            print "Merged output."
+            print("Merged output.")
             for file in good_files:
                 os.remove(file)
 
@@ -170,7 +170,7 @@ class FlatNtupleBase(Processor):
 
     def process_file(self, input_file):
         """Initialize input and output trees and initiate the event loop"""
-        print "Processing file: %s" % input_file
+        print("Processing file: %s" % input_file)
         match = re.search("([^\/]+)\.root$", input_file)
         if match:
             output_filename = "%s/%s_processed.root" % (self.tmp_dir, match.group(1))
@@ -202,7 +202,7 @@ class FlatNtupleBase(Processor):
         self._process_events()
 
         nout = self.tree.tree.GetEntries()
-        print 'Selected %d / %d entries from %s (%.2f%%)' % (nout, nevents, input_file, 100.*nout/nevents if nevents else 0)
+        print('Selected %d / %d entries from %s (%.2f%%)' % (nout, nevents, input_file, 100.*nout/nevents if nevents else 0))
         fout.Write()
         fout.Close()
         return output_filename, nevents
