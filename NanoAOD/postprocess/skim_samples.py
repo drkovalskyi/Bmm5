@@ -294,10 +294,10 @@ def output_is_already_available(filename):
         if force_recreation:
             os.remove(filename)
         elif good:
-            print message, " It appears to be good. Skip it. If you want to recreate it, please remove the existing file" 
+            print(message, " It appears to be good. Skip it. If you want to recreate it, please remove the existing file") 
             return True
         else:
-            print message," File is corrupted. Will recreate."
+            print(message," File is corrupted. Will recreate.")
             os.remove(filename)
     return False
 
@@ -402,7 +402,7 @@ def parallel_process(input_files, files_per_job, skims):
     queue_depth = 10 # keep it small to avoid memory leaks
 
     for skim in skims:
-        print "Skim name: %s" % skim
+        print("Skim name: %s" % skim)
         new_files = []
         skim_output_eos_dir = get_output_dir(output_eos_dir, input_files[0], skim)
 
@@ -416,7 +416,7 @@ def parallel_process(input_files, files_per_job, skims):
         if os.path.exists(skim_output_eos_dir):
             list_files = subprocess.check_output(
                 'find %s -type f -name "*.list"' % skim_output_eos_dir,
-                shell = True
+                shell = True, encoding='utf8'
             ).split("\n")
 
             # Put already existing jobs in the first job set. It can lead
@@ -428,7 +428,7 @@ def parallel_process(input_files, files_per_job, skims):
                     # check if we have valid root file
                     root_file = re.sub("\.list$", ".root", list_file)
                     if not _is_good_file(root_file):
-                        print "WARNING: no valid ROOT file is found for %s. Reprocessing" % list_file
+                        print("WARNING: no valid ROOT file is found for %s. Reprocessing" % list_file)
                         subprocess.call("rm -v %s" % list_file, shell=True)
                     else:
                         with open(list_file) as f:
@@ -441,15 +441,15 @@ def parallel_process(input_files, files_per_job, skims):
                                 job_sets.append([])
                             job_sets[0].append(files)
 
-            print "Number of assigned files: %u" % len(assigned_files)
+            print("Number of assigned files: %u" % len(assigned_files))
             if len(job_sets) > 0:
-                print "Number of existing jobs: %u" % len(job_sets[0])
+                print("Number of existing jobs: %u" % len(job_sets[0]))
 
         for f in input_files:
             if not f in assigned_files:
                 new_files.append(f)
             
-        print "Number of new files: %u" % len(new_files)
+        print("Number of new files: %u" % len(new_files))
                 
         r = len(input_files)/nProcesses
         if r<files_per_job:
@@ -472,10 +472,10 @@ def parallel_process(input_files, files_per_job, skims):
                 for list_of_files in job_list:
                     process_job(list_of_files,skim=skim)
 
-    print "Processing is done."
+    print("Processing is done.")
 
-for sample,info in samples.items():
-    print "Processing %s" % sample
+for sample,info in list(samples.items()):
+    print("Processing %s" % sample)
     output_filename = "%s.root" % sample
     if output_is_already_available(output_filename):
         continue
@@ -494,10 +494,10 @@ for sample,info in samples.items():
     elif 'lfns' in info:
         input_files = getPFNs(info['pfns'])
     else:
-        print "Input is not specified. Skip the sample"
+        print("Input is not specified. Skip the sample")
         continue
     if len(input_files)==0:
-        print "Nothing to process. Skip the sample"
+        print("Nothing to process. Skip the sample")
         continue
 
     match = False
