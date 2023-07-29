@@ -7,3 +7,5 @@ __init__.py
 *.pcm
 .__afs*
 *.log
+*.txt
+*.bak
