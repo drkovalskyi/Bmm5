@@ -24,9 +24,9 @@ class JobDispatcher(object):
     def _init_resources(self):
         """On demand initialization of resource handlers"""
         self._resources = []
-        print "Initializing the resources"
+        print("Initializing the resources")
         for resource in cfg.resources:
-            print "\t", resource
+            print("\t", resource)
             self._resources.append(eval(resource))
 
     def _job_info(self, job):
@@ -51,7 +51,7 @@ class JobDispatcher(object):
     def show_resource_availability(self):
         """Current statust of resources"""
         for resource in self.resources():
-            print "%s - free slots: %u" % (resource.name(), resource.number_of_free_slots())
+            print("%s - free slots: %u" % (resource.name(), resource.number_of_free_slots()))
 
     def update_running_jobs(self):
         """Collection information about running jobs from resource handlers"""
@@ -84,10 +84,10 @@ class JobDispatcher(object):
             
     def _load_existing_jobs(self):
         """Find existings jobs and store their input"""
-        print "Loading existing jobs..."
+        print("Loading existing jobs...")
         command = 'find -L %s -type f -name "*job" -path "*/%u/*"' % (cfg.output_location, cfg.version)
-        self.all_jobs = subprocess.check_output(command, shell=True).splitlines()
-        print "Found %u jobs" % len(self.all_jobs)
+        self.all_jobs = subprocess.check_output(command, shell=True, encoding='utf8').splitlines()
+        print("Found %u jobs" % len(self.all_jobs))
 
     def update_status_of_jobs(self):
         """Classify jobs by status and store in corresponding lists"""
@@ -100,7 +100,7 @@ class JobDispatcher(object):
             self.jobs_by_status[status].append(job)
 
         for status in self.jobs_by_status:
-            print "\t%s: %u" % (status, len(self.jobs_by_status[status]))
+            print("\t%s: %u" % (status, len(self.jobs_by_status[status])))
 
     def number_of_running_jobs(self, owned=False):
         """Get total number of running jobs on all resources"""
@@ -113,19 +113,19 @@ class JobDispatcher(object):
         """Process available jobs"""
 
         # submit jobs
-        print "Submitting new jobs"
+        print("Submitting new jobs")
         while time.time() < self.end_time:
             self.update_status_of_jobs()
             if 'New' not in self.jobs_by_status or self.jobs_by_status['New'] == 0:
-                print "No new jobs to submit. Reloading to check if new jobs where injected"
+                print("No new jobs to submit. Reloading to check if new jobs where injected")
                 self._load_existing_jobs()                
                 self.update_status_of_jobs()
                 if 'New' not in self.jobs_by_status or self.jobs_by_status['New'] == 0:
-                    print "No new jobs is found."
+                    print("No new jobs is found.")
                     break
             for resource in self.resources():
                 n_slots = resource.number_of_free_slots()
-                print "%s has %u free slots" % (resource.name(), n_slots)
+                print("%s has %u free slots" % (resource.name(), n_slots))
                 for i in range(n_slots):
                     if len(self.jobs_by_status['New']) > 0:
                         resource.submit_job(self.jobs_by_status['New'].pop())
@@ -134,47 +134,56 @@ class JobDispatcher(object):
             time.sleep(60)
 
         # finalize running jobs
-        print "Finalizing running jobs"
+        print("Finalizing running jobs")
         while True:
             n_running = self.number_of_running_jobs(owned=True)
-            print "Number of running jobs: %u" % n_running
+            print("Number of running jobs: %u" % n_running)
             if n_running == 0:
                 break
             time.sleep(60)
             
-    def show_failures(self, detailed=False):
+    def show_failures(self):
         self.update_status_of_jobs()
         failures = {}
+        report_name = "failure_report-%d.txt" % time.time()
 
         if 'Failed' in self.jobs_by_status:
-            for job in self.jobs_by_status['Failed']:
-                if detailed:
-                    print "\n", job
-                     
-                job_info = self._job_info(job)
+            with open(report_name, "w") as f:
+                f.write("Detail informtion about failed jobs\n")
+                for job in self.jobs_by_status['Failed']:
+                    f.write("job: " + job + "\n")
 
-                failure_type = None
-                if os.path.exists(job_info['output']):
-                    failure_type = 'Output is available'
-                elif os.path.exists(job_info['lock']):
-                    failure_type = 'Locked without output'
-                elif os.path.exists(job_info['log']):
-                    failure_type = 'Only log'
-                else:
-                    failure_type = 'Missing log'
+                    job_info = self._job_info(job)
 
-                if detailed and os.path.exists(job_info['log']):
-                    subprocess.call("tail %s" % job_info['log'], shell=True)
-                    
-                if failure_type:
-                    if failure_type not in failures:
-                        failures[failure_type] = []
-                    failures[failure_type].append(job)
+                    failure_type = None
+                    if os.path.exists(job_info['output']):
+                        failure_type = 'Output is available'
+                    elif os.path.exists(job_info['lock']):
+                        failure_type = 'Locked without output'
+                    elif os.path.exists(job_info['log']):
+                        failure_type = 'Only log'
+                    else:
+                        failure_type = 'Missing log'
 
-        for failure_type, jobs in failures.items():
-            print "Failure type: %s" % failure_type
-            print "\tNumber of jobs: %u" % len(jobs)
-            pprint(jobs)
+                    if failure_type:
+                        f.write("Failure type: " + failure_type + "\n")
+                    else:
+                        f.write("Uknown failure type\n")
+
+                    if os.path.exists(job_info['log']):
+                        f.write("Tail of the log " + job_info['log'] + "\n")
+                        f.write(subprocess.check_output("tail %s" % job_info['log'],
+                                                        shell=True, encoding='utf8'))
+                    if failure_type:
+                        if failure_type not in failures:
+                            failures[failure_type] = []
+                        failures[failure_type].append(job)
+            print("Detailed failure information is available in %s" % report_name)
+
+            for failure_type, jobs in list(failures.items()):
+                print("Failure type: %s" % failure_type)
+                print("\tNumber of jobs: %u" % len(jobs))
+                # pprint(jobs)
 
     def reset_failures(self):
         self.update_status_of_jobs()
@@ -213,7 +222,7 @@ class JobDispatcher(object):
             rate = None
             # Skimmer specific analysis for now
             result = subprocess.check_output("grep -E 'Selected|Hz' %s" % job_info['log'],
-                                             shell=True)
+                                             shell=True, encoding='utf8')
             for line in result.splitlines():
                 match = re.search("^Selected\s+(\d+)[\s\/]+(\d+)\s+entries", line)
                 if match:
@@ -312,7 +321,7 @@ class JobDispatcher(object):
                         subprocess.call("mkdir -p %s" % path, shell=True)
                     # with open("%s/%s.txt" % (path, task_name), "w") as f:
                     data = []
-                    for dataset, info in report[task_type][version][task_name].items():
+                    for dataset, info in list(report[task_type][version][task_name].items()):
                         n_processed = 0
                         n_selected = 0
                         n_rate = 0
@@ -342,12 +351,11 @@ if __name__ == "__main__":
     jd = JobDispatcher()
     # jd.kill_all_jobs()
     # jd.show_resource_availability()
-    # jd.show_failures(True)
-    # jd.clean_up()
     # jd.update_status_of_jobs()
     # jd.job_report()
     
-    # jd.show_failures()
-    
     jd.reset_failures()
     jd.process_jobs()
+    jd.show_failures()
+    
+    # jd.clean_up()

@@ -284,6 +284,6 @@ if __name__ == "__main__":
 
     # p = FlatNtupleForMLFit("/tmp/dmytro/9081fd38604b24f4c6035628a89e18ed.job")
     p = FlatNtupleForTrigEfficiency(file_name)
-    print p.__dict__
+    print(p.__dict__)
         
     p.process()

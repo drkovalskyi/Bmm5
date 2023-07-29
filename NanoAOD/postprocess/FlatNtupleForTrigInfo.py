@@ -36,8 +36,8 @@ class FlatNtupleForTrigInfo(FlatNtupleBase):
 
     def _is_good_dimuon(self, i):
         if self.event.mm_mu1_index[i] < 0 or self.event.mm_mu2_index[i] < 0: return False
-	if self.event.Muon_pt[self.event.mm_mu1_index[i]] < 4.0: return False
-	if self.event.Muon_pt[self.event.mm_mu2_index[i]] < 4.0: return False
+        if self.event.Muon_pt[self.event.mm_mu1_index[i]] < 4.0: return False
+        if self.event.Muon_pt[self.event.mm_mu2_index[i]] < 4.0: return False
         if abs(self.event.Muon_eta[self.event.mm_mu1_index[i]]) > 1.4: return False
         if abs(self.event.Muon_eta[self.event.mm_mu2_index[i]]) > 1.4: return False
         if self.event.Muon_charge[self.event.mm_mu1_index[i]] * self.event.Muon_charge[self.event.mm_mu2_index[i]] != -1: return False
@@ -47,18 +47,18 @@ class FlatNtupleForTrigInfo(FlatNtupleBase):
     
     def _is_good_for_HLT_DoubleMu4_3_Bs(self, i):
         if self.event.mm_kin_mass[i] < 4.6 or self.event.mm_kin_mass[i] > 5.9: return False 
-	if self.event.mm_kin_pt[i] < 5 or self.event.mm_kin_vtx_prob[i] < 0.025: return False
+        if self.event.mm_kin_pt[i] < 5 or self.event.mm_kin_vtx_prob[i] < 0.025: return False
         return True
 
     def _is_good_for_HLT_DoubleMu4_3_Jpsi(self, i):
         if abs(self.event.mm_kin_mass[i] - 3.1) > 0.1: return False 
-	if self.event.mm_kin_pt[i] < 7 or self.event.mm_kin_vtx_prob[i] < 0.1: return False
-	if self.event.mm_kin_alphaBS[i] > 0.4: return False
+        if self.event.mm_kin_pt[i] < 7 or self.event.mm_kin_vtx_prob[i] < 0.1: return False
+        if self.event.mm_kin_alphaBS[i] > 0.4: return False
         return True
     
     def _is_good_for_HLT_DoubleMu4_3_Jpsi_Displaced(self, i):
         if not self._is_good_for_HLT_DoubleMu4_3_Jpsi(i): return False
-	if self.event.mm_kin_slxy[i] < 4: return False
+        if self.event.mm_kin_slxy[i] < 4: return False
         return True
     
     def __select_candidates(self, candidates):
@@ -231,6 +231,6 @@ if __name__ == "__main__":
 
     # p = FlatNtupleForMLFit("/tmp/dmytro/9081fd38604b24f4c6035628a89e18ed.job")
     p = FlatNtupleForTrigInfo(file_name)
-    print p.__dict__
+    print(p.__dict__)
         
     p.process()

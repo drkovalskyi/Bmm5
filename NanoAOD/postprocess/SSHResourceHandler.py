@@ -9,7 +9,7 @@ class SSHResourceHandler(ResourceHandler):
         self.site = site
         self.max_njobs = max_number_of_jobs_running
         self.proc = subprocess.Popen("ssh -T -x %s 'bash -l'" % site,
-                                     shell=True,
+                                     shell=True, encoding='utf8',
                                      stdin  = subprocess.PIPE,
                                      stdout = subprocess.PIPE
                                      )
@@ -56,9 +56,9 @@ class SSHResourceHandler(ResourceHandler):
     def _submit_job(self, job):
         log = re.sub('\.job$', '\.log', job)
         command = "nice bash job_starter.sh %s %s &> /dev/null &" % (self._processor_name(job), job)
-        print "submitting %s" % job
+        print("submitting %s" % job)
             
-        print self._send_command_and_get_response(command),
+        print(self._send_command_and_get_response(command), end=' ')
 
     def _get_running_jobs(self):
         jobs = []
@@ -78,7 +78,7 @@ class SSHResourceHandler(ResourceHandler):
         return self.site
 
     def kill_all_jobs(self):
-        print "Killing jobs at %s" % self.name()
+        print("Killing jobs at %s" % self.name())
         response = self._send_command_and_get_response("ps -Af")
         for line in response.splitlines():
             match = re.search('^\S+\s+(\S+).*?job_starter', line)

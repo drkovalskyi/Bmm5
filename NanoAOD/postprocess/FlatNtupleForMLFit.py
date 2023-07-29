@@ -36,7 +36,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             self.goodruns[type] = dict()
             for f in os.listdir('certification/%s' % type):
                 self.goodruns[type].update(json.load(open('certification/%s/%s' % (type, f))))
-            print "Number of runs in the %s certification: %u" % (type, len(self.goodruns[type]))
+            print("Number of runs in the %s certification: %u" % (type, len(self.goodruns[type])))
 
         # run number is a string for some reason
         run = str(self.event.run)
@@ -535,6 +535,6 @@ if __name__ == "__main__":
 
     # p = FlatNtupleForMLFit("/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/518/fit-bkkmm/BsToJPsiPhi_JPsiToMuMu_PhiToKK_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/3ce6cf95a912f9ea0fbad11004884b04.job")
     p = FlatNtupleForMLFit(file_name)
-    print p.__dict__
+    print(p.__dict__)
         
     p.process()

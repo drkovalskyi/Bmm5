@@ -10,8 +10,8 @@ class JobCreator(object):
     def load_existing_jobs(self):
         """Find existings jobs and store their input"""
         command = 'find -L %s -type f -name "*job" -path "*/%u/*"' % (cfg.output_location, cfg.version)
-        all_jobs = subprocess.check_output(command, shell=True).splitlines()
-        print "Found %u jobs" % len(all_jobs)
+        all_jobs = subprocess.check_output(command, shell=True, encoding='utf8').splitlines()
+        print("Found %u jobs" % len(all_jobs))
         njobs = 0
         for job in all_jobs:
             match = re.search("([^\/]+)\/(\d+)\/([^\/]+)\/([^\/]+)", job)
@@ -34,15 +34,15 @@ class JobCreator(object):
                                         "Task: %s\nDataset: %s\nFile: %s" % (task_id, dataset, file))
                     else:
                         self.files_in_use_by_task_and_dataset[task_id][dataset][file] = 1
-        print "Number of processed valid jobs: %u" % njobs
+        print("Number of processed valid jobs: %u" % njobs)
 
     def find_all_inputs(self):
         """Find all files and splits them in datasets"""
         # look for files that were not modified at least for 30 mins to avoid interferences with transfers
         command = 'find -L %s/%s -mmin +30 -type f -name "*root"' % (cfg.input_location, cfg.version)
-        all_inputs = subprocess.check_output(command, shell=True).splitlines()
+        all_inputs = subprocess.check_output(command, shell=True, encoding='utf8').splitlines()
         all_inputs.sort()
-        print "Total number of input file: %u" % len(all_inputs)
+        print("Total number of input file: %u" % len(all_inputs))
         for entry in all_inputs:
             match = re.search("([^\/]+)\/[^\/]+\.root", entry)
             if match:
@@ -52,13 +52,13 @@ class JobCreator(object):
                 self.all_inputs_by_datasets[dataset].append(entry)
             else:
                 raise Exception("Failed to get dataset name for file %s" % entry)
-        print "Number of datasets: %u" % len(self.all_inputs_by_datasets)
+        print("Number of datasets: %u" % len(self.all_inputs_by_datasets))
         
     def filename(self, input_files):
         """Generate unique file name based on the hash of input file names"""
-        return hashlib.md5(",".join(input_files)).hexdigest()
+        return hashlib.md5((",".join(input_files)).encode("utf-8")).hexdigest()
 
-    def create_new_jobs(self, make_small_jobs=False):
+    def create_new_jobs(self, allow_small_jobs=False):
         """Find new files and create jobs"""
 
         report = dict()
@@ -67,9 +67,9 @@ class JobCreator(object):
             if task['name'] not in cfg.active_tasks[task['type']]:
                 continue
             task_id = "%s-%s" % (task['type'], task['name'])
-            print "Processing task %s" % task_id
+            print("Processing task %s" % task_id)
 
-            for dataset, ds_inputs in self.all_inputs_by_datasets.items():
+            for dataset, ds_inputs in list(self.all_inputs_by_datasets.items()):
                 if not re.search(task['input_pattern'], dataset): continue
                 # find new inputs
                 new_inputs = []
@@ -85,7 +85,7 @@ class JobCreator(object):
                 n = task['files_per_job']
                 njobs = 0
                 for i in range(0, n_elements, n):
-                    if not make_small_jobs and i + n >= n_elements:
+                    if not allow_small_jobs and i + n >= n_elements:
                         break
                     # get input
                     inputs = new_inputs[i : i + n]
@@ -96,7 +96,7 @@ class JobCreator(object):
 
                     # prepare job information
                     job_info = dict()
-                    for key, value in task.items():
+                    for key, value in list(task.items()):
                         if key in ['files_per_job', 'type', 'name', 'input_pattern']:
                             continue
                         job_info[key] = value
@@ -116,13 +116,13 @@ class JobCreator(object):
                     json.dump(job_info, open(job_filename, "w"))
                     njobs += 1
                 if len(new_inputs) > 0:
-                    print "  Dataset %s" % dataset
-                    print "    Number of new input files %u" % len(new_inputs)
-                    print "    Number of new jobs created %u" % njobs
+                    print("  Dataset %s" % dataset)
+                    print("    Number of new input files %u" % len(new_inputs))
+                    print("    Number of new jobs created %u" % njobs)
                     report[task_id] = report.get(task_id, 0) + njobs
-        print "Number of new job created:"
+        print("Number of new job created:")
         for task_id in sorted(report, key=report.get, reverse=True):
-            print "\t%4u %s" % (report[task_id], task_id)
+            print("\t%4u %s" % (report[task_id], task_id))
                             
 if __name__ == "__main__":
 
@@ -130,4 +130,4 @@ if __name__ == "__main__":
     jc.find_all_inputs()
     jc.load_existing_jobs()
     # jc.create_new_jobs(False)
-    jc.create_new_jobs(True)
+    jc.create_new_jobs(allow_small_jobs=True)
