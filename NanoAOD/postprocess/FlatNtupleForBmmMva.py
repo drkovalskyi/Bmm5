@@ -212,7 +212,7 @@ class FlatNtupleForBmmMva(FlatNtupleBase):
         return True
 
 def unit_test():
-    path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/516/"
+    path = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/518/"
     job = {
         "input": [
             path + "BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v1+MINIAODSIM/F36A84DB-86B1-A84E-9205-C79D2ABE2A9D.root"

@@ -98,7 +98,8 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
 
                 # Gen-based matching
                 if not keep_muon and hasattr(self.event, 'Muon_genPartFlav'):
-                    genPartFlav = ord(self.event.Muon_genPartFlav[i])
+                    # genPartFlav = ord(self.event.Muon_genPartFlav[i])
+                    genPartFlav = self.event.Muon_genPartFlav[i]
                     if genPartFlav == 3:
                         keep_muon = True
                         data['sim_type'] = 1
@@ -273,7 +274,8 @@ if __name__ == "__main__":
         "input": [
             # "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/Charmonium+Run2018D-PromptReco-v2+MINIAOD/98841806-7910-3B4F-8818-832B7FFDC87B.root"
             # "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/BsToMuMu_bmm_fakes_and_ids.root"
-            "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM/8C7F570C-A4C8-F942-96D3-E87AFB8471A7.root"
+            # "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/QCD_Pt-30to50_MuEnrichedPt5_TuneCP5_13TeV_pythia8+RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3+MINIAODSIM/8C7F570C-A4C8-F942-96D3-E87AFB8471A7.root"
+            "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/523/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v4+MINIAODSIM/eeff8699-4ec6-4a6c-93a9-6df3db3992f8.root"
         ],
         "tree_name" : "muons",
       }  
