@@ -66,7 +66,13 @@ class SimpleSkimmer(Processor):
         dfFinal = df2.Filter("Sum(goodCandidates) > 0", "Event has good candidates")
         report = dfFinal.Report()
 
-        dfFinal.Snapshot("Events", self.job_output_tmp, filtered_list)
+        if 'keep_only_common_branches' in self.job_info['keep_only_common_branches'] and\
+           self.job_info['keep_only_common_branches']:
+            print("WARNING: keeping only common branches in the output. May lead to data loss")
+            dfFinal.Snapshot("Events", self.job_output_tmp, filtered_list)
+        else:
+            dfFinal.Snapshot("Events", self.job_output_tmp, self.job_info['keep'])
+            
         report.Print()
 
         print("Total time %.1f sec. to process %i events. Rate = %.1f Hz." % ((time.time() - t0), n_events, n_events / (time.time() - t0)))
@@ -131,8 +137,8 @@ def unit_test():
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
 
-    # p = SimpleSkimmer(file_name)
-    p = SimpleSkimmer("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/524/em/ParkingBPH1+Run2018B-UL2018_MiniAODv2-v1+MINIAOD/039c7188cd7498a349a68a58f8ee392f.job")
+    p = SimpleSkimmer(file_name)
+    # p = SimpleSkimmer("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/524/em/ParkingBPH1+Run2018B-UL2018_MiniAODv2-v1+MINIAOD/039c7188cd7498a349a68a58f8ee392f.job")
     print(p.__dict__)
     p.process()
 
