@@ -1,14 +1,38 @@
 from PostProcessingBase import Processor
 import time
 import json
-from ROOT import TChain, RDataFrame, TFile
+from ROOT import TChain, RDataFrame, TFile, std
 import sys
+import re
 
 
 class SimpleSkimmer(Processor):
     """Processor to Skim and Slim files."""
 
-    # FIXME: handle all trees
+    def _get_common_branches(self):
+        # Find common branches preserving their order
+        common_branches = None
+
+        input_files = self.job_info['input']
+        for file_name in input_files:
+            root_file = TFile.Open(file_name)
+            tree = root_file.Get("Events")
+            branches = tree.GetListOfBranches()
+
+            current_branches = []
+            for j in range(branches.GetEntries()):
+                branch_name = branches.At(j).GetName()
+                current_branches.append(branch_name)
+
+            if common_branches == None:
+                common_branches = current_branches
+            else:
+                common_branches = [branch for branch in common_branches if branch in current_branches]
+
+            root_file.Close()
+
+        return common_branches
+
 
     def _process(self):
         t0 = time.time()
@@ -18,6 +42,15 @@ class SimpleSkimmer(Processor):
             if parameter not in self.job_info:
                 raise Exception("Missing input '%s'" % parameter)
 
+        ## get a list of common branches
+        common_branches = self._get_common_branches()
+        filtered_list = std.vector('string')()
+        for column in common_branches:
+            if re.search(self.job_info['keep'], str(column)):
+                filtered_list.push_back(column)
+        print(filtered_list)
+
+        # setup input TChain
         input_files = self.job_info['input']
         chain = TChain("Events")
         for file in input_files:
@@ -33,7 +66,7 @@ class SimpleSkimmer(Processor):
         dfFinal = df2.Filter("Sum(goodCandidates) > 0", "Event has good candidates")
         report = dfFinal.Report()
 
-        dfFinal.Snapshot("Events", self.job_output_tmp, self.job_info['keep'])
+        dfFinal.Snapshot("Events", self.job_output_tmp, filtered_list)
         report.Print()
 
         print("Total time %.1f sec. to process %i events. Rate = %.1f Hz." % ((time.time() - t0), n_events, n_events / (time.time() - t0)))
@@ -60,10 +93,13 @@ class SimpleSkimmer(Processor):
 
 
 def unit_test():
+    standard_branches = 'PV_npvs|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock'
+
     ### create a test job
     job = {
         "input": [
-            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/522/ParkingDoubleMuonLowMass0+Run2022C-PromptReco-v1+MINIAOD/48c83780-3bd9-44e2-848f-c05797f3d474.root"
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/523/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v4+MINIAODSIM/eeff8699-4ec6-4a6c-93a9-6df3db3992f8.root"
+            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/522/ParkingDoubleMuonLowMass0+Run2022C-PromptReco-v1+MINIAOD/48c83780-3bd9-44e2-848f-c05797f3d474.root"
             # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022D-PromptReco-v1+MINIAOD/308d7ea2-c25d-47c2-a567-f7c4abd117af.root"
             # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/60ef0541-b8f5-479b-becd-4fdbd0e0599b.root",
             # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/610c8283-348f-485d-8ece-efe360e4a342.root"
@@ -83,9 +119,11 @@ def unit_test():
             # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61f17f66-f6e3-490e-ad96-8c2a01ef7ecb.root",
         ],
         # "cut": "ks_kin_sipPV<3 && ks_kin_slxy>3 && ks_trk1_sip>5 && ks_trk2_sip>5 && ks_kin_cosAlphaXY>0.999",
-        "cut": "dstar_dm_pv > 0 ",
+        # "cut": "dstar_dm_pv > 0 ",
+        "cut": "Muon_pt>0",
         "processor": "SimpleSkimmer",
-        "keep": "^(ks_.*|nks|Muon_.*|nMuon)$",
+        # "keep": "^(MuonId_.*|nMuonId|Muon_.*|nMuon)$",
+        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + standard_branches + ")$",
         "verbose": True
 
     }
@@ -93,7 +131,8 @@ def unit_test():
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
 
-    p = SimpleSkimmer(file_name)
+    # p = SimpleSkimmer(file_name)
+    p = SimpleSkimmer("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/524/em/ParkingBPH1+Run2018B-UL2018_MiniAODv2-v1+MINIAOD/039c7188cd7498a349a68a58f8ee392f.job")
     print(p.__dict__)
     p.process()
 
