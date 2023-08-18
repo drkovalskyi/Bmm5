@@ -2,6 +2,10 @@
 
 ## New developments
 
+## [NanoAODv10-V05] - 2023/08/18
+### Changes
+	- lowered minimal muon pt to 2 GeV for all types of muons
+
 ## [NanoAODv10-V04] - 2023/07/21
 ### Changes
 	- added extra muon variables
