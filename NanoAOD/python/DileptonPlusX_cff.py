@@ -372,7 +372,7 @@ def fix_parameter_names(pset):
 
 DileptonsElMuTableVariables = fix_parameter_names(copy_pset(DileptonsDiMuonTableVariables, {"mu1_":"el1_"}))
 DileptonsElMuMcTableVariables = fix_parameter_names(copy_pset(DileptonsDiMuonMcTableVariables, {"mu1_":"el1_"}))
-print(DileptonsElMuMcTableVariables)
+# print(DileptonsElMuMcTableVariables)
 
 
 DileptonsElMuTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 

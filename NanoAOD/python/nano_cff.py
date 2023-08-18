@@ -35,8 +35,8 @@ def nanoAOD_customizeBmmMuonId(process):
     return process
 
 def nanoAOD_keepLowPtMuons(process):
-    process.muonTable.doc = cms.string("slimmedMuons after basic selection (pt > 15 || (pt > 2 && (passed(\'CutBasedIdLoose\') || passed(\'SoftCutBasedId\') || passed(\'SoftMvaId\') || passed(\'CutBasedIdGlobalHighPt\') || passed(\'CutBasedIdTrkHighPt\'))))")
+    process.muonTable.doc = cms.string("slimmedMuons after basic selection (pt > 2 || (pt > 2 && (passed(\'CutBasedIdLoose\') || passed(\'SoftCutBasedId\') || passed(\'SoftMvaId\') || passed(\'CutBasedIdGlobalHighPt\') || passed(\'CutBasedIdTrkHighPt\'))))")
 
-    process.finalMuons.cut = cms.string("pt > 15 || (pt > 2 && (passed(\'CutBasedIdLoose\') || passed(\'SoftCutBasedId\') || passed(\'SoftMvaId\') || passed(\'CutBasedIdGlobalHighPt\') || passed(\'CutBasedIdTrkHighPt\')))")
+    process.finalMuons.cut = cms.string("pt > 2 || (pt > 2 && (passed(\'CutBasedIdLoose\') || passed(\'SoftCutBasedId\') || passed(\'SoftMvaId\') || passed(\'CutBasedIdGlobalHighPt\') || passed(\'CutBasedIdTrkHighPt\')))")
 
     return process
