@@ -928,7 +928,9 @@ prescaleTable = cms.EDProducer("TriggerPrescaleProducer",
       prescales     = cms.InputTag('patTrigger'),
       triggerNames  = cms.vstring('HLT_DoubleMu4_3_Bs', 'HLT_DoubleMu4_3_Jpsi',
                                   'HLT_DoubleMu4_Jpsi_Displaced', 'HLT_DoubleMu4_Jpsi_NoVertexing',
-                                  'HLT_DoubleMu4_3_Jpsi_Displaced')
+                                  'HLT_DoubleMu4_3_Jpsi_Displaced',
+                                  'HLT_DoubleMu4_3_LowMass', 'HLT_Mu4_L1DoubleMu', 'HLT_Mu0_L1DoubleMu',
+                                  'HLT_DoubleMu4_LowMass_Displaced')
 )
 
 DileptonPlusXSequence   = cms.Sequence(Dileptons * PrimaryVertexInfo)

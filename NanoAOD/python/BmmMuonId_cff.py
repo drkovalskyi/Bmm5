@@ -33,7 +33,12 @@ triggers = [
     'HLT_IsoMu24',
     'HLT_IsoMu27',
     'HLT_Mu8',
-    'HLT_Mu17'
+    'HLT_Mu15',
+    'HLT_Mu17',
+    'HLT_DoubleMu4_3_LowMass',
+    'HLT_DoubleMu4_LowMass_Displaced'
+    'HLT_Mu4_L1DoubleMu',
+    'HLT_Mu0_L1DoubleMu',
 ]
 
 BmmMuonId = cms.EDProducer(
