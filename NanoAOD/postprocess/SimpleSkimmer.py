@@ -137,7 +137,7 @@ class SimpleSkimmer(Processor):
 
 
 def unit_test():
-    standard_branches = 'PV_npvs|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock'
+    standard_branches = 'PV_npvsGood|PV_npvs|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock'
 
     ### create a test job
     job = {
