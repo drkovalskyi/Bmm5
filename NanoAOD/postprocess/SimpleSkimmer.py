@@ -1,21 +1,38 @@
 from PostProcessingBase import Processor
 import time
 import json
-from ROOT import TChain, RDataFrame, TFile, std
+from ROOT import TChain, RDataFrame, TFile, std, TTree
 import sys
 import re
+import numpy as np
 
 
 class SimpleSkimmer(Processor):
     """Processor to Skim and Slim files."""
 
-    def _get_common_branches(self):
-        # Find common branches preserving their order
-        common_branches = None
+    def __init__(self, job_filename, take_ownership=False):
+        self.n_gen_all = None
+        self.n_gen_passed = None
+        self.common_branches = None
+        super(SimpleSkimmer, self).__init__(job_filename, take_ownership)
 
+    def _preprocess(self):
         input_files = self.job_info['input']
         for file_name in input_files:
             root_file = TFile.Open(file_name)
+
+            # GenFilterInfo
+            lumis = root_file.Get("LuminosityBlocks")
+            if lumis:
+                for lumi in lumis:
+                    if hasattr(lumi, 'GenFilter_numEventsPassed'):
+                        if self.n_gen_all == None:
+                            self.n_gen_all = 0
+                            self.n_gen_passed = 0
+                        self.n_gen_passed += lumi.GenFilter_numEventsPassed
+                        self.n_gen_all    += lumi.GenFilter_numEventsTotal
+
+            # Find common branches preserving their order
             tree = root_file.Get("Events")
             branches = tree.GetListOfBranches()
 
@@ -24,14 +41,12 @@ class SimpleSkimmer(Processor):
                 branch_name = branches.At(j).GetName()
                 current_branches.append(branch_name)
 
-            if common_branches == None:
-                common_branches = current_branches
+            if self.common_branches == None:
+                self.common_branches = current_branches
             else:
-                common_branches = [branch for branch in common_branches if branch in current_branches]
+                self.common_branches = [branch for branch in self.common_branches if branch in current_branches]
 
             root_file.Close()
-
-        return common_branches
 
 
     def _process(self):
@@ -43,9 +58,9 @@ class SimpleSkimmer(Processor):
                 raise Exception("Missing input '%s'" % parameter)
 
         ## get a list of common branches
-        common_branches = self._get_common_branches()
+        self._preprocess()
         filtered_list = std.vector('string')()
-        for column in common_branches:
+        for column in self.common_branches:
             if re.search(self.job_info['keep'], str(column)):
                 filtered_list.push_back(column)
         print(filtered_list)
@@ -66,14 +81,15 @@ class SimpleSkimmer(Processor):
         dfFinal = df2.Filter("Sum(goodCandidates) > 0", "Event has good candidates")
         report = dfFinal.Report()
 
-        if 'keep_only_common_branches' in self.job_info['keep_only_common_branches'] and\
-           self.job_info['keep_only_common_branches']:
+        if 'keep_only_common_branches' in self.job_info and self.job_info['keep_only_common_branches']:
             print("WARNING: keeping only common branches in the output. May lead to data loss")
             dfFinal.Snapshot("Events", self.job_output_tmp, filtered_list)
         else:
             dfFinal.Snapshot("Events", self.job_output_tmp, self.job_info['keep'])
             
         report.Print()
+
+        # reports
 
         print("Total time %.1f sec. to process %i events. Rate = %.1f Hz." % ((time.time() - t0), n_events, n_events / (time.time() - t0)))
 
@@ -97,6 +113,28 @@ class SimpleSkimmer(Processor):
 
         sys.stdout.flush()
 
+        # Update accounting information
+
+        # Store meta data
+        f = TFile(self.job_output_tmp, "UPDATE")
+        t = TTree("info","Selection information")
+
+        n_processed = np.empty((1), dtype="i")
+        t.Branch("n_processed", n_processed, "n_processed/I")
+        n_processed[0] = n_events
+
+        if self.n_gen_all != None:
+            n_gen_all = np.empty((1), dtype="i")
+            n_gen_passed = np.empty((1), dtype="i")
+            t.Branch("n_gen_all", n_gen_all, "n_gen_all/I")
+            t.Branch("n_gen_passed", n_gen_passed, "n_gen_passed/I")
+            n_gen_all[0] = self.n_gen_all
+            n_gen_passed[0] = self.n_gen_passed
+
+        t.Fill()
+        f.Write()
+        f.Close()
+
 
 def unit_test():
     standard_branches = 'PV_npvs|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock'
@@ -104,7 +142,8 @@ def unit_test():
     ### create a test job
     job = {
         "input": [
-            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/523/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v4+MINIAODSIM/eeff8699-4ec6-4a6c-93a9-6df3db3992f8.root"
+            "/afs/cern.ch/work/d/dmytro/projects/Run3-Bmm-NanoAODv10/src/test.root"
+            #"root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/523/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v4+MINIAODSIM/eeff8699-4ec6-4a6c-93a9-6df3db3992f8.root"
             # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/522/ParkingDoubleMuonLowMass0+Run2022C-PromptReco-v1+MINIAOD/48c83780-3bd9-44e2-848f-c05797f3d474.root"
             # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022D-PromptReco-v1+MINIAOD/308d7ea2-c25d-47c2-a567-f7c4abd117af.root"
             # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/60ef0541-b8f5-479b-becd-4fdbd0e0599b.root",
