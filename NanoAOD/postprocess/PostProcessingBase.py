@@ -187,6 +187,7 @@ class FlatNtupleBase(Processor):
 
         # GenFilterInfo
         lumis = fin.Get("LuminosityBlocks")
+        info = fin.Get("info")
         if lumis:
             for lumi in lumis:
                 if hasattr(lumi, 'GenFilter_numEventsPassed'):
@@ -195,7 +196,15 @@ class FlatNtupleBase(Processor):
                         self.n_gen_passed = 0
                     self.n_gen_passed += lumi.GenFilter_numEventsPassed
                     self.n_gen_all    += lumi.GenFilter_numEventsTotal
-        
+        elif info:
+            for entry in info:
+                if hasattr(entry, 'n_gen_all'):
+                    if self.n_gen_all == None:
+                        self.n_gen_all = 0
+                        self.n_gen_passed = 0
+                    self.n_gen_passed += entry.n_gen_passed
+                    self.n_gen_all    += entry.n_gen_all
+
         self.input_tree = fin.Get("Events")
         nevents = self.input_tree.GetEntries()
 
