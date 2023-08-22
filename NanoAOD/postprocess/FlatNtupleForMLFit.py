@@ -45,26 +45,6 @@ class FlatNtupleForMLFit(FlatNtupleBase):
     goodruns = dict()
 
 
-    def _is_certified(self, type):
-        # load certification information
-        if type not in self.goodruns:
-            self.goodruns[type] = dict()
-            for f in os.listdir('certification/%s' % type):
-                self.goodruns[type].update(json.load(open('certification/%s/%s' % (type, f))))
-            print("Number of runs in the %s certification: %u" % (type, len(self.goodruns[type])))
-
-        # run number is a string for some reason
-        run = str(self.event.run)
-
-        if run not in self.goodruns[type]:
-            return False
-        
-        for min_lumi, max_lumi in self.goodruns[type][run]:
-            if self.event.luminosityBlock >= min_lumi and self.event.luminosityBlock <= max_lumi:
-                return True
-        return False
-
-
     def _validate_inputs(self):
         """Task specific input validation"""
 
@@ -237,8 +217,8 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         self.tree['ls']  = self.event.luminosityBlock
         self.tree['evt'] = self.event.event
         self.tree['npv'] = self.event.PV_npvsGood
-        self.tree['certified_muon']   = self._is_certified("muon")
-        self.tree['certified_golden'] = self._is_certified("golden")
+        self.tree['certified_muon']   = self._is_certified(self.event, "muon")
+        self.tree['certified_golden'] = self._is_certified(self.event, "golden")
         self.tree['n']   = ncands
 
         ## MC info
@@ -505,30 +485,26 @@ if __name__ == "__main__":
     #     # "best_candidate": "",
     #   }  
 
-    # job = {
-    #     "input": [
-    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/518/Charmonium+Run2018D-12Nov2019_UL2018-v1+MINIAOD/BD514049-659A-F74F-A799-D485A4531390.root",
-    #         ],
-    #     "signal_only" : False,
-    #     "tree_name" : "bmmData",
-    #     "blind" : False,
-    #     "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
-    #             "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] < 0 and "\
-    #             "Muon_softMva[mm_mu1_index] > 0.45 and "\
-    #             "abs(mm_kin_mu1eta)<1.4 and "\
-    #             "mm_kin_mu1pt>4 and "\
-    #             "Muon_softMva[mm_mu2_index] > 0.45 and "\
-    #             "abs(mm_kin_mu2eta)<1.4 and "\
-    #             "mm_kin_mu2pt>4 and "\
-    #             "abs(mm_kin_mass-5.4)<0.5 and "\
-    #             "mm_kin_sl3d>6 and "\
-    #             "mm_kin_vtx_prob>0.025 and "\
-    #             "HLT_DoubleMu4_3_Bs"
-    #             ,
-    #     "final_state" : "mm",
-    #     # "best_candidate": "mm_kin_pt",
-    #     "best_candidate": "",
-    #   }  
+    job = {
+        "input": [
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/523/ParkingDoubleMuonLowMass0+Run2022D-PromptReco-v1+MINIAOD/954c0f64-a35a-4eff-9676-15cc8f5d0bb1.root"
+            ],
+        "signal_only" : False,
+        "tree_name" : "bmmData",
+        "blind" : False,
+        "cut" : "mm_mu1_index>=0 and mm_mu2_index>=0 and "\
+                "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] < 0 and "\
+                "Muon_softMva[mm_mu1_index] > 0.45 and "\
+                "Muon_softMva[mm_mu2_index] > 0.45 and "\
+                "abs(mm_kin_mass-5.4)<0.5 and "\
+                "mm_kin_sl3d>6 and "\
+                "mm_kin_vtx_prob>0.025 and "\
+                "HLT_DoubleMu4_3_Bs"
+                ,
+        "final_state" : "mm",
+        # "best_candidate": "mm_kin_pt",
+        "best_candidate": "",
+      }  
 
     # job = {
     #     "input": [
@@ -647,18 +623,18 @@ if __name__ == "__main__":
     #     "best_candidate": "",
     #   }
     
-    job = {
-        "input": [
-            "simple_skim_output.root"
-            ],
-        "signal_only" : False,
-        "tree_name" : "minbiasMcBg",
-        "blind" : False,
-        "cut" : "mm_kin_sl3d>4 and "\
-                "mm_kin_vtx_prob>0.025",
-        "final_state" : "mm",
-        "best_candidate": "",
-      }
+    # job = {
+    #     "input": [
+    #         "simple_skim_output.root"
+    #         ],
+    #     "signal_only" : False,
+    #     "tree_name" : "minbiasMcBg",
+    #     "blind" : False,
+    #     "cut" : "mm_kin_sl3d>4 and "\
+    #             "mm_kin_vtx_prob>0.025",
+    #     "final_state" : "mm",
+    #     "best_candidate": "",
+    #   }
     
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))

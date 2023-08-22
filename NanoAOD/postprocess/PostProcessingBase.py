@@ -111,9 +111,30 @@ class FlatNtupleBase(Processor):
         self.n_gen_passed = None
         super(FlatNtupleBase, self).__init__(job_filename, take_ownership)
     
+
     def _validate_inputs(self):
         """Task specific input validation"""
         raise Exception("Not implemented")
+
+
+    def _is_certified(self, event, type):
+        # load certification information
+        if type not in self.goodruns:
+            self.goodruns[type] = dict()
+            for f in os.listdir('certification/%s' % type):
+                self.goodruns[type].update(json.load(open('certification/%s/%s' % (type, f))))
+            print("Number of runs in the %s certification: %u" % (type, len(self.goodruns[type])))
+
+        # run number is a string for some reason
+        run = str(event.run)
+
+        if run not in self.goodruns[type]:
+            return False
+        
+        for min_lumi, max_lumi in self.goodruns[type][run]:
+            if event.luminosityBlock >= min_lumi and event.luminosityBlock <= max_lumi:
+                return True
+        return False
 
 
     def _process(self):
