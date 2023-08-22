@@ -11,6 +11,11 @@ def nanoAOD_customizeDileptonPlusX(process):
     # MC
     process.nanoSequenceMC = cms.Sequence(process.slimmedMuons + process.nanoSequenceMC + process.DileptonPlusXMcSequence + process.DileptonPlusXMcTables)
     process.muonTable.variables.softMva = Var("softMvaValue()",float,doc="soft MVA ID score",precision=6)
+
+    # enforce process name
+    # process.load('PhysicsTools.NanoAOD.globals_cff')
+    process.genFilterTable.src = cms.InputTag("genFilterEfficiencyProducer", "", "GEN")
+    
     return process
 
 def nanoAOD_customizeV0ForMuonFake(process):
