@@ -11,10 +11,12 @@ class FlatNtupleForMLFit(FlatNtupleBase):
     leaf_counts = { 
         'mm':    'nmm',
         'bkmm':  'nbkmm',
-        'bkkmm': 'nbkkmm'
+        'bkkmm': 'nbkkmm',
+        'em':    'nem',
     }
 
     triggers_to_store = [
+        # Run 2
         'HLT_DoubleMu4_3_Bs',
         'HLT_DoubleMu4_3_Jpsi',
         'HLT_DoubleMu4_Jpsi_Displaced',
@@ -24,7 +26,20 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         'HLT_DoubleMu4_JpsiTrk_Displaced',       # Jpsi
         'HLT_DoubleMu4_PsiPrimeTrk_Displaced',   # Psi2S
         'HLT_Dimuon0_Upsilon_NoVertexing',       # Upsilon 2017-2018
-        'HLT_Dimuon8_Upsilon_Barrel'             # Upsilon 2016
+        'HLT_Dimuon8_Upsilon_Barrel',            # Upsilon 2016
+        'HLT_Mu9_IP5_part0',
+        'HLT_Mu9_IP5_part1',
+        'HLT_Mu9_IP5_part2',
+        'HLT_Mu9_IP5_part3',
+        'HLT_Mu9_IP5_part4',
+        'HLT_Mu12_IP6_part0',
+        'HLT_Mu12_IP6_part1',
+        'HLT_Mu12_IP6_part2',
+        'HLT_Mu12_IP6_part3',
+        'HLT_Mu12_IP6_part4',
+
+        # Run 3
+        'HLT_Mu12_IP6',
     ]
 
     goodruns = dict()
@@ -49,6 +64,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
                 return True
         return False
 
+
     def _validate_inputs(self):
         """Task specific input validation"""
 
@@ -59,7 +75,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
 
     def __select_candidates(self, candidates):
         """Select candidates to be stored"""
-        
+
         if len(candidates) == 0 or self.job_info['best_candidate'] == "":
             return candidates
 
@@ -73,13 +89,13 @@ class FlatNtupleForMLFit(FlatNtupleBase):
                 max_value = values[i]
 
         return [best_candidate]
-        
-            
+
+
     def _process_events(self):
         """Event loop"""
 
         parsed_cut = self.get_cut()
-                    
+
         for event_index, event in enumerate(self.input_tree):
             self.event = event           
             candidates = []
@@ -94,16 +110,20 @@ class FlatNtupleForMLFit(FlatNtupleBase):
                             break
                 if not passed_trigger:
                     continue
-            
+
             # Find candidates the satisfy the selection requirements
             n = getattr(self.event, self.leaf_counts[self.job_info['final_state']])
             for cand in range(n):
-                if self.job_info['final_state'] == 'mm':
-                    if self.job_info['blind']:
+                if self.job_info['blind']:
+                    if self.job_info['final_state'] == 'mm':
                         if self.event.mm_kin_mass[cand] < 5.50 and \
                            self.event.mm_kin_mass[cand] > 5.15:
                             continue
-                
+                    if self.job_info['final_state'] == 'em':
+                        if self.event.mm_kin_mass[cand] < 5.70 and \
+                           self.event.mm_kin_mass[cand] > 5.10:
+                            continue
+
                 # cut = self.job_info['cut'].format(cand=cand, tree="self.event")
                 format_dict = { self.leaf_counts[self.job_info['final_state']] : cand,
                                 'tree' : 'self.event'}
@@ -117,7 +137,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             cands = self.__select_candidates(candidates)
             for cand in cands:
                 self._fill_tree(cand, len(cands))
-            
+
 
     def _configure_output_tree(self):
         ## event info
@@ -130,7 +150,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         self.tree.addBranch('npu_mean',   'Float_t', 0, "tru mean number of pileup interactions")
         self.tree.addBranch('certified_muon',    'Int_t', 0, "Event passed Muon Certification")
         self.tree.addBranch('certified_golden',  'Int_t', 0, "Event passed Golden Certification")
-        
+
         # ps
         # cw8
         self.tree.addBranch('bdt',        'Float_t', 0, "BDT score")
@@ -145,35 +165,54 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         self.tree.addBranch('tauxye',     'Float_t', 0, "2D decay time error")
         self.tree.addBranch('gtau',       'Float_t', 0, "generated decay time")
 
-        self.tree.addBranch('muid',        'UInt_t', 0, "MVA muon selection for both muons")
         self.tree.addBranch('chan',        'UInt_t', 0, "0 if |eta|<0.7 for both muons. 1 otherwise")
 
-        self.tree.addBranch('m1pt',       'Float_t', 0)
-        self.tree.addBranch('m1eta',      'Float_t', 0)
-        self.tree.addBranch('m1phi',      'Float_t', 0)
-        self.tree.addBranch('m1q',          'Int_t', 0, "Muon charge. 0 for hadrons")
-        self.tree.addBranch('m1mc',         'Int_t', 0, "PDG id of the mother of the MC matched muon")
-        self.tree.addBranch('m1bdt',      'Float_t', 0, "Muon BDT. 1 for hadrons")
+        if self.job_info['final_state'] in ['mm', 'bkmm', 'bkkmm']:
+            self.tree.addBranch('muid',        'UInt_t', 0, "MVA muon selection for both muons")
 
-        self.tree.addBranch('m2pt',       'Float_t', 0)
-        self.tree.addBranch('m2eta',      'Float_t', 0)
-        self.tree.addBranch('m2phi',      'Float_t', 0)
-        self.tree.addBranch('m2q',          'Int_t', 0, "Muon charge. 0 for hadrons")
-        self.tree.addBranch('m2mc',         'Int_t', 0, "PDG id of the mother of the MC matched muon")
-        self.tree.addBranch('m2bdt',      'Float_t', 0, "Muon BDT. 1 for hadrons")
+            self.tree.addBranch('m1pt',       'Float_t', 0)
+            self.tree.addBranch('m1eta',      'Float_t', 0)
+            self.tree.addBranch('m1phi',      'Float_t', 0)
+            self.tree.addBranch('m1q',          'Int_t', 0, "Muon charge. 0 for hadrons")
+            self.tree.addBranch('m1mc',         'Int_t', 0, "PDG id of the mother of the MC matched muon")
+            self.tree.addBranch('m1bdt',      'Float_t', 0, "Muon BDT. 1 for hadrons")
+
+            self.tree.addBranch('m2pt',       'Float_t', 0)
+            self.tree.addBranch('m2eta',      'Float_t', 0)
+            self.tree.addBranch('m2phi',      'Float_t', 0)
+            self.tree.addBranch('m2q',          'Int_t', 0, "Muon charge. 0 for hadrons")
+            self.tree.addBranch('m2mc',         'Int_t', 0, "PDG id of the mother of the MC matched muon")
+            self.tree.addBranch('m2bdt',      'Float_t', 0, "Muon BDT. 1 for hadrons")
+        elif self.job_info['final_state'] == 'em':
+            self.tree.addBranch('id',          'UInt_t', 0, "Tight electron and muon selections")
+
+            self.tree.addBranch('elpt',       'Float_t', 0)
+            self.tree.addBranch('eleta',      'Float_t', 0)
+            self.tree.addBranch('elphi',      'Float_t', 0)
+            self.tree.addBranch('elq',          'Int_t', 0, "Electron charge. 0 for hadrons")
+            self.tree.addBranch('elmc',         'Int_t', 0, "PDG id of the mother of the MC matched muon")
+
+            self.tree.addBranch('mupt',       'Float_t', 0)
+            self.tree.addBranch('mueta',      'Float_t', 0)
+            self.tree.addBranch('muphi',      'Float_t', 0)
+            self.tree.addBranch('muq',          'Int_t', 0, "Muon charge. 0 for hadrons")
+            self.tree.addBranch('mumc',         'Int_t', 0, "PDG id of the mother of the MC matched muon")
+        else:
+            raise Exception("Unsupported final state: %s" % self.job_info['final_state'])
 
         self.tree.addBranch('kk_mass',    'Float_t', 0, "Mass of two kaons in kkmm final state")
-        
+
         self.tree.addBranch('mc_match',     'Int_t', 0, "PdgId of the MC matched B meson")
         self.tree.addBranch('mc_bhh',       'Int_t', 0, "PdgId of B meson in Btohh MC events")
 
         for trigger in self.triggers_to_store:
-            self.tree.addBranch(trigger, 'UInt_t', 0)
+            self.tree.addBranch(trigger, 'Int_t', -1, "Trigger decision: 1 - fired, 0 - didn't fire, -1 - no information")
             self.tree.addBranch("%s_ps" % trigger, 'UInt_t', 999999, "Prescale. 0 - Off, 999999 - no information")
-            self.tree.addBranch("%s_matched" % trigger, 'Int_t', 0,  "Muons are matched to the trigger objets")
+            self.tree.addBranch("%s_matched" % trigger, 'Int_t', 0,  "matched to the trigger objets")
 
     def _tag_bhh(self):
         """Determine B meson pdgId for Btohh mixed samples"""
+        if not hasattr(self.event, "GenPart_pdgId"): return 0
         for i, id in enumerate(self.event.GenPart_pdgId):
             if abs(id) != 13: continue
 
@@ -189,6 +228,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             return grandmother_pdgId
         return 0
 
+
     def _fill_tree(self, cand, ncands):
         self.tree.reset()
 
@@ -200,7 +240,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         self.tree['certified_muon']   = self._is_certified("muon")
         self.tree['certified_golden'] = self._is_certified("golden")
         self.tree['n']   = ncands
-        
+
         ## MC info
         if hasattr(self.event, 'Pileup_nTrueInt'):
             self.tree['npu']      = self.event.Pileup_nPU
@@ -225,7 +265,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
 
             mu1 = self.event.mm_mu1_index[cand]
             mu2 = self.event.mm_mu2_index[cand]
-        
+
             if mu1 >= 0:
                 self.tree['m1pt']  = self.event.Muon_pt[mu1]
                 self.tree['m1eta'] = self.event.Muon_eta[mu1]
@@ -256,7 +296,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
 
             if mu1 >= 0 and mu2 >= 0:
                 self.tree['muid']   = self.event.Muon_softMvaId[mu1] and self.event.Muon_softMvaId[mu2]
-                
+
         elif self.job_info['final_state'] == 'bkmm':
             # B to Jpsi K
             self.tree['pt']     = self.event.bkmm_jpsimc_pt[cand]
@@ -275,7 +315,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             mm_index = self.event.bkmm_mm_index[cand]
             mu1 = self.event.mm_mu1_index[mm_index]
             mu2 = self.event.mm_mu2_index[mm_index]
-        
+
             if mu1 >= 0:
                 self.tree['m1pt']  = self.event.Muon_pt[mu1]
                 self.tree['m1eta'] = self.event.Muon_eta[mu1]
@@ -296,7 +336,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
 
             if mu1 >= 0 and mu2 >= 0:
                 self.tree['muid']   = self.event.Muon_softMvaId[mu1] and self.event.Muon_softMvaId[mu2]
-                
+
         elif self.job_info['final_state'] == 'bkkmm':
             # B to Jpsi Phi 
             self.tree['pt']     = self.event.bkkmm_jpsikk_pt[cand]
@@ -317,7 +357,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             mm_index = self.event.bkkmm_mm_index[cand]
             mu1 = self.event.mm_mu1_index[mm_index]
             mu2 = self.event.mm_mu2_index[mm_index]
-        
+
             if mu1 >= 0:
                 self.tree['m1pt']  = self.event.Muon_pt[mu1]
                 self.tree['m1eta'] = self.event.Muon_eta[mu1]
@@ -339,22 +379,81 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             if mu1 >= 0 and mu2 >= 0:
                 self.tree['muid']   = self.event.Muon_softMvaId[mu1] and self.event.Muon_softMvaId[mu2]
 
+        elif self.job_info['final_state'] == 'em':
+            # B to em
+            self.tree['bdt']    = self.event.em_mva[cand]
+            self.tree['pt']     = self.event.em_kin_pt[cand]
+            self.tree['eta']    = self.event.em_kin_eta[cand]
+            self.tree['phi']    = self.event.em_kin_phi[cand]
+            self.tree['m']      = self.event.em_kin_mass[cand]
+            self.tree['me']     = self.event.em_kin_massErr[cand]
+            self.tree['tau']    = self.event.em_kin_tau[cand]
+            self.tree['taue']   = self.event.em_kin_taue[cand]
+            self.tree['tauxy']  = self.event.em_kin_tauxy[cand]
+            self.tree['tauxye'] = self.event.em_kin_tauxye[cand]
+            if hasattr(self.event, 'em_gen_tau'):
+                self.tree['gtau'] = self.event.em_gen_tau[cand]
+                self.tree['mc_match'] = self.event.em_gen_pdgId[cand]
+
+            el = self.event.em_el_index[cand]
+            mu = self.event.em_mu_index[cand]
+
+            if el >= 0:
+                self.tree['elpt']  = self.event.Electron_pt[el]
+                self.tree['eleta'] = self.event.Electron_eta[el]
+                self.tree['elphi'] = self.event.Electron_phi[el]
+                self.tree['elq']   = self.event.Electron_charge[el]
+                if hasattr(self.event, 'em_gen_el_mpdgId'):
+                    self.tree['elmc']  = self.event.em_gen_el_mpdgId[cand]
+            else: 
+                self.tree['elpt']  = self.event.em_el_pt[cand]
+                self.tree['eleta'] = self.event.em_el_eta[cand]
+                self.tree['elphi'] = self.event.em_el_phi[cand]
+
+            if mu >= 0:
+                self.tree['mupt']  = self.event.Muon_pt[mu]
+                self.tree['mueta'] = self.event.Muon_eta[mu]
+                self.tree['muphi'] = self.event.Muon_phi[mu]
+                self.tree['muq']   = self.event.Muon_charge[mu]
+                if hasattr(self.event, 'em_gen_mu_mpdgId'):
+                    self.tree['mumc']  = self.event.em_gen_mu_mpdgId[cand]
+            else: 
+                self.tree['mupt']  = self.event.em_mu_pt[cand]
+                self.tree['mueta'] = self.event.em_mu_eta[cand]
+                self.tree['muphi'] = self.event.em_mu_phi[cand]
+
+            if el >= 0 and mu >= 0:
+                self.tree['id']   = self.event.Electron_mvaNoIso_WP90[el] and self.event.Muon_softMvaId[mu]
         else:
             raise Exception("Unsupported final state: %s" % self.job_info['final_state'])
-            
-        if abs(self.tree['m1eta']) < 0.7 and abs(self.tree['m2eta']) < 0.7:
-            self.tree['chan'] = 0
-        else:
-            self.tree['chan'] = 1
 
-        for trigger in self.triggers_to_store:
-            if hasattr(self.event, trigger):
-                self.tree[trigger] = getattr(self.event, trigger)
-            if hasattr(self.event, "prescale_" + trigger):
-                self.tree[trigger + "_ps"] = getattr(self.event, "prescale_" + trigger)
-            if hasattr(self.event, "MuonId_" + trigger):
-                if mu1 >= 0 and mu2 >= 0:
-                    self.tree[trigger + "_matched"] = getattr(self.event, "MuonId_" + trigger)[mu1] and getattr(self.event, "MuonId_" + trigger)[mu2] 
+        if self.job_info['final_state'] in ['mm', 'bkmm', 'bkkmm']:
+            if abs(self.tree['m1eta']) < 0.7 and abs(self.tree['m2eta']) < 0.7:
+                self.tree['chan'] = 0
+            else:
+                self.tree['chan'] = 1
+
+            for trigger in self.triggers_to_store:
+                if hasattr(self.event, trigger):
+                    self.tree[trigger] = getattr(self.event, trigger)
+                if hasattr(self.event, "prescale_" + trigger):
+                    self.tree[trigger + "_ps"] = getattr(self.event, "prescale_" + trigger)
+                if hasattr(self.event, "MuonId_" + trigger):
+                    if mu1 >= 0 and mu2 >= 0:
+                        self.tree[trigger + "_matched"] = getattr(self.event, "MuonId_" + trigger)[mu1] and getattr(self.event, "MuonId_" + trigger)[mu2] 
+        elif self.job_info['final_state'] == 'em':
+            if abs(self.tree['eleta']) < 0.7 and abs(self.tree['mueta']) < 0.7:
+                self.tree['chan'] = 0
+            else:
+                self.tree['chan'] = 1
+
+            for trigger in self.triggers_to_store:
+                if hasattr(self.event, trigger):
+                    self.tree[trigger] = getattr(self.event, trigger)
+                if hasattr(self.event, "prescale_" + trigger):
+                    self.tree[trigger + "_ps"] = getattr(self.event, "prescale_" + trigger)
+        else:
+            raise Exception("Unsupported final state: %s" % self.job_info['final_state'])
 
         self.tree.fill()
 
@@ -506,35 +605,67 @@ if __name__ == "__main__":
     #   }  
 
     
+    # job = {
+    #     "input": [
+    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/518/BsToJPsiPhi_JPsiToMuMu_PhiToKK_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/482F89A1-6DF1-BF49-A7A1-41DAA184DDD7.root"
+    #     ],
+    #     "signal_only" : True,
+    #     "tree_name" : "bspsiphiMc",
+    #     "blind" : False,
+    #     "cut" :
+    #         "mm_mu1_index[bkkmm_mm_index]>=0 and "\
+    #         "mm_mu2_index[bkkmm_mm_index]>=0 and "\
+    #         "Muon_softMvaId[mm_mu1_index[bkkmm_mm_index]] and "\
+    #         "abs(Muon_eta[mm_mu1_index[bkkmm_mm_index]])<1.4 and "\
+    #         "Muon_pt[mm_mu1_index[bkkmm_mm_index]]>4 and "\
+    #         "Muon_softMvaId[mm_mu2_index[bkkmm_mm_index]] and "\
+    #         "abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4 and "\
+    #         "Muon_pt[mm_mu2_index[bkkmm_mm_index]]>4 and "\
+    #         "abs(bkkmm_jpsikk_mass-5.3)<0.5 and "\
+    #         "bkkmm_jpsikk_sl3d>4 and "\
+    #         "bkkmm_jpsikk_vtx_chi2dof<5",
+    #     "final_state" : "bkkmm",
+    #     # "best_candidate": "bkkmm_jpsikk_pt",
+    #     "best_candidate": "",
+    #   }  
+    
+    # job = {
+    #     "input": [
+    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/524/em/ParkingBPH4+Run2018D-UL2018_MiniAODv2-v1+MINIAOD/e01150104e251790604d1af9d88e2add.root"
+    #     ],
+    #     "signal_only" : False,
+    #     "tree_name" : "bemData",
+    #     "blind" : False,
+    #     "triggers":["HLT_Mu12_IP6", "HLT_Mu12_IP6_part0", "HLT_Mu12_IP6_part1", "HLT_Mu12_IP6_part2", "HLT_Mu12_IP6_part3", "HLT_Mu12_IP6_part4"],
+    #     "cut" :
+    #         "em_mu_index>=0 and em_el_index>=0 and "\
+    #         "em_mu_pt>5 and em_el_pt>5 and "\
+    #         "Muon_mediumId[em_mu_index] and Electron_mvaNoIso_WPL[em_el_index] and "\
+    #         "abs(em_kin_mass-5.4)<1.0 and "\
+    #         "em_kin_vtx_prob>0.025",
+    #     "final_state" : "em",
+    #     "best_candidate": "",
+    #   }
+    
     job = {
         "input": [
-            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/518/BsToJPsiPhi_JPsiToMuMu_PhiToKK_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/482F89A1-6DF1-BF49-A7A1-41DAA184DDD7.root"
-        ],
-        "signal_only" : True,
-        "tree_name" : "bspsiphiMc",
+            "simple_skim_output.root"
+            ],
+        "signal_only" : False,
+        "tree_name" : "minbiasMcBg",
         "blind" : False,
-        "cut" :
-            "mm_mu1_index[bkkmm_mm_index]>=0 and "\
-            "mm_mu2_index[bkkmm_mm_index]>=0 and "\
-            "Muon_softMvaId[mm_mu1_index[bkkmm_mm_index]] and "\
-            "abs(Muon_eta[mm_mu1_index[bkkmm_mm_index]])<1.4 and "\
-            "Muon_pt[mm_mu1_index[bkkmm_mm_index]]>4 and "\
-            "Muon_softMvaId[mm_mu2_index[bkkmm_mm_index]] and "\
-            "abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4 and "\
-            "Muon_pt[mm_mu2_index[bkkmm_mm_index]]>4 and "\
-            "abs(bkkmm_jpsikk_mass-5.3)<0.5 and "\
-            "bkkmm_jpsikk_sl3d>4 and "\
-            "bkkmm_jpsikk_vtx_chi2dof<5",
-        "final_state" : "bkkmm",
-        # "best_candidate": "bkkmm_jpsikk_pt",
+        "cut" : "mm_kin_sl3d>4 and "\
+                "mm_kin_vtx_prob>0.025",
+        "final_state" : "mm",
         "best_candidate": "",
-      }  
+      }
     
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
 
     # p = FlatNtupleForMLFit("/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/518/fit-bkkmm/BsToJPsiPhi_JPsiToMuMu_PhiToKK_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v2+MINIAODSIM/3ce6cf95a912f9ea0fbad11004884b04.job")
     p = FlatNtupleForMLFit(file_name)
+
     print(p.__dict__)
         
     p.process()
