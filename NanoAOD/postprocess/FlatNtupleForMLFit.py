@@ -42,9 +42,6 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         'HLT_Mu12_IP6',
     ]
 
-    goodruns = dict()
-
-
     def _validate_inputs(self):
         """Task specific input validation"""
 

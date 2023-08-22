@@ -106,6 +106,8 @@ class Processor(object):
 class FlatNtupleBase(Processor):
     """Flat ROOT ntuple producer for Bmm5 analysis"""
 
+    goodruns = dict()
+
     def __init__(self, job_filename, take_ownership=False):
         self.n_gen_all = None
         self.n_gen_passed = None
