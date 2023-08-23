@@ -189,7 +189,7 @@ for sample in samples:
 
 
 for entry in cuts:
-    print "%35s " % entry['name'],
+    print("%35s " % entry['name'], end=' ')
     for i,sample in enumerate(samples):
         if sample['final_state'] in entry['cut']:
             baseline_cut = True
@@ -199,19 +199,19 @@ for entry in cuts:
             current_cuts[i] += entry['cut'][sample['final_state']]
             #print "cut ",current_cuts[i]
             n1 = sample['chain'].GetEntries(current_cuts[i])
-            print "& %6.2f & %6.2f " % (100.0 * n1 / total_counts[i], 100.0 * n1 / current_counts[i]),
+            print("& %6.2f & %6.2f " % (100.0 * n1 / total_counts[i], 100.0 * n1 / current_counts[i]), end=' ')
             #print "& %6.2f & %6.2f & %6.2f" % (n1 , total_counts[i], current_counts[i]),
             current_counts[i] = n1
             if not baseline_cut:
                 n2 = sample['chain'].GetEntries(get_final_cut(sample['final_state'], entry['cut'][sample['final_state']]))
                 #print "cut ",get_final_cut(sample['final_state'], entry['cut'][sample['final_state']])
-                print "& %6.2f " % (100.0 * final_counts[i] / n2),
+                print("& %6.2f " % (100.0 * final_counts[i] / n2), end=' ')
                 #print "& %6.2f & %6.2f " % ( final_counts[i] , n2),
                 
             else:
-                print "&        ",
+                print("&        ", end=' ')
         else:
-            print "&        &         &        ",
+            print("&        &         &        ", end=' ')
         
-    print "\\\\"
+    print("\\\\")
     
