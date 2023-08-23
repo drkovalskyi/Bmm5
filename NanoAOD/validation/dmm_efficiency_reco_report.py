@@ -231,10 +231,10 @@ cuts = [
     },
     {
         'cut':{
-            'mm':'mm_mu1_pt[dstar_mm_index] > 4 && mm_mu2_pt[dstar_mm_index] > 3',
-            'fakes':'mm_mu1_pt[dstar_mm_index] > 4 && mm_mu2_pt[dstar_mm_index] > 3',
+            'mm':'mm_mu1_pt[dstar_mm_index] > 4 && mm_mu2_pt[dstar_mm_index] > 4',
+            'fakes':'mm_mu1_pt[dstar_mm_index] > 4 && mm_mu2_pt[dstar_mm_index] > 4',
         },
-        'name':r'$\ptmuone>4$, $\ptmutwo>3$',
+        'name':r'$\ptmu>4$',
     },
     {
         'cut':{
@@ -248,14 +248,14 @@ cuts = [
             'mm':'dstar_dm_pv>0.140 && dstar_dm_pv<0.155',
             'fakes':'dstar_dm_pv>0.140 && dstar_dm_pv<0.155',
         },
-        'name':'$\dm$ is in [0.140, 0.155] GeV',
+        'name':'$\dm$ in [0.140, 0.155]',
     },
     {
         'cut':{
             'mm':'mm_kin_mass[dstar_mm_index]>1.81 && mm_kin_mass[dstar_mm_index]<1.94',
             'fakes':'mm_kin_mass[dstar_mm_index]>1.81 && mm_kin_mass[dstar_mm_index]<1.94',
         },
-        'name':'$\PDz$ mass is in [1.81, 1.94] GeV',
+        'name':'$\PDz$ mass in [1.81, 1.94]',
     },
     {
         'cut':{
