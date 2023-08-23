@@ -96,16 +96,16 @@ effective_cuts = [""] * len(chains)
 n_last = copy.deepcopy(totals)
 
 for entry in cuts:
-    print "%40s " % entry['name'],
+    print("%40s " % entry['name'], end=' ')
     for i,chain in enumerate(chains):
         if samples[i]['type'] in entry['types']:
             if effective_cuts[i] != "":  effective_cuts[i] += "&&"
             effective_cuts[i] += entry['cut']
             n = chain.GetEntries(effective_cuts[i])
-            print "& %6.2f & %6.2f " % (100.0 * n / totals[i], 100.0 * n / n_last[i]),
+            print("& %6.2f & %6.2f " % (100.0 * n / totals[i], 100.0 * n / n_last[i]), end=' ')
             n_last[i] = n
         else:
-            print "& & ",
+            print("& & ", end=' ')
         
-    print "\\\\"
+    print("\\\\")
     
