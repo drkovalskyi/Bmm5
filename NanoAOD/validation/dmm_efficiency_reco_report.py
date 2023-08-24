@@ -2,6 +2,7 @@
 import ROOT
 
 path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/523"
+path2 = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/523"
 samples = [
     {
         'final_state':'mm',
@@ -32,6 +33,31 @@ samples = [
             path + "/DstarToD0Pi_D0To2Mu_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v2+MINIAODSIM/ea54cd31-9792-4d65-8c21-1236921055ff.root",
             path + "/DstarToD0Pi_D0To2Mu_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v2+MINIAODSIM/eb9dfbdc-addd-4c63-903d-8edc27c33428.root",
             path + "/DstarToD0Pi_D0To2Mu_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v2+MINIAODSIM/f5217816-f36b-441a-8d28-6112aeab01a7.root",
+        ],
+        'chain':None
+    },
+    {
+        'final_state':'pipi',
+        'name':'\dzpipi',
+        'files':[
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/09df1c6dc6b9faa5443c7e7c40002838.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/2dc95a5b20db06295ee5c8beab54f825.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/3aae8fc447ea454ab7e452e123f17097.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/407920bde2864ed70503fc806d78f315.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/4f01c0c8ad757d923abf4b1f2a651bfc.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/520f6e55abdf40a053db4375c391a07a.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/5424a8672ca71aa5d83cdde55e647eb3.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/77f9cdf0d987b75fb8905b06e3675dde.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/7c41ef33106b41e82fb7fd3fd7e42c34.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/81b13389a89d47b8b9b7b4f781f5a297.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/8571965c33860c30f1e8de80ba618717.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/b3e80525b9ed48b4a74dae4a5b9fb7d0.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/e29a7ca7544e15299f871023ec07c012.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/ec70bf5453d852365f14704b85360909.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/fcadfeb58b2e32bb91f7f867a8440d79.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/fd2bdb6ecab3fcf8353dd112a72b0719.root",
+            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/ff65166e7b41914bd632b2b130f0a6fc.root",
+
         ],
         'chain':None
     },
@@ -219,6 +245,7 @@ cuts = [
     {
         'cut':{
             'mm':'dstar_gen_pdgId!=0 && dstar_mm_index>=0',
+            'pipi':'dstar_hh_index>=0&&abs(dstar_gen_pdgId)==413&&abs(hh_gen_had1_pdgId)==211&&abs(hh_gen_had2_pdgId)==211',
             'fakes':'dstar_gen_pdgId!=0 && dstar_mm_index>=0 && abs(mm_gen_cpdgId[dstar_mm_index])==421',
             # 'mmk':'mm_mu1_index[bkmm_mm_index]>=0 && mm_mu2_index[bkmm_mm_index]>=0 && bkmm_gen_pdgId!=0 && bkmm_jpsimc_mass>0'
             # + ' && Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 && Muon_pt[mm_mu2_index[bkmm_mm_index]]>4'
@@ -232,9 +259,10 @@ cuts = [
     {
         'cut':{
             'mm':'mm_mu1_pt[dstar_mm_index] > 4 && mm_mu2_pt[dstar_mm_index] > 4',
+            'pipi':'hh_had1_pt[dstar_hh_index] > 4 && hh_had2_pt[dstar_hh_index] > 4',
             'fakes':'mm_mu1_pt[dstar_mm_index] > 4 && mm_mu2_pt[dstar_mm_index] > 4',
         },
-        'name':r'$\ptmu>4$',
+        'name':r'$\pt>4$',
     },
     {
         'cut':{
@@ -246,6 +274,7 @@ cuts = [
     {
         'cut':{
             'mm':'dstar_dm_pv>0.140 && dstar_dm_pv<0.155',
+            'pipi':'dstar_dm_pv>0.140 && dstar_dm_pv<0.155',
             'fakes':'dstar_dm_pv>0.140 && dstar_dm_pv<0.155',
         },
         'name':'$\dm$ in [0.140, 0.155]',
@@ -253,6 +282,7 @@ cuts = [
     {
         'cut':{
             'mm':'mm_kin_mass[dstar_mm_index]>1.81 && mm_kin_mass[dstar_mm_index]<1.94',
+            'pipi':'hh_kin_mass[dstar_hh_index]>1.81 && hh_kin_mass[dstar_hh_index]<1.94',
             'fakes':'mm_kin_mass[dstar_mm_index]>1.81 && mm_kin_mass[dstar_mm_index]<1.94',
         },
         'name':'$\PDz$ mass in [1.81, 1.94]',
@@ -260,6 +290,7 @@ cuts = [
     {
         'cut':{
             'mm':'mm_kin_vtx_prob[dstar_mm_index]>0.01',
+            'pipi':'hh_kin_vtx_prob[dstar_hh_index]>0.01',
             'fakes':'mm_kin_vtx_prob[dstar_mm_index]>0.01',
         },
         'name':'$\PDz$ vertex probability $> 0.01$',
@@ -267,6 +298,7 @@ cuts = [
     {
         'cut':{
             'mm':'dstar_pv_with_pion_prob>0.1',
+            'pipi':'dstar_pv_with_pion_prob>0.1',
             'fakes':'dstar_pv_with_pion_prob>0.1',
         },
         'name':'$\PDstpm$ vertex probability $> 0.1$',
@@ -281,6 +313,7 @@ cuts = [
     {
         'cut':{
             'mm':'mm_kin_sl3d[dstar_mm_index]>3',
+            'pipi':'hh_kin_sl3d[dstar_hh_index]>3',
             'fakes':'mm_kin_sl3d[dstar_mm_index]>3',
         },
         'name':r'$\fls > 3$',
@@ -288,6 +321,7 @@ cuts = [
     {
         'cut':{
             'mm':'mm_kin_alpha[dstar_mm_index]<0.1',
+            'pipi':'hh_kin_alpha[dstar_hh_index]<0.1',
             'fakes':'mm_kin_alpha[dstar_mm_index]<0.1',
         },
         'name':'$\pa < 0.1$',
