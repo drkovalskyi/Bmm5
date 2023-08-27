@@ -1,5 +1,6 @@
-
 import ROOT
+
+from base_efficiency_reco_report import EfficiencyReport
 
 path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/523"
 path2 = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/523"
@@ -40,23 +41,24 @@ samples = [
         'final_state':'pipi',
         'name':'\dzpipi',
         'files':[
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/09df1c6dc6b9faa5443c7e7c40002838.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/2dc95a5b20db06295ee5c8beab54f825.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/3aae8fc447ea454ab7e452e123f17097.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/407920bde2864ed70503fc806d78f315.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/4f01c0c8ad757d923abf4b1f2a651bfc.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/520f6e55abdf40a053db4375c391a07a.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/5424a8672ca71aa5d83cdde55e647eb3.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/77f9cdf0d987b75fb8905b06e3675dde.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/7c41ef33106b41e82fb7fd3fd7e42c34.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/81b13389a89d47b8b9b7b4f781f5a297.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/8571965c33860c30f1e8de80ba618717.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/b3e80525b9ed48b4a74dae4a5b9fb7d0.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/e29a7ca7544e15299f871023ec07c012.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/ec70bf5453d852365f14704b85360909.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/fcadfeb58b2e32bb91f7f867a8440d79.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/fd2bdb6ecab3fcf8353dd112a72b0719.root",
-            path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/ff65166e7b41914bd632b2b130f0a6fc.root",
+            "/eos/cms/store/group/phys_muon/dmytro/tmp/DstarToD0Pi_D0To2Pi_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/09df1c6dc6b9faa5443c7e7c40002838.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/2dc95a5b20db06295ee5c8beab54f825.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/3aae8fc447ea454ab7e452e123f17097.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/407920bde2864ed70503fc806d78f315.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/4f01c0c8ad757d923abf4b1f2a651bfc.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/520f6e55abdf40a053db4375c391a07a.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/5424a8672ca71aa5d83cdde55e647eb3.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/77f9cdf0d987b75fb8905b06e3675dde.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/7c41ef33106b41e82fb7fd3fd7e42c34.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/81b13389a89d47b8b9b7b4f781f5a297.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/8571965c33860c30f1e8de80ba618717.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/b3e80525b9ed48b4a74dae4a5b9fb7d0.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/e29a7ca7544e15299f871023ec07c012.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/ec70bf5453d852365f14704b85360909.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/fcadfeb58b2e32bb91f7f867a8440d79.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/fd2bdb6ecab3fcf8353dd112a72b0719.root",
+            # path2 + "/d0pipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/ff65166e7b41914bd632b2b130f0a6fc.root",
 
         ],
         'chain':None
@@ -64,6 +66,7 @@ samples = [
     {
         'final_state':'fakes',
         'name':r'\dzpipimm',
+        'scale':1e6,
         'files':[
             path + "/DstarToD0Pi_D0To2Pi_PiToMu_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v2+MINIAODSIM/0022a93d-6eb6-44f8-8ec1-2e39db36ccd0.root",
             path + "/DstarToD0Pi_D0To2Pi_PiToMu_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v2+MINIAODSIM/02902f40-c433-46c8-b3be-ab6073863d83.root",
@@ -223,46 +226,20 @@ samples = [
         ],
         'chain':None
     },
-    # {
-    #     'final_state':'mmk',
-    #     'name':'\bjpsik',
-    #     'files':[
-    #         "/eos/cms/store/group/phys_muon/dmytro/tmp/RunIISummer20UL18MiniAOD_BuToJpsiK_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen.root"
-    #     ],
-    #     'chain':None
-    # },
-    # {
-    #     'final_state':'mmkk',
-    #     'name':'blah',
-    #     'files':[
-    #         "/eos/cms/store/group/phys_muon/dmytro/tmp/RunIISummer20UL18MiniAOD_BsToJPsiPhi_JPsiToMuMu_PhiToKK_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen.root"
-    #     ],
-    #     'chain':None
-    # }
 ]
 
 cuts = [
     {
         'cut':{
-            'mm':'dstar_gen_pdgId!=0 && dstar_mm_index>=0',
-            'pipi':'dstar_hh_index>=0&&abs(dstar_gen_pdgId)==413&&abs(hh_gen_had1_pdgId)==211&&abs(hh_gen_had2_pdgId)==211',
-            'fakes':'dstar_gen_pdgId!=0 && dstar_mm_index>=0 && abs(mm_gen_cpdgId[dstar_mm_index])==421',
-            # 'mmk':'mm_mu1_index[bkmm_mm_index]>=0 && mm_mu2_index[bkmm_mm_index]>=0 && bkmm_gen_pdgId!=0 && bkmm_jpsimc_mass>0'
-            # + ' && Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 && Muon_pt[mm_mu2_index[bkmm_mm_index]]>4'
-            # + ' && abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 && abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4',
-            # 'mmkk':'mm_mu1_index[bkkmm_mm_index]>=0 && mm_mu2_index[bkkmm_mm_index]>=0 && bkkmm_gen_pdgId!=0 && bkkmm_jpsikk_mass>0'
-            # + ' && Muon_pt[mm_mu1_index[bkkmm_mm_index]]>4 && Muon_pt[mm_mu2_index[bkkmm_mm_index]]>4'
-            # + ' && abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4 && abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4',
+            'mm':'dstar_gen_pdgId!=0 && dstar_mm_index>=0 && mm_mu1_pt[dstar_mm_index]>4 && mm_mu2_pt[dstar_mm_index]>4',
+            'pipi':(
+                'dstar_hh_index>=0 && hh_had1_pdgId*hh_had2_pdgId==-211*211 && '
+                'abs(dstar_gen_pdgId)==413 && abs(hh_gen_had1_pdgId)==211 && abs(hh_gen_had2_pdgId)==211 && '
+                'hh_had1_pt[dstar_hh_index]>4 && hh_had2_pt[dstar_hh_index]>4'
+            ),
+            'fakes':'dstar_gen_pdgId!=0 && dstar_mm_index>=0 && abs(mm_gen_cpdgId[dstar_mm_index])==421 && mm_mu1_pt[dstar_mm_index]>4 && mm_mu2_pt[dstar_mm_index]>4',
         },
         'name':'MC matched baseline',
-    },
-    {
-        'cut':{
-            'mm':'mm_mu1_pt[dstar_mm_index] > 4 && mm_mu2_pt[dstar_mm_index] > 4',
-            'pipi':'hh_had1_pt[dstar_hh_index] > 4 && hh_had2_pt[dstar_hh_index] > 4',
-            'fakes':'mm_mu1_pt[dstar_mm_index] > 4 && mm_mu2_pt[dstar_mm_index] > 4',
-        },
-        'name':r'$\pt>4$',
     },
     {
         'cut':{
@@ -329,62 +306,6 @@ cuts = [
     
 ]
 
+report = EfficiencyReport(samples, cuts)
+report.make_report("gen", r"%7.4f")
 
-total_counts = []
-current_counts = []
-final_counts = []
-
-current_cuts = [""] * len(samples)
-
-# function to get N and N-1 cuts
-def get_final_cut(final_state, cut_to_exclude=None):
-    cut = ""
-    for entry in cuts:
-        if final_state in entry['cut']:
-            if cut_to_exclude and cut_to_exclude == entry['cut'][final_state]:
-                continue
-            if cut != "":  cut += "&&"
-            cut += entry['cut'][final_state]
-    #return "mm_mu1_index>=0 && mm_mu2_index>=0 && " + cut
-    return cut
-
-for sample in samples:
-    chain = ROOT.TChain("Events")
-    for f in sample['files']:
-        chain.Add(f)
-    sample['chain'] = chain
-
-    n = chain.GetEntries()
-    total_counts.append(n)
-    current_counts.append(n)
-    
-    cut = get_final_cut(sample['final_state'])
-    final_counts.append(chain.GetEntries(cut))
-
-
-for entry in cuts:
-    print("%35s " % entry['name'], end=' ')
-    for i,sample in enumerate(samples):
-        if sample['final_state'] in entry['cut']:
-            baseline_cut = True
-            if current_cuts[i] != "":
-                current_cuts[i] += "&&"
-                baseline_cut = False
-            current_cuts[i] += entry['cut'][sample['final_state']]
-            #print "cut ",current_cuts[i]
-            n1 = sample['chain'].GetEntries(current_cuts[i])
-            print("& %6.2f & %6.2f " % (100.0 * n1 / total_counts[i], 100.0 * n1 / current_counts[i]), end=' ')
-            #print "& %6.2f & %6.2f & %6.2f" % (n1 , total_counts[i], current_counts[i]),
-            current_counts[i] = n1
-            if not baseline_cut:
-                n2 = sample['chain'].GetEntries(get_final_cut(sample['final_state'], entry['cut'][sample['final_state']]))
-                #print "cut ",get_final_cut(sample['final_state'], entry['cut'][sample['final_state']])
-                print("& %6.2f " % (100.0 * final_counts[i] / n2), end=' ')
-                #print "& %6.2f & %6.2f " % ( final_counts[i] , n2),
-                
-            else:
-                print("&        ", end=' ')
-        else:
-            print("&        &         &        ", end=' ')
-        
-    print("\\\\")
