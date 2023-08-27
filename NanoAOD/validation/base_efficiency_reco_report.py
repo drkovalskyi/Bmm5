@@ -85,7 +85,8 @@ class EfficiencyReport:
 
     def make_report(self, baseline="sample", format="%6.2f"):
 
-        empty_string = " " * len(format % 0.0)
+        formatted_empty_string = " " * len(format % 0.0)
+        default_empty_string = " " * len("%5.1f" % 0.0)
         event_counts = []
         baseline_counts = []
         gen_passed_counts = []
@@ -128,9 +129,12 @@ class EfficiencyReport:
         if baseline == "gen":
             print(prefix % "Generator filter", end=' ')
             for i,sample in enumerate(self.samples):
-                gen_eff = 100.0 * gen_passed_counts[i] / baseline_counts[i]
+                scale = 100.0
+                if 'scale' in sample:
+                    scale = sample['scale']
+                gen_eff = scale * gen_passed_counts[i] / baseline_counts[i]
                 print(("& " + format) % gen_eff, end='')
-                print(f" & {empty_string} & {empty_string} ", end=' ')                
+                print(f" & {default_empty_string} & {default_empty_string} ", end=' ')
             print("\\\\")
 
         first_line = True
@@ -143,6 +147,9 @@ class EfficiencyReport:
                     continue
                 chain = self.get_events(sample)
                 if sample['final_state'] in entry['cut']:
+                    scale = 100.0
+                    if 'scale' in sample:
+                        scale = sample['scale']
                     if current_cuts[i] != "":
                         current_cuts[i] += "&&"
                     current_cuts[i] += entry['cut'][sample['final_state']]
@@ -150,17 +157,17 @@ class EfficiencyReport:
                     #print "cut ",current_cuts[i]
                     n1 = chain.GetEntries(current_cuts[i])
 
-                    print(("& " + format) % (100.0 * n1 / baseline_counts[i]), end=' ')
+                    print(("& " + format) % (scale * n1 / baseline_counts[i]), end=' ')
 
                     if not first_line:
                         n2 = chain.GetEntries(self.get_complete_selection(sample['final_state'], entry['cut'][sample['final_state']]))
-                        print(("& " + format + " & " + format + " ") % (100.0 * n1 / current_counts[i], 100.0 * final_counts[i] / n2), end=' ')
+                        print(("& %5.1f & %5.1f ") % (100.0 * n1 / current_counts[i], 100.0 * final_counts[i] / n2), end=' ')
                     else:
-                        print(f"& {empty_string} & {empty_string} ", end=' ')
+                        print(f"& {default_empty_string} & {default_empty_string} ", end=' ')
 
                     current_counts[i] = n1
                 else:
-                    print(f"& {empty_string} & {empty_string} & {empty_string} ", end=' ')
+                    print(f"& {formatted_empty_string} & {default_empty_string} & {default_empty_string} ", end=' ')
 
             if baseline != "first_cut" or icut != 0:
                 print("\\\\")
@@ -254,6 +261,6 @@ if __name__ == "__main__":
 
     # report.make_report()
     # print()
-    report.make_report("gen", r"%7.3f")
+    report.make_report("gen", r"%7.4f")
 
 
