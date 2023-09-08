@@ -4,9 +4,12 @@ from datetime import datetime
 from ROOT import TChain, TFile
 from time import sleep
 import math 
+import warnings
 
 def make_dataset(tree, name, mass_var, other_vars, cuts=""):
-
+    '''
+    Build RooDataSet from a flat ntuple made
+    '''
     ### Build the dataset
     
     var_set = ROOT.RooArgSet()
@@ -19,13 +22,33 @@ def make_dataset(tree, name, mass_var, other_vars, cuts=""):
         data = data.reduce(cuts)
 
     # data.Print("V")
-    print "Input tree has ", tree.GetEntries(), "entries. The derived dataset has ", data.sumEntries()
+    print("Input tree has ", tree.GetEntries(), "entries. The derived dataset has ", data.sumEntries())
 
     return data
 
-def get_workspace_with_weights_for_jpsik(tree, name, mass_var, other_vars, cuts="", ref_hist=None):
-    data = make_dataset(tree, name, mass_var, other_vars, cuts)
+def make_dataset_for_bjpsik(tree, name, mass_var, other_vars, cuts=""):
+    '''
+    Build RooDataSet from Bmm NanoAOD
+    '''
+    
+    ### Build the dataset
+    
+    var_set = ROOT.RooArgSet()
+    for var in other_vars:
+        var_set.add(var)
+    var_set.add(mass_var)
 
+    data = ROOT.RooDataSet(name, "", var_set, ROOT.RooFit.Import(tree))
+    if cuts != "":
+        data = data.reduce(cuts)
+
+    # data.Print("V")
+    print("Input tree has ", tree.GetEntries(), "entries. The derived dataset has ", data.sumEntries())
+
+    return data
+
+
+def get_workspace_with_weights_for_bjpsik(data, mass_var, ref_hist=None):
     ### Build model
 
     if not ref_hist:
@@ -71,6 +94,18 @@ def get_workspace_with_weights_for_jpsik(tree, name, mass_var, other_vars, cuts=
     
     return ws
 
+
+def get_workspace_with_weights_for_jpsik(tree, name, mass_var, other_vars, cuts="", ref_hist=None):
+    '''
+    s-weights for flat ntuples flat ntuples
+    '''
+    warnings.warn("get_workspace_with_weights_for_jpsik is deprecated and will be removed in the future. "
+                  "Use new_method instead.", DeprecationWarning)
+
+    data = make_dataset(tree, name, mass_var, other_vars, cuts)
+
+    return get_workspace_with_weights_for_bjpsik(data, mass_var, ref_hist)
+
 if __name__ == '__main__':
     tree = ROOT.TChain("mva")
     # tree.Add("/eos/cms/store/group/phys_bphys/bmm/bmm5/PostProcessing/FlatNtuples/512/bmm_mva_jpsik/Charmonium+Run2018D-PromptReco-v2+MINIAOD/*.root")
@@ -113,6 +148,7 @@ if __name__ == '__main__':
     c1.cd(3)
     hsub.Draw()
     c1.Update()
-    raw_input("Press enter to continue")
+    input("Press enter to continue")
+    
     # https://sft.its.cern.ch/jira/si/jira.issueviews:issue-html/ROOT-9890/ROOT-9890.html
-    ws.Delete() 
+    # ws.Delete() 
