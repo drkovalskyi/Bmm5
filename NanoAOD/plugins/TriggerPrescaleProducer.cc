@@ -91,11 +91,11 @@ void TriggerPrescaleProducer::produce(edm::Event& iEvent, const edm::EventSetup&
   auto out  = std::make_unique<nanoaod::FlatTable>(1, "prescale", true);
   for (auto const & trigger: triggers){
     auto trigger_id = trigger_map.find(trigger);
-    int prescale = 0;
+    double prescale = 0;
     if (trigger_id != trigger_map.end()){
-      prescale = prescale_handle->getPrescaleForIndex(trigger_id->second);
+      prescale = prescale_handle->getPrescaleForIndex<double>(trigger_id->second);
     }
-    out->addColumnValue<int>(trigger, prescale, "HLT prescale");
+    out->addColumnValue<double>(trigger, prescale, "HLT prescale");
   }
   iEvent.put(std::move(out));
 }
