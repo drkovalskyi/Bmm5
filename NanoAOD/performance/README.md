@@ -9,11 +9,12 @@ Reference machine: vocms0118
 
 ### Monte Carlo
 
-Dataset: /BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2/MINIAODSIM
+Dataset: BsToMuMu_BMuonFilter
 
 #### Time per event for the event loop
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv12-V01 |     526           |  0.096 sec/event  |       0.238 sec/event    |
 | NanoAODv10-V03 |     523           |  0.053 sec/event  |       0.130 sec/event    |
 | NanoAODv10-V02 |     522           |  0.039 sec/event  |  0.170 sec/event         |
 | NanoAODv10-V01 |     521           |    |           |
@@ -27,6 +28,7 @@ Dataset: /BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/RunIISum
 #### File size per event 
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ | 
+| NanoAODv12-V01 |     526           |   1.5 kB/event    |         3.5 kB/event     | 
 | NanoAODv10-V03 |     523           |   1.3 kB/event    |         3.4 kB/event     | 
 | NanoAODv10-V02 |     522           |   1.1 kB/event    |         3.2 kB/event     | 
 | NanoAODv9-V03 |      519           |   1.2 kB/event    |         2.4 kB/event     | 
@@ -38,6 +40,7 @@ Dataset: /BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/RunIISum
 #### Memory Usage (RSS)
 | Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | ------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv12-V01 |     526           |      1359 kB      |         1590 kB          |
 | NanoAODv10-V03 |     523           |      1728 kB      |         1960 kB          |
 | NanoAODv10-V02 |     522           |      1179 kB      |         1546 kB          |
 | NanoAODv9-V03 |      519           |      1763 kB      |         1945 kB          |
@@ -79,11 +82,11 @@ Dataset: /BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen/RunIISum
 ## Testing procedure
 cmsDriver and processing commands
 * Monte Carlo
-   * BsToMuMu_RunIIAutumn18NanoAODv9
-      * Standard NanoAODv9 + all Bmm customization
-         * ```msDriver.py RECO --conditions 124X_mcRun3_2022_realistic_postEE_v1 --customise Configuration/DataProcessing/Utils.addMonitoring --datatier NANOAOD --era Run3 --eventcontent NANOAODSIM --filein /store/user/dmytro/tmp/store+mc+Run3Summer22EEMiniAODv3+BsToJPsiPhi_JPsiToMuMu_PhiToKK_EtaPtFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+MINIAODSIM+124X_mcRun3_2022_realistic_postEE_v1-v2+2550000+0f450e50-38cc-4dd3-a874-26b4a956b959.root --fileout file:BsToJPsiPhi_JPsiToMuMu_PhiToKK_NanoAODv10.root --nThreads 1 -n 10000 --no_exec --python_filename BsToJPsiPhi_JPsiToMuMu_PhiToKK_NanoAODv10.py --scenario pp --step NANO --mc --customise PhysicsTools/NanoAOD/V10/nano_cff.nanoAOD_customizeV10 --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))" --customise Validation/Performance/TimeMemoryInfo.py --customise_commands="process.Timing.summaryOnly = cms.untracked.bool(True)"```
-         * ```cmsRun BsToJPsiPhi_JPsiToMuMu_PhiToKK_NanoAODv10.py > & BsToJPsiPhi_JPsiToMuMu_PhiToKK_NanoAODv10.log```
-         * ```python3 Bmm5/NanoAOD/performance/make_report.py BsToJPsiPhi_JPsiToMuMu_PhiToKK_NanoAODv10.log```
+   * BsToMuMu_BMuonFilter
+      * Standard NanoAODv12 + all Bmm customization using Run3Summer22EEMiniAODv3 as input
+         * ```cmsDriver.py RECO --conditions 130X_mcRun3_2022_realistic_v5 --customise Configuration/DataProcessing/Utils.addMonitoring --datatier NANOAOD --era Run3,run3_nanoAOD_124 --eventcontent NANOAODSIM --filein /store/user/dmytro/tmp/store+mc+Run3Summer22EEMiniAODv3+BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+MINIAODSIM+124X_mcRun3_2022_realistic_postEE_v1-v2+2820000+0096d5dd-88d3-46a0-a8cc-255a3090c71e.root --fileout file:BsToMuMu_BMuonFilter_NanoAODv12.root --nThreads 1 -n 10000 --no_exec --python_filename BsToMuMu_BMuonFilter_NanoAODv12.py --scenario pp --step NANO --mc --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))" --customise Validation/Performance/TimeMemoryInfo.py --customise_commands="process.Timing.summaryOnly = cms.untracked.bool(True)"```
+         * ```cmsRun BsToMuMu_BMuonFilter_NanoAODv12.py > & BsToMuMu_BMuonFilter_NanoAODv12.log```
+         * ```python3 Bmm5/NanoAOD/performance/make_report.py BsToMuMu_BMuonFilter_NanoAODv12.log```
 * Data:
    * Charmonium Run2018D
       * Standard NanoAODv9 + all Bmm customization
