@@ -63,6 +63,7 @@ private:
   bool isMC_;
   string triggerCollection_;
   vector<string> triggers_;
+  vector<string> features_;
   XGBooster softMuonMva_;
   edm::Handle<BXVector<l1t::Muon> >   l1Handle_;
 };
@@ -76,16 +77,10 @@ packedGenParticles_(nullptr),
 isMC_( iConfig.getParameter<bool>( "isMC" ) ),
 triggerCollection_( iConfig.getParameter<string>( "triggerCollection" ) ),
 triggers_( iConfig.getParameter<vector<string>>( "triggers" ) ),
-softMuonMva_(iConfig.getParameter<edm::FileInPath>("softMuonMva").fullPath())
+softMuonMva_(iConfig.getParameter<edm::FileInPath>("softMuonMva").fullPath(),
+	     iConfig.getParameter<edm::FileInPath>("features").fullPath())
 {
     produces<pat::CompositeCandidateCollection>("muons");
-    
-    vector<string> features = {"trkValidFrac", "glbTrackProbability", "nLostHitsInner",
-      "nLostHitsOuter", "trkKink", "chi2LocalPosition", "match2_dX", "match2_pullX", "match1_dX", "match1_pullX",
-      "nPixels", "nValidHits", "nLostHitsOn", "match2_dY", "match1_dY", "match2_pullY", "match1_pullY",
-      "match2_pullDyDz", "match1_pullDyDz", "match2_pullDxDz", "match1_pullDxDz"};
-    for (const auto& feature: features)
-      softMuonMva_.addFeature(feature);
 }
 
 void BmmMuonIdProducer::fillSoftMva(pat::CompositeCandidate& mu_cand){
@@ -93,6 +88,8 @@ void BmmMuonIdProducer::fillSoftMva(pat::CompositeCandidate& mu_cand){
   // "match1_pullDyDz"
   // "match2_pullDxDz"
   // "match1_pullDxDz"
+  softMuonMva_.set("pt",                  mu_cand.pt());
+  softMuonMva_.set("eta",                 mu_cand.eta());
   softMuonMva_.set("trkValidFrac",        mu_cand.userFloat("trkValidFrac"));
   softMuonMva_.set("glbTrackProbability", mu_cand.userFloat("glbTrackProbability"));
   softMuonMva_.set("nLostHitsInner",      mu_cand.userInt(  "nLostHitsInner"));
