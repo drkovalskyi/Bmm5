@@ -11,6 +11,7 @@ class XGBooster
 {       
 public:
   XGBooster(std::string model_file);
+  XGBooster(std::string model_file, std::string model_features);
   
   /// Features need to be entered in the order they are used
   /// in the model

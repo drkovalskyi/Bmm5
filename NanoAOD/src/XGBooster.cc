@@ -4,14 +4,72 @@
 #include <stdexcept>
 #include <algorithm>
 
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <stdexcept>
+
+
+std::vector<std::string> read_features(const std::string& content) {
+  std::vector<std::string> result;
+
+  std::istringstream stream(content);
+  char ch;
+
+  // Expect opening '['
+  stream >> ch;
+  if (ch != '[') {
+    throw std::runtime_error("Expected '[' at the beginning of the JSON array!");
+  }
+
+  while (stream) {
+    stream >> ch;
+    
+    if (ch == ']') {
+      break;
+    } else if (ch == ',') {
+      continue;
+    } else if (ch == '"') {
+      std::string feature;
+      std::getline(stream, feature, '"');
+      result.push_back(feature);
+    } else {
+      throw std::runtime_error("Unexpected character in the JSON array!");
+    }
+  }
+
+  return result;
+}
+
 XGBooster::XGBooster(std::string model_file)
 {
   int status = XGBoosterCreate(NULL, 0, &booster_);
-  assert(status==0 && "Failed to create XGBooster");
+  if (status != 0)
+    throw std::runtime_error("Failed to create XGBooster");
   status = XGBoosterLoadModel(booster_, model_file.c_str());
-  assert(status==0 && "Failed to load XGBoost model");
+  if (status != 0)
+    throw std::runtime_error("Failed to load XGBoost model");
   XGBoosterSetParam(booster_, "nthread", "1");
-};
+}
+
+XGBooster::XGBooster(std::string model_file, std::string model_features):XGBooster(model_file)
+{
+  std::ifstream file(model_features);
+  if (!file.is_open())
+    throw std::runtime_error("Failed to open file: " + model_features);
+      
+  std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  file.close();
+  
+  std::vector<std::string> features = read_features(content);
+  
+  for (const auto& feature : features) {
+    addFeature(feature);
+  }
+
+}
+
 
 void XGBooster::reset()
 {
@@ -33,10 +91,16 @@ float XGBooster::predict()
   float result(-999.);
 
   // check if all feature values are set properly
-  for (auto feature: features_)
-    if (isnan(feature)){
-      reset();
-      return result;
+  for (unsigned int i = 0; i < features_.size(); ++i)
+    if (std::isnan(features_.at(i))) {
+      std::string feature_name;
+      for (const auto& pair : feature_name_to_index_) {
+	if (pair.second == i) {
+	  feature_name = pair.first;
+	  break;
+	}
+      }
+      throw std::runtime_error("Feature is not set: " + feature_name);
     }
   
   DMatrixHandle dvalues;
