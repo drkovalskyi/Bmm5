@@ -436,6 +436,8 @@ private:
   double minBhhVtxProb_;
   double minD0Mass_;
   double maxD0Mass_;
+  double minDmmMass_;
+  double maxDmmMass_;
   double min_dm_;
   double max_dm_;
   
@@ -502,6 +504,8 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   minBhhVtxProb_(   iConfig.getParameter<double>( "minBhhVtxProb" ) ),
   minD0Mass_(      iConfig.getParameter<double>( "minD0Mass" ) ),
   maxD0Mass_(      iConfig.getParameter<double>( "maxD0Mass" ) ),
+  minDmmMass_(      iConfig.getParameter<double>( "minDmmMass" ) ),
+  maxDmmMass_(      iConfig.getParameter<double>( "maxDmmMass" ) ),
   min_dm_(      iConfig.getParameter<double>( "minDm" ) ),
   max_dm_(      iConfig.getParameter<double>( "maxDm" ) ),
   bdtReader0_("!Color:Silent"),
@@ -2107,7 +2111,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	    double d0_mass = (muon1.p4() + muon2.p4()).mass();
 	    double dstar_mass = (muon1.p4() + muon2.p4() + soft_pion.p4()).mass();
 
-	    if (d0_mass > minD0Mass_ && d0_mass < maxD0Mass_ &&
+	    if (d0_mass > minDmmMass_ && d0_mass < maxDmmMass_ &&
 		(dstar_mass - d0_mass) > min_dm_ && (dstar_mass - d0_mass) < max_dm_){
 		
 	      fillDstarInfo(*dstar_collection, iEvent, kinematicLLVertexFit, dimuonCand, 

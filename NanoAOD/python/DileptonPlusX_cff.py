@@ -150,6 +150,8 @@ Dileptons = cms.EDProducer(
     recoMuMuPi = cms.bool(True),
     minD0Mass = cms.double(1.75),
     maxD0Mass = cms.double(1.95),
+    minDmmMass = cms.double(1.25),
+    maxDmmMass = cms.double(2.45),
     minDm = cms.double(0.135),
     maxDm = cms.double(0.160),
 )
