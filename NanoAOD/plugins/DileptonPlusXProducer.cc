@@ -166,6 +166,12 @@ private:
 		       const pat::PackedCandidate& had1,
 		       const pat::PackedCandidate& had2);
 
+  void
+  buildKsCandidates(pat::CompositeCandidateCollection& hh_collection,
+		    const edm::Event& iEvent,
+		    const pat::PackedCandidate& had1,
+		    const pat::PackedCandidate& had2);
+  
 
   bool isGoodMuon(const pat::Muon& muon);
   bool isGoodTrack(const pat::PackedCandidate& cand);
@@ -425,17 +431,22 @@ private:
   bool   recoDstar_;
   bool   recoD0pipi_;
   bool   recoD0Kpi_;
+  bool   recoKspipi_;
   double minBhhTrkPt_;
   double minDhhTrkPt_;
+  double minKsTrkPt_;
   double minJpsiHadronPt_;
   double minBhhMass_;
   double maxBhhMass_;
   double maxBhhTrkEta_;
   double maxDhhTrkEta_;
+  double maxKsTrkEta_;
   double minBhhSigLxy_;
   double minBhhVtxProb_;
   double minD0Mass_;
   double maxD0Mass_;
+  double minKsMass_;
+  double maxKsMass_;
   double minDmmMass_;
   double maxDmmMass_;
   double min_dm_;
@@ -493,17 +504,22 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   recoDstar_(      iConfig.getParameter<bool>( "recoDstar" ) ),
   recoD0pipi_(     iConfig.getParameter<bool>( "recoD0pipi" ) ),
   recoD0Kpi_(      iConfig.getParameter<bool>( "recoD0Kpi" ) ),
+  recoKspipi_(     iConfig.getParameter<bool>( "recoKspipi" ) ),
   minBhhTrkPt_(        iConfig.getParameter<double>( "minBhhHadronPt" ) ),
   minDhhTrkPt_(        iConfig.getParameter<double>( "minDhhHadronPt" ) ),
+  minKsTrkPt_(         iConfig.getParameter<double>( "minKsHadronPt" ) ),
   minJpsiHadronPt_( iConfig.getParameter<double>( "minJpsiHadronPt" ) ),
   minBhhMass_(      iConfig.getParameter<double>( "minBhhMass" ) ),
   maxBhhMass_(      iConfig.getParameter<double>( "maxBhhMass" ) ),
   maxBhhTrkEta_(       iConfig.getParameter<double>( "maxBhhHadronEta" ) ),
   maxDhhTrkEta_(       iConfig.getParameter<double>( "maxDhhHadronEta" ) ),
+  maxKsTrkEta_(        iConfig.getParameter<double>( "maxKsHadronEta" ) ),
   minBhhSigLxy_(    iConfig.getParameter<double>( "minBhhSigLxy" ) ),
   minBhhVtxProb_(   iConfig.getParameter<double>( "minBhhVtxProb" ) ),
   minD0Mass_(      iConfig.getParameter<double>( "minD0Mass" ) ),
   maxD0Mass_(      iConfig.getParameter<double>( "maxD0Mass" ) ),
+  minKsMass_(      iConfig.getParameter<double>( "minKsMass" ) ),
+  maxKsMass_(      iConfig.getParameter<double>( "maxKsMass" ) ),
   minDmmMass_(      iConfig.getParameter<double>( "minDmmMass" ) ),
   maxDmmMass_(      iConfig.getParameter<double>( "maxDmmMass" ) ),
   min_dm_(      iConfig.getParameter<double>( "minDm" ) ),
@@ -1923,6 +1939,39 @@ DileptonPlusXProducer::buildDstarCandidates(pat::CompositeCandidateCollection& d
   }
 }
 
+void
+DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_collection,
+					 const edm::Event& iEvent,
+					 const pat::PackedCandidate& had1,
+					 const pat::PackedCandidate& had2) {
+  if (had1.pt() < minKsTrkPt_ || fabs(had1.eta()) > maxKsTrkEta_) return;
+  if (had2.pt() < minKsTrkPt_ || fabs(had2.eta()) > maxKsTrkEta_) return;
+  AddFourMomenta addP4;
+  bmm::Candidate pion1(had1);
+  pion1.setType(PionMass_, "had", 211 * had1.charge());
+  bmm::Candidate pion2(had2);
+  pion2.setType(PionMass_, "had", 211 * had2.charge());
+
+  if (recoKspipi_){
+    double ks_mass = (pion1.p4() + pion2.p4()).mass();
+
+    if (ks_mass > minKsMass_ && ks_mass < maxKsMass_){
+	
+      pat::CompositeCandidate ksCand(std::string("hh"));
+      ksCand.addDaughter( pion1 , "pion1");
+      ksCand.addDaughter( pion2 , "pion2");
+      addP4.set( ksCand );
+	
+      if (preprocess(ksCand, iEvent, pion1, pion2)){
+	// Kinematic Fits
+	auto d0VertexFit = fillDileptonInfo(ksCand, iEvent, pion1, pion2);
+	int hh_index = hh_collection.size();
+	hh_collection.push_back(ksCand);
+      }
+    }
+  }
+}
+
 
 void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   bField_ = &iSetup.getData(bFieldToken_);
@@ -2199,6 +2248,8 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	  
 	buildDstarCandidates(*dstar_collection, *hh_collection, iEvent, had1, had2);
 
+	buildKsCandidates(*hh_collection, iEvent, had1, had2);
+	
 	// // reco Btohh
 	// if (dileptonCand.name() == "hh")
 	//   if (not lepton1.from_gen() and not lepton2.from_gen())
