@@ -2,6 +2,13 @@
 
 ## New developments
 
+## [NanoAODv12-V01] - 2023/08/18
+### Changes
+	- Migrated to NanoAODv12 setup to include Run
+	- Switched to the new soft mva id
+	- Added KsToPiPi similar to KsToMuMu
+	- Widen D0mm mass window to include more background
+
 ## [NanoAODv10-V05] - 2023/08/18
 ### Changes
 	- lowered minimal muon pt to 2 GeV for all types of muons
