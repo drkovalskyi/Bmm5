@@ -32,11 +32,11 @@ Here is a list required cmsDriver options to get analysis specific parts include
       * conditions: 130X_mcRun3_2022_realistic_v5
       * Example:
       	* ```cmsDriver.py RECO --conditions 130X_mcRun3_2022_realistic_v5 --datatier NANOAOD --era Run3,run3_nanoAOD_124 --eventcontent NANOAODSIM --filein /store/user/dmytro/tmp/store+mc+Run3Summer22EEMiniAODv3+BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+MINIAODSIM+124X_mcRun3_2022_realistic_postEE_v1-v2+2820000+0096d5dd-88d3-46a0-a8cc-255a3090c71e.root --fileout file:/tmp/dmytro/BsToMuMu_BMuonFilter_NanoAODv12_test.root --nThreads 4 -n "-1" --no_exec --python_filename BsToMuMu_BMuonFilter_NanoAODv12_test.py --scenario pp --step NANO --mc --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"```
-    * **Run-2**
-    * era: Run2_2018,run2_nanoAOD_106Xv2
-    * conditions: auto:phase1_2018_realistic
-    * Example:
-      * ```cmsDriver.py RECO --conditions auto:phase1_2018_realistic --datatier NANOAOD --era Run2_2018,run2_nanoAOD_106Xv2 --eventcontent NANOAODSIM --filein /store/group/phys_muon/dmytro/tmp/store+mc+RunIISummer20UL18MiniAODv2+BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+MINIAODSIM+106X_upgrade2018_realistic_v16_L1v1-v2+120000+B73A72CF-5947-A14A-8686-92D34790C8F7.root --fileout file:BsToMuMu.root --nThreads 16 -n "-1" --no_exec --python_filename BsToMuMu.py --scenario pp --step NANO --mc --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"```
+    * **Run-2** - RunIISummer20UL MiniAODv2
+      * era: Run2_2018,run2_nanoAOD_106Xv2
+      * conditions: auto:phase1_2018_realistic
+      * Example:
+      	* ```cmsDriver.py RECO --conditions auto:phase1_2018_realistic --datatier NANOAOD --era Run2_2018,run2_nanoAOD_106Xv2 --eventcontent NANOAODSIM --filein /store/group/phys_muon/dmytro/tmp/store+mc+RunIISummer20UL18MiniAODv2+BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+MINIAODSIM+106X_upgrade2018_realistic_v16_L1v1-v2+120000+B73A72CF-5947-A14A-8686-92D34790C8F7.root --fileout file:BsToMuMu.root --nThreads 16 -n "-1" --no_exec --python_filename BsToMuMu.py --scenario pp --step NANO --mc --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"```
   * Data
     * **Run2023**
       * era: Run3
@@ -44,10 +44,10 @@ Here is a list required cmsDriver options to get analysis specific parts include
       * Example:
       	* ```cmsDriver.py RECO --conditions 130X_dataRun3_PromptAnalysis_v1 --datatier NANOAOD --era Run3 --eventcontent NANOAOD --filein /store/data/Run2023D/ParkingDoubleMuonLowMass0/MINIAOD/PromptReco-v1/000/370/580/00000/a0cf8056-01ce-48f5-9b7e-570e225b5aba.root --fileout file:/tmp/dmytro/test_data.root --nThreads 4 -n 10000 --no_exec --python_filename test_data.py --scenario pp --step NANO --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"```
     * **Run2022**
-    * era: Run3,run3_nanoAOD_124
-    * conditions: 130X_dataRun3_v2
-    * Example:
-      * ```cmsDriver.py RECO --conditions 130X_dataRun3_v2 --datatier NANOAOD --era Run3,run3_nanoAOD_124 --eventcontent NANOAOD --filein file:/eos/cms/store/user/dmytro/tmp/store+data+Run2022C+ParkingDoubleMuonLowMass0+MINIAOD+PromptReco-v1+000+357+271+00000+ea64a9c2-6b1f-4744-b4ea-41aa0e3c3e1b.root --fileout file:/tmp/dmytro/test_data.root --nThreads 4 -n 10000 --no_exec --python_filename test_data.py --scenario pp --step NANO --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"```
+      * era: Run3,run3_nanoAOD_124
+      * conditions: 130X_dataRun3_v2
+      * Example:
+      	* ```cmsDriver.py RECO --conditions 130X_dataRun3_v2 --datatier NANOAOD --era Run3,run3_nanoAOD_124 --eventcontent NANOAOD --filein file:/eos/cms/store/user/dmytro/tmp/store+data+Run2022C+ParkingDoubleMuonLowMass0+MINIAOD+PromptReco-v1+000+357+271+00000+ea64a9c2-6b1f-4744-b4ea-41aa0e3c3e1b.root --fileout file:/tmp/dmytro/test_data.root --nThreads 4 -n 10000 --no_exec --python_filename test_data.py --scenario pp --step NANO --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"```
 
 ## Optional Filtering
 If you want to add event filtering to the commands below you just need to modify the step option the following way
