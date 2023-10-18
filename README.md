@@ -24,7 +24,7 @@ Here is a list required cmsDriver options to get analysis specific parts include
   * Monte Carlo
     * **MiniAODv4**
       * era: Run3
-      * conditions: 124X_mcRun3_2022_realistic_postEE_v1
+      * conditions: 130X_mcRun3_2022_realistic_v5
       * Example:
       	* ```cmsDriver.py RECO --conditions 130X_mcRun3_2022_realistic_v5 --customise Configuration/DataProcessing/Utils.addMonitoring --datatier NANOAOD --era Run3 --eventcontent NANOAODSIM --filein /store/mc/Run3Summer22MiniAODv4/DstarToD0Pi_D0To2Mu_MuFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen/MINIAODSIM/130X_mcRun3_2022_realistic_v5-v1/30000/71ec4425-d76b-446d-9d89-a7b250c56568.root --fileout file:/tmp/dmytro/test.root --nThreads 4 -n 1000 --no_exec --python_filename test.py --scenario pp --step NANO --mc --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"```
     * **MiniAODv3**
