@@ -17,6 +17,7 @@ class JobDispatcher(object):
         self.sleep = 60
         self.all_jobs = None
         self.jobs_by_status = None
+        self.submitted_jobs = dict()
         self.running_jobs = []
 
         self._load_existing_jobs()
@@ -61,6 +62,17 @@ class JobDispatcher(object):
         for resource in self.resources():
             self.running_jobs.extend(resource.get_running_jobs())
 
+    def get_finished_jobs(self, resource_name, clear=True):
+        finished_jobs = []
+        if resource_name in self.submitted_jobs:
+            for job in self.submitted_jobs[resource_name]:
+                if job not in self.running_jobs:
+                    finished_jobs.append(job)
+        if clear:
+            for job in finished_jobs:
+                self.submitted_jobs[resource_name].remove(job)
+        return finished_jobs
+        
     def get_job_status(self, job):
         """Determine job status based on existance of associated files and running information"""
         job_info = self._job_info(job)
@@ -124,11 +136,18 @@ class JobDispatcher(object):
                     print("No new jobs is found.")
                     break
             for resource in self.resources():
+                finished_jobs = self.get_finished_jobs(resource.name())
+                for job in finished_jobs:
+                    print("\t%s finished" % job)
                 n_slots = resource.number_of_free_slots()
                 print("%s has %u free slots" % (resource.name(), n_slots))
                 for i in range(n_slots):
                     if len(self.jobs_by_status['New']) > 0:
-                        resource.submit_job(self.jobs_by_status['New'].pop())
+                        job_to_submit = self.jobs_by_status['New'].pop()
+                        if resource.name() not in self.submitted_jobs:
+                            self.submitted_jobs[resource.name()] = set()
+                        self.submitted_jobs[resource.name()].add(job_to_submit)
+                        resource.submit_job(job_to_submit)
                     else:
                         break
             time.sleep(60)
