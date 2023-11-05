@@ -13,7 +13,7 @@ import fcntl
 import sys
 
 from Bmm5.MVA.mtree import MTree
-from ROOT import TFile, TTree
+from ROOT import TFile, TTree, RDataFrame
 import numpy as np
 
 class Processor(object):
@@ -70,6 +70,7 @@ class Processor(object):
         # check if we own the lock
         if info['pid'] == os.getpid():
             if re.search('^\/eos\/', self.job_lock):
+                # subprocess.call("rm -v %s " % self.job_lock, shell=True)
                 subprocess.call("eos rm %s " % self.job_lock, shell=True)
             else:
                 subprocess.call("rm -v %s " % self.job_lock, shell=True)
@@ -190,6 +191,13 @@ class FlatNtupleBase(Processor):
 
     def _process_events(self):
         raise Exception("Not implemented")
+    
+
+    def _preselect(self, input_tree, file_out, cut, keep=""):
+        df = RDataFrame(input_tree)
+        df2 = df.Define("goodCandidates", cut)
+        dfFinal = df2.Filter("Sum(goodCandidates) > 0", "Event has good candidates")
+        dfFinal.Snapshot("Events", file_out, keep)
 
     def process_file(self, input_file):
         """Initialize input and output trees and initiate the event loop"""
@@ -197,6 +205,7 @@ class FlatNtupleBase(Processor):
         match = re.search("([^\/]+)\.root$", input_file)
         if match:
             output_filename = "%s/%s_processed.root" % (self.tmp_dir, match.group(1))
+            skim_filename = "%s/%s_skim.root" % (self.tmp_dir, match.group(1))
         else:
             raise Exception("Unexpected input ROOT file name:\n%s" % input_file)
 
@@ -227,16 +236,32 @@ class FlatNtupleBase(Processor):
                         self.n_gen_passed = 0
                     self.n_gen_passed += entry.n_gen_passed
                     self.n_gen_all    += entry.n_gen_all
+        
+        input_tree = fin.Get("Events")
+        nevents = input_tree.GetEntries()
+        print(nevents)
 
-        self.input_tree = fin.Get("Events")
-        nevents = self.input_tree.GetEntries()
-
+        if 'pre-selection' in self.job_info:
+            keep = ""
+            if "pre-selection-keep" in self.job_info:
+                keep = self.job_info['pre-selection-keep']
+            self._preselect(input_tree, skim_filename, self.job_info['pre-selection'], keep)
+            f = TFile.Open(skim_filename)
+            self.input_tree = f.Get("Events")
+            n_preselect = self.input_tree.GetEntries()
+            print('Pre-selected %d / %d entries from %s (%.2f%%)' % (n_preselect, nevents, input_file, 100.*n_preselect/nevents if nevents else 0))
+        else:
+            self.input_tree = input_tree
+        
         self._process_events()
 
         nout = self.tree.tree.GetEntries()
         print('Selected %d / %d entries from %s (%.2f%%)' % (nout, nevents, input_file, 100.*nout/nevents if nevents else 0))
         fout.Write()
         fout.Close()
+        if 'pre-selection' in self.job_info:
+            subprocess.call("rm -v %s" % (skim_filename), shell=True)
+
         return output_filename, nevents
 
     def get_cut(self):
