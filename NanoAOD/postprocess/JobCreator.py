@@ -38,8 +38,9 @@ class JobCreator(object):
 
     def find_all_inputs(self):
         """Find all files and splits them in datasets"""
-        # look for files that were not modified at least for 30 mins to avoid interferences with transfers
-        command = 'find -L %s/%s -mmin +30 -type f -name "*root"' % (cfg.input_location, cfg.version)
+        # # look for files that were not modified at least for 30 mins to avoid interferences with transfers
+        # command = 'find -L %s/%s -mmin +30 -type f -name "*root"' % (cfg.input_location, cfg.version)
+        command = 'find -L %s -type f -name "*root"' % (cfg.input_location)
         all_inputs = subprocess.check_output(command, shell=True, encoding='utf8').splitlines()
         all_inputs.sort()
         print("Total number of input file: %u" % len(all_inputs))
@@ -70,6 +71,7 @@ class JobCreator(object):
             print("Processing task %s" % task_id)
 
             for dataset, ds_inputs in list(self.all_inputs_by_datasets.items()):
+                # print(dataset)
                 if not re.search(task['input_pattern'], dataset): continue
                 # find new inputs
                 new_inputs = []
@@ -129,5 +131,5 @@ if __name__ == "__main__":
     jc = JobCreator()
     jc.find_all_inputs()
     jc.load_existing_jobs()
-    # jc.create_new_jobs(False)
+    # jc.create_new_jobs(allow_small_jobs=False)
     jc.create_new_jobs(allow_small_jobs=True)
