@@ -3,9 +3,13 @@ from resources_cfg import resources
 
 workdir = "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv8/src/Bmm5/NanoAOD/postprocess/"
 version = 523
-input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD"
+
+input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/" + str(version)
+# input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/523/bkmm"
+
 # output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing-NEW"
 output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing"
+
 xrootd_prefix = "root://eoscms.cern.ch:/"
 web_report_path = "/afs/cern.ch/user/d/dmytro/www/public_html/bmm5/postprocessing/"
 
@@ -31,6 +35,9 @@ active_tasks = {
         # 'ks','phi', 'dstar', 'dstar2'
         # 'ks', 'phi', 'dstar'
         # 'ksmm'
+        #'em', 'dzpipi'
+        # 'dzmm'
+        # 'bkmm'
     ],
 
     # Flat ntuples with task specific content
@@ -42,10 +49,12 @@ active_tasks = {
         # 'bmm_mva_jpsik_loose_vtx'
         # 'trig-eff',
         # 'trig-info'
-        # 'fit-bkmm',
         # 'fit'
         # 'fit-bkkmm'
-        'muon_mva'
+        # 'muon_mva'
+        # 'fit-em'
+        'dstar'
+        # 'dzpipi'
 
     ]
 }
@@ -65,6 +74,13 @@ cuts = {
     "mm_kin_pt>5.0 and mm_kin_vtx_prob>0.025 and "\
     "HLT_DoubleMu4_3_Bs",
 
+    "fit-em":
+    "em_mu_index>=0 and em_el_index>=0 and "\
+    "em_mu_pt>5 and em_el_pt>5 and "\
+    "Muon_mediumId[em_mu_index] and Electron_mvaNoIso_WPL[em_el_index] and "\
+    "abs(em_kin_mass-5.4)<1.0 and "\
+    "em_kin_vtx_prob>0.025",
+
     "fit-bkmm" :
     "mm_mu1_index[bkmm_mm_index]>=0 and "\
     "mm_mu2_index[bkmm_mm_index]>=0 and "\
@@ -82,6 +98,11 @@ cuts = {
     "mm_kin_sl3d[bkmm_mm_index]>4 and "\
     "abs(bkmm_jpsimc_mass-5.4)<0.5",
 
+    "bkmm_skim" : (
+        "bkmm_jpsimc_vtx_prob>0.025 and bkmm_jpsimc_sl3d>3"
+        " and abs(bkmm_jpsimc_mass-5.4)<0.5 && bkmm_jpsimc_alpha<0.2"
+    ),
+    
     "fit-bkkmm" :
     "mm_mu1_index[bkkmm_mm_index]>=0 and "\
     "mm_mu2_index[bkkmm_mm_index]>=0 and "\
@@ -97,10 +118,40 @@ cuts = {
     "bkkmm_jpsikk_sl3d>4 and "\
     "bkkmm_jpsikk_vtx_prob>0.025 and "\
     "abs(bkkmm_jpsikk_mass-5.4)<0.5 and "\
-    "abs(bkkmm_jpsikk_kk_mass-1.02)<0.03"
+    "abs(bkkmm_jpsikk_kk_mass-1.02)<0.03",
+
+    "dstar_dzpipi" : (
+        "dstar_hh_index>=0 and "
+        "hh_had1_pt[dstar_hh_index]>4 and hh_had2_pt[dstar_hh_index]>4 and "
+        "hh_kin_alpha[dstar_hh_index]<0.1 and hh_kin_sl3d[dstar_hh_index]>3 and "
+        "hh_kin_vtx_prob[dstar_hh_index]>0.01 and dstar_pv_with_pion_prob>0.1 and "
+        "dstar_dm_pv>0.140 and dstar_dm_pv<0.155 and "
+        "hh_kin_mass[dstar_hh_index]>1.81 and hh_kin_mass[dstar_hh_index]<1.94 and "
+        "hh_had1_pdgId[dstar_hh_index] * hh_had2_pdgId[dstar_hh_index] == - 211 * 211"
+    ),
+
+    "dstar_dzmm" : (
+        "dstar_mm_index>=0 and "
+        "mm_mu1_pt[dstar_mm_index]>4 and mm_mu2_pt[dstar_mm_index]>4 and "
+        "mm_kin_alpha[dstar_mm_index]<0.1 and mm_kin_sl3d[dstar_mm_index]>3 and "
+        "mm_kin_vtx_prob[dstar_mm_index]>0.01 and dstar_pv_with_pion_prob>0.1 and "
+        "dstar_dm_pv>0.140 and dstar_dm_pv<0.155 and "
+        "mm_kin_mass[dstar_mm_index]>1.76 and mm_kin_mass[dstar_mm_index]<1.94 and "
+        "Muon_softMva[mm_mu1_index[dstar_mm_index]] > 0.45 and "
+        "Muon_softMva[mm_mu2_index[dstar_mm_index]] > 0.45"
+    ),
 }
 
-common_branches = 'PV_npvs|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock'
+cuts["bkmm"] = (
+    "mm_mu1_index[bkmm_mm_index]>=0 and mm_mu2_index[bkmm_mm_index]>=0 and "
+    "Muon_charge[mm_mu1_index[bkmm_mm_index]] * Muon_charge[mm_mu2_index[bkmm_mm_index]] < 0 and "
+    "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 and Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 and "
+    "Muon_softMva[mm_mu1_index[bkmm_mm_index]] > 0.45 and Muon_softMva[mm_mu2_index[bkmm_mm_index]] > 0.45 and "
+    "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and " + cuts["bkmm_skim"]
+)    
+
+
+common_branches = 'PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock'
 
 tasks = [
 
@@ -126,6 +177,19 @@ tasks = [
         'type':'NanoAOD-skims',
         'files_per_job':100
     },
+
+    {
+        'input_pattern':'ParkingDoubleMuonLowMass',
+        'processor':'SimpleSkimmer',
+        "cut": cuts['bkmm_skim'],
+        'name':'bkmm',
+        'type':'Skims',
+        "keep": "^(mm_.*|HLT_DoubleMu4_3_LowMass|nmm|bkmm_.*|nbkmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" +
+        common_branches + ")$",
+        'files_per_job':200
+    },
+
+
     # {
     #     'input_pattern':'DoubleMuon',
     #     'processor':'Skimmer',
@@ -223,6 +287,42 @@ tasks = [
         'files_per_job':50
     },
     {
+        'input_pattern':'MINIAODSIM',
+        'processor':'SimpleSkimmer',
+        'cut':'dstar_hh_index >= 0 && dstar_gen_pdgId!=0',
+        'name':'dstar_hh',
+        'type':'Skims',
+        "keep": "^(dstar_.*|ndstar|d0_.*|nd0|mm_.*|nmm|Muon_.*|nMuon|hh_.*|nhh|" + common_branches + ")$",
+        'files_per_job':200
+    },
+    {
+        'input_pattern':'^(DstarToD0Pi_D0To2Pi_SoftQCD|InclusiveDileptonMinBias|DY|B)',
+        'processor':'SimpleSkimmer',
+        'cut':'abs(hh_gen_had1_pdgId)==211&&abs(hh_gen_had2_pdgId)==211&&abs(hh_gen_pdgId)==421&&hh_had1_pt>4&&hh_had2_pt>4',
+        'name':'dzpipi',
+        'type':'Skims',
+        "keep": "^(dstar_.*|ndstar|hh_.*|nhh|" + common_branches + ")$",
+        'files_per_job':1000
+    },
+    {
+        'input_pattern':'ZeroBias',
+        'processor':'SimpleSkimmer',
+        'cut':'hh_had1_pdgId*hh_had2_pdgId==-211*211&&hh_had1_pt>4&&hh_had2_pt>4',
+        'name':'dzpipi',
+        'type':'Skims',
+        "keep": "^(dstar_.*|ndstar|hh_.*|nhh|" + common_branches + ")$",
+        'files_per_job':50
+    },
+    {
+        'input_pattern':'ParkingDoubleMuonLowMass',
+        'processor':'SimpleSkimmer',
+        'cut':'mm_kin_mass>1.81 && mm_kin_mass<1.94 && mm_mu1_pt>4 && mm_mu2_pt>4',
+        'name':'dzmm',
+        'type':'Skims',
+        "keep": "^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|HLT_.*" + common_branches + ")$",
+        'files_per_job':50
+    },
+    {
         'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton|MINIAODSIM',
         # 'input_pattern':'EGamma|DoubleEG|SingleElectron|SinglePhoton',
         'processor':'Skimmer',
@@ -256,6 +356,24 @@ tasks = [
         'type':'Skims',
         "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + common_branches + ")$",
         'files_per_job':20
+    },
+    {
+        'input_pattern':'ParkingBPH|InclusiveDileptonMinBias',
+        'processor':'SimpleSkimmer',
+        'cut':'abs(em_kin_mass-5.4)<1.0',
+        'name':'em',
+        'type':'Skims',
+        "keep": "^(em_.*|nem|HLT_Mu.*_IP.*|Muon_.*|nMuon|MuonId_.*|nMuonId|Electron_.*|nElectron|npvs|pvs_.*|" + common_branches + ")$",
+        'files_per_job':250
+    },
+    {
+        'input_pattern':'InclusiveDileptonMinBias',
+        'processor':'SimpleSkimmer',
+        'cut':'Muon_pt > 0',
+        'name':'muons',
+        'type':'Skims',
+        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + common_branches + ")$",
+        'files_per_job':100
     },
     {
         'input_pattern':'ParkingDoubleMuonLowMass',
@@ -361,23 +479,32 @@ tasks = [
     },
 
     ############### bmm_mva_jpsik ###############
+    # {
+    #     'input_pattern':'BuToJpsiK',
+    #     'processor':'FlatNtupleForBmmMvaJpsiK',
+    #     'signal_only': True,
+    #     'tree_name': "mva",
+    #     'name':'bmm_mva_jpsik',
+    #     'type':'FlatNtuples',
+    #     'files_per_job':20
+    # },
+    # {
+    #     'input_pattern':'Charmonium',
+    #     'processor':'FlatNtupleForBmmMvaJpsiK',
+    #     'signal_only': False,
+    #     'tree_name': "mva",
+    #     'name':'bmm_mva_jpsik',
+    #     'type':'FlatNtuples',
+    #     'files_per_job':20
+    # },
     {
-        'input_pattern':'BuToJpsiK',
-        'processor':'FlatNtupleForBmmMvaJpsiK',
-        'signal_only': True,
-        'tree_name': "mva",
-        'name':'bmm_mva_jpsik',
-        'type':'FlatNtuples',
-        'files_per_job':20
-    },
-    {
-        'input_pattern':'Charmonium',
+        'input_pattern':'ParkingDoubleMuonLowMass',
         'processor':'FlatNtupleForBmmMvaJpsiK',
         'signal_only': False,
         'tree_name': "mva",
         'name':'bmm_mva_jpsik',
         'type':'FlatNtuples',
-        'files_per_job':20
+        'files_per_job':10
     },
     
     ############### bmm_mva_jpsik_loose_vtx ###############
@@ -636,6 +763,89 @@ tasks = [
         "best_candidate": "",
     },
 
+    ################ fit-dmm ################
+    # {
+    #     'input_pattern':'BsToMuMu',
+    #     'processor':'FlatNtupleForMLFit',
+    #     'name':'fit',
+    #     'type':'FlatNtuples',
+    #     'files_per_job':20,
+    #     "tree_name" : "bsmmMc",
+    #     "blind" : False,
+    #     "cut" : cuts['fit'],
+    #     "final_state" : "mm",
+    #     # "best_candidate": "mm_kin_pt",
+    #     "best_candidate": "",
+        
+    # },
+    # {
+    #     'input_pattern':'BdToMuMu',
+    #     'processor':'FlatNtupleForMLFit',
+    #     'name':'fit',
+    #     'type':'FlatNtuples',
+    #     'files_per_job':20,
+    #     "tree_name" : "bmmMc",
+    #     "blind" : False,
+    #     "cut" : cuts['fit'],
+    #     "final_state" : "mm",
+    #     # "best_candidate": "mm_kin_pt",
+    #     "best_candidate": "",
+        
+    # },
+    # {
+    #     'input_pattern':'Charmonium',
+    #     'processor':'FlatNtupleForMLFit',
+    #     'name':'fit',
+    #     'type':'FlatNtuples',
+    #     'files_per_job':20,
+    #     "tree_name" : "bmmData",
+    #     "blind" : False,
+    #     "cut" : cuts['fit'],
+    #     "final_state" : "mm",
+    #     # "best_candidate": "mm_kin_pt",
+    #     "best_candidate": "",
+    # },
+    
+    ################ fit-em ################
+    {
+        'input_pattern':'BsToEMu',
+        'processor':'FlatNtupleForMLFit',
+        'name':'fit-em',
+        'type':'FlatNtuples',
+        'files_per_job':6,
+        "tree_name" : "bsemMc",
+        "blind" : False,
+        "cut" : cuts['fit-em'],
+        "final_state" : "em",
+        "best_candidate": "",
+        
+    },
+    {
+        'input_pattern':'BdToEMu',
+        'processor':'FlatNtupleForMLFit',
+        'name':'fit-em',
+        'type':'FlatNtuples',
+        'files_per_job':6,
+        "tree_name" : "bdemMc",
+        "blind" : False,
+        "cut" : cuts['fit-em'],
+        "final_state" : "em",
+        "best_candidate": "",
+        
+    },
+    {
+        'input_pattern':'Skim.*ParkingBPH',
+        'processor':'FlatNtupleForMLFit',
+        'name':'fit-em',
+        'type':'FlatNtuples',
+        'files_per_job':50,
+        "tree_name" : "bemData",
+        "blind" : False,
+        "cut" : cuts['fit-em'],
+        "final_state" : "em",
+        "best_candidate": "",
+    },
+    
     ################ fit-bkmm ################
     {
         'input_pattern':'BuToJpsiK',
@@ -670,6 +880,19 @@ tasks = [
         "tree_name" : "bupsikData",
         "blind" : False,
         "cut" : cuts["fit-bkmm"], "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "final_state" : "bkmm",
+        "best_candidate": "",
+    },
+    {
+        'input_pattern':'ParkingDoubleMuonLowMass',
+        'processor':'FlatNtupleForMLFit',
+        'name':'bkmm',
+        'type':'FlatNtuples',
+        'files_per_job':20,
+        "tree_name" : "bupsikData",
+        "blind" : False,
+        "cut" : cuts["bkmm"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
         "final_state" : "bkmm",
         "best_candidate": "",
     },
@@ -850,7 +1073,7 @@ tasks = [
         'processor':'FlatNtupleForMuonMVA',
         'name':'muon_mva',
         'type':'FlatNtuples',
-        'files_per_job':20,
+        'files_per_job':10,
         "tree_name" : "muons",
     },
 
@@ -874,5 +1097,89 @@ tasks = [
         'name':'bmm_mva',
         'type':'FlatNtuples',
         'files_per_job':20
+    },
+    ################ dstar ##################
+    {
+        'input_pattern':'DstarToD0Pi_D0To2Pi_Soft',
+        'processor':'FlatNtupleForDstarFit',
+        'name':'dstar',
+        'type':'FlatNtuples',
+        'files_per_job':20,
+        "tree_name" : "dzpipiMC",
+        "blind" : False,
+        "cut" : cuts['dstar_dzpipi'],
+        "final_state" : "dzpipi",
+        "best_candidate": "",
+    },
+    {
+        'input_pattern':'DstarToD0Pi_D0To2Mu',
+        'processor':'FlatNtupleForDstarFit',
+        'name':'dstar',
+        'type':'FlatNtuples',
+        'files_per_job':20,
+        "tree_name" : "dzmmMC",
+        "blind" : False,
+        "cut" : cuts['dstar_dzmm'],
+        "final_state" : "dzmm",
+        "triggers":["HLT_DoubleMu4_3_LowMass"],
+        "best_candidate": "",
+    },
+    {
+        'input_pattern':'DstarToD0Pi_D0To2Pi_PiToMu',
+        'processor':'FlatNtupleForDstarFit',
+        'name':'dstar',
+        'type':'FlatNtuples',
+        'files_per_job':20,
+        "tree_name" : "dzpipimmMC",
+        "blind" : False,
+        "cut" : cuts['dstar_dzmm'],
+        "final_state" : "dzmm",
+        "triggers":["HLT_DoubleMu4_3_LowMass"],
+        "best_candidate": "",
+    },
+    {
+        'input_pattern':'ParkingDoubleMuonLowMass',
+        'processor':'FlatNtupleForDstarFit',
+        'name':'dstar',
+        'type':'FlatNtuples',
+        'files_per_job':100,
+        "tree_name" : "dzmmData",
+        "blind" : False,
+        "cut" : cuts['dstar_dzmm'],
+        "final_state" : "dzmm",
+        "best_candidate": "",
+        "triggers":["HLT_DoubleMu4_3_LowMass"],
+        "pre-selection":"dstar_mm_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
+        "pre-selection-keep":"^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+    },
+    {
+        'input_pattern':'ZeroBias',
+        'processor':'FlatNtupleForDstarFit',
+        'name':'dstar',
+        'type':'FlatNtuples',
+        'files_per_job':100,
+        "tree_name" : "dzpipiData",
+        "blind" : False,
+        "cut" : cuts['dstar_dzpipi'],
+        "final_state" : "dzpipi",
+        "best_candidate": "",
+        "triggers":["HLT_ZeroBias"],
+        "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
+        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias|" + common_branches + ")$",
+    },
+    {
+        'input_pattern':'ParkingDoubleElectronLowMass|ParkingDoubleMuonLowMass',
+        'processor':'FlatNtupleForDstarFit',
+        'name':'dzpipi',
+        'type':'FlatNtuples',
+        'files_per_job':100,
+        "tree_name" : "dzpipiData",
+        "blind" : False,
+        "cut" : cuts['dstar_dzpipi'],
+        "final_state" : "dzpipi",
+        "best_candidate": "",
+        "triggers":[],
+        "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
+        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|" + common_branches + ")$",
     },
 ]
