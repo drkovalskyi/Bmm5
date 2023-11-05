@@ -69,8 +69,8 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
             candidates = []
 
             for i in range(self.event.nMuon):
-                if not self.event.Muon_isTracker[i]: continue
-                if not self.event.Muon_isGlobal[i]: continue
+                # if not self.event.Muon_isTracker[i]: continue
+                # if not self.event.Muon_isGlobal[i]: continue
 
                 keep_muon = False
                 # We should use only muons from known sources, because 
@@ -315,7 +315,7 @@ if __name__ == "__main__":
 
     job = {
         "input": [
-            "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/524/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/19a3e64f-5f30-43ff-bc5f-ea1b87c9c564.root",
+            "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/525/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/19a3e64f-5f30-43ff-bc5f-ea1b87c9c564.root",
             # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/524/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v4+MINIAODSIM/eeff8699-4ec6-4a6c-93a9-6df3db3992f8.root"
             # "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/512/Charmonium+Run2018D-PromptReco-v2+MINIAOD/98841806-7910-3B4F-8818-832B7FFDC87B.root"
             # "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv6/src/BsToMuMu_bmm_fakes_and_ids.root"
