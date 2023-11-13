@@ -1236,6 +1236,8 @@ void DileptonPlusXProducer::fillBtoKKllInfo(pat::CompositeCandidate& bCand,
   }
   auto bToPhill_displacement = compute3dDisplacement(bToPhill);
   addFitInfo(bCand, bToPhill, "phill", bToPhill_displacement,-1,-1,1,2);
+
+  // Bs to Ds mu nu, Ds to Phi mu nu, Phi to KK
   
 }
 
@@ -1826,9 +1828,25 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
       
       double kkll_mass = (lepton1.p4() + lepton2.p4() + kaonCand1.p4() + kaonCand2.p4()).mass();
       if ( kkll_mass < minBKKllMass_ || kkll_mass > maxBKKllMass_ ) goodBtoLLKK = false;
-		  
+
+      // Bs to Ds mu nu, Ds to Phi mu nu, Phi to KK
+      bool goodBsToDsmunu = true;
+      auto phi = kaonCand1.p4() + kaonCand2.p4();
+      if (fabs(phi.mass() - PhiMass_) > 0.01) {
+	goodBsToDsmunu = false;
+      } else {
+	auto ds1 = phi + lepton1.p4();
+	auto ds2 = phi + lepton2.p4();
+	auto bs = ds1 + lepton2.p4();
+	if (ds1.mass() > 2.05 and ds2.mass() > 2.05) {
+	  goodBsToDsmunu = false;
+	} else {
+	  if (bs.mass() > 5.4) goodBsToDsmunu = false;
+	}
+      }
+
       // fill BtoLLKK candidate info
-      if (goodBtoLLKK){
+      if (goodBtoLLKK or goodBsToDsmunu){
 	pat::CompositeCandidate btokkllCand;
 	btokkllCand.addUserInt(dileptonCand.name() + "_index", ll_index);
 	btokkllCand.addUserFloat("kaon1_l1_doca", l1_kaon_doca);
@@ -1965,7 +1983,6 @@ DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_c
       if (preprocess(ksCand, iEvent, pion1, pion2)){
 	// Kinematic Fits
 	auto d0VertexFit = fillDileptonInfo(ksCand, iEvent, pion1, pion2);
-	int hh_index = hh_collection.size();
 	hh_collection.push_back(ksCand);
       }
     }
