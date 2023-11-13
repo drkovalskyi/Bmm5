@@ -2,7 +2,12 @@
 
 ## New developments
 
-## [NanoAODv12-V01] - 2023/08/18
+## [NanoAODv12-V02] - 2023/11/13
+### Changes
+	- bug fixes for XGBoost
+	- Added BsToDsMuNu
+
+## [NanoAODv12-V01] - 2023/10/18
 ### Changes
 	- Migrated to NanoAODv12 setup to include Run
 	- Switched to the new soft mva id
