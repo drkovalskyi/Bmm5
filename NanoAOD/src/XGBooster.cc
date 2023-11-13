@@ -106,10 +106,22 @@ float XGBooster::predict()
   DMatrixHandle dvalues;
   XGDMatrixCreateFromMat(&features_[0], 1, features_.size(), 9e99, &dvalues);
     
-  bst_ulong out_len=0;
-  const float* score;
+  bst_ulong out_len = 0;
+  const float* score = nullptr;
 
-  auto ret = XGBoosterPredict(booster_, dvalues, 0, 0, 0, &out_len, &score);
+  // config json
+  const char* json = R"({
+    "type": 0,
+    "training": false,
+    "iteration_begin": 0,
+    "iteration_end": 0,
+    "strict_shape": false
+   })";
+
+  // Shape of output prediction
+  bst_ulong const* out_shape = nullptr;
+
+  auto ret = XGBoosterPredictFromDMatrix(booster_, dvalues, json, &out_shape, &out_len, &score);
 
   XGDMatrixFree(dvalues);
 
