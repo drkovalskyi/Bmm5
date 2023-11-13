@@ -152,7 +152,7 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
     auto muons = make_unique<pat::CompositeCandidateCollection>();
 
     for ( const auto& muon: *muonHandle.product()){
-      pat::CompositeCandidate mu_cand;
+      pat::CompositeCandidate mu_cand(reco::CompositeCandidate(muon.charge(), muon.p4()));
       mu_cand.addUserFloat("trkKink",             muon.combinedQuality().trkKink);
       mu_cand.addUserFloat("glbTrackProbability", muon.combinedQuality().glbTrackProbability);
       mu_cand.addUserFloat("chi2LocalPosition",   muon.combinedQuality().chi2LocalPosition);
