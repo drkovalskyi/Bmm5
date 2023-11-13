@@ -104,7 +104,7 @@ float XGBooster::predict()
     }
   
   DMatrixHandle dvalues;
-  XGDMatrixCreateFromMat(&features_[0], 1, features_.size(), 0., &dvalues);
+  XGDMatrixCreateFromMat(&features_[0], 1, features_.size(), 9e99, &dvalues);
     
   bst_ulong out_len=0;
   const float* score;
