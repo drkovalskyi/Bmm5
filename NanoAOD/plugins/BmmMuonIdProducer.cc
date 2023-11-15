@@ -64,7 +64,9 @@ private:
   string triggerCollection_;
   vector<string> triggers_;
   vector<string> features_;
-  XGBooster softMuonMva_;
+  vector<string> xgboost_models_;
+  vector<string> xgboost_variable_names_;
+  vector<XGBooster> softMuonMva_;
   edm::Handle<BXVector<l1t::Muon> >   l1Handle_;
 };
 
@@ -77,10 +79,13 @@ packedGenParticles_(nullptr),
 isMC_( iConfig.getParameter<bool>( "isMC" ) ),
 triggerCollection_( iConfig.getParameter<string>( "triggerCollection" ) ),
 triggers_( iConfig.getParameter<vector<string>>( "triggers" ) ),
-softMuonMva_(iConfig.getParameter<edm::FileInPath>("softMuonMva").fullPath(),
-	     iConfig.getParameter<edm::FileInPath>("features").fullPath())
+xgboost_models_( iConfig.getParameter<vector<string>>( "xgboost_models" ) ),
+xgboost_variable_names_( iConfig.getParameter<vector<string>>( "xgboost_variable_names" ) )
 {
     produces<pat::CompositeCandidateCollection>("muons");
+    for (auto model: xgboost_models_)
+      softMuonMva_.push_back(XGBooster(edm::FileInPath("Bmm5/NanoAOD/data/muon_mva/" + model + ".model").fullPath(),
+				       edm::FileInPath("Bmm5/NanoAOD/data/muon_mva/" + model + ".features").fullPath()));
 }
 
 void BmmMuonIdProducer::fillSoftMva(pat::CompositeCandidate& mu_cand){
@@ -88,32 +93,35 @@ void BmmMuonIdProducer::fillSoftMva(pat::CompositeCandidate& mu_cand){
   // "match1_pullDyDz"
   // "match2_pullDxDz"
   // "match1_pullDxDz"
-  softMuonMva_.set("pt",                  mu_cand.pt());
-  softMuonMva_.set("eta",                 mu_cand.eta());
-  softMuonMva_.set("trkValidFrac",        mu_cand.userFloat("trkValidFrac"));
-  softMuonMva_.set("glbTrackProbability", mu_cand.userFloat("glbTrackProbability"));
-  softMuonMva_.set("nLostHitsInner",      mu_cand.userInt(  "nLostHitsInner"));
-  softMuonMva_.set("nLostHitsOuter",      mu_cand.userInt(  "nLostHitsOuter"));
-  softMuonMva_.set("trkKink",             mu_cand.userFloat("trkKink"));
-  softMuonMva_.set("chi2LocalPosition",   mu_cand.userFloat("chi2LocalPosition"));
-  softMuonMva_.set("match2_dX",           mu_cand.userFloat("match2_dX"));
-  softMuonMva_.set("match2_pullX",        mu_cand.userFloat("match2_pullX"));
-  softMuonMva_.set("match1_dX",           mu_cand.userFloat("match1_dX"));
-  softMuonMva_.set("match1_pullX",        mu_cand.userFloat("match1_pullX"));
-  softMuonMva_.set("nPixels",             mu_cand.userInt(  "nPixels"));
-  softMuonMva_.set("nValidHits",          mu_cand.userInt(  "nValidHits"));
-  softMuonMva_.set("nLostHitsOn",         mu_cand.userInt(  "nLostHitsOn"));
-  softMuonMva_.set("match2_dY",           mu_cand.userFloat("match2_dY"));
-  softMuonMva_.set("match2_pullY",        mu_cand.userFloat("match2_pullY"));
-  softMuonMva_.set("match1_dY",           mu_cand.userFloat("match1_dY"));
-  softMuonMva_.set("match1_pullY",        mu_cand.userFloat("match1_pullY"));
-  softMuonMva_.set("match2_pullDyDz",     mu_cand.userFloat("match2_pullDyDz"));
-  softMuonMva_.set("match1_pullDyDz",     mu_cand.userFloat("match1_pullDyDz"));
-  softMuonMva_.set("match2_pullDxDz",     mu_cand.userFloat("match2_pullDxDz"));
-  softMuonMva_.set("match1_pullDxDz",     mu_cand.userFloat("match1_pullDxDz"));
-
-  mu_cand.addUserFloat("newSoftMuonMva", softMuonMva_.predict());
+  for (unsigned int i=0; i < softMuonMva_.size(); ++i) {
+    softMuonMva_.at(i).set("pt",                  mu_cand.pt());
+    softMuonMva_.at(i).set("eta",                 mu_cand.eta());
+    softMuonMva_.at(i).set("trkValidFrac",        mu_cand.userFloat("trkValidFrac"));
+    softMuonMva_.at(i).set("glbTrackProbability", mu_cand.userFloat("glbTrackProbability"));
+    softMuonMva_.at(i).set("nLostHitsInner",      mu_cand.userInt(  "nLostHitsInner"));
+    softMuonMva_.at(i).set("nLostHitsOuter",      mu_cand.userInt(  "nLostHitsOuter"));
+    softMuonMva_.at(i).set("trkKink",             mu_cand.userFloat("trkKink"));
+    softMuonMva_.at(i).set("chi2LocalPosition",   mu_cand.userFloat("chi2LocalPosition"));
+    softMuonMva_.at(i).set("match2_dX",           mu_cand.userFloat("match2_dX"));
+    softMuonMva_.at(i).set("match2_pullX",        mu_cand.userFloat("match2_pullX"));
+    softMuonMva_.at(i).set("match1_dX",           mu_cand.userFloat("match1_dX"));
+    softMuonMva_.at(i).set("match1_pullX",        mu_cand.userFloat("match1_pullX"));
+    softMuonMva_.at(i).set("nPixels",             mu_cand.userInt(  "nPixels"));
+    softMuonMva_.at(i).set("nValidHits",          mu_cand.userInt(  "nValidHits"));
+    softMuonMva_.at(i).set("nLostHitsOn",         mu_cand.userInt(  "nLostHitsOn"));
+    softMuonMva_.at(i).set("match2_dY",           mu_cand.userFloat("match2_dY"));
+    softMuonMva_.at(i).set("match2_pullY",        mu_cand.userFloat("match2_pullY"));
+    softMuonMva_.at(i).set("match1_dY",           mu_cand.userFloat("match1_dY"));
+    softMuonMva_.at(i).set("match1_pullY",        mu_cand.userFloat("match1_pullY"));
+    softMuonMva_.at(i).set("match2_pullDyDz",     mu_cand.userFloat("match2_pullDyDz"));
+    softMuonMva_.at(i).set("match1_pullDyDz",     mu_cand.userFloat("match1_pullDyDz"));
+    softMuonMva_.at(i).set("match2_pullDxDz",     mu_cand.userFloat("match2_pullDxDz"));
+    softMuonMva_.at(i).set("match1_pullDxDz",     mu_cand.userFloat("match1_pullDxDz"));
+    
+    mu_cand.addUserFloat("xgb_" + xgboost_variable_names_.at(i), softMuonMva_.at(i).predict());
+  }
 }
+
 
 const l1t::Muon* BmmMuonIdProducer::getL1Muon( const reco::Candidate& cand ){
   const l1t::Muon* match = nullptr;

@@ -41,19 +41,31 @@ triggers = [
     'HLT_Mu0_L1DoubleMu',
 ]
 
+xgboost_models = [
+    ('Run2022-20230926-1356-Event0', 'pt2'),                    # 525 unweight_muon_mva_pt2
+    ('Run2022-20230926-1028-Event0', 'weighted_pt2'),           # 525 weight_muon_mva_pt2
+    ('Run2022-20231115-1932-Event0', 'weighted_pt2_trigger'),   # 525 weight_muon_mva_pt2_trigger
+    ('Run2022-20231113-0145-Event0', 'pt2_trigger'),            # 525 unweight_muon_mva_pt2_trigger
+]
+
 BmmMuonId = cms.EDProducer(
     "BmmMuonIdProducer",
     muonCollection = cms.InputTag("linkedObjects","muons"),
     prunedGenParticleCollection = cms.InputTag("prunedGenParticles"),
     packedGenParticleCollection = cms.InputTag("packedGenParticles"),
     trigger = cms.InputTag("slimmedPatTrigger"),
-    softMuonMva = cms.FileInPath('Bmm5/NanoAOD/data/muon_mva/Run2022-20230926-1356-Event0.model'),
-    features = cms.FileInPath('Bmm5/NanoAOD/data/muon_mva/Run2022-20230926-1356-Event0.features'),
+    # models and their feature files are expected to be saved in Bmm5/NanoAOD/data/muon_mva/
+    xgboost_models = cms.vstring(),
+    xgboost_variable_names = cms.vstring(),
     isMC = cms.bool(False),
     triggers = cms.vstring(triggers),
     triggerCollection = cms.string("hltIterL3MuonCandidates"),
     l1Src = cms.InputTag("gmtStage2Digis:Muon"),
 )
+
+for entry in xgboost_models:
+    BmmMuonId.xgboost_models.append(entry[0]),
+    BmmMuonId.xgboost_variable_names.append(entry[1])
 
 from Configuration.Eras.Modifier_run2_muon_2016_cff import run2_muon_2016
 run2_muon_2016.toModify(BmmMuonId,
@@ -101,7 +113,6 @@ BmmMuonIdVariables = cms.PSet(
     trkLostLayersOuter  = Var("userInt('trkLostLayersOuter')",      int, doc = "Number of lost layers after tracker track"),
 
     highPurity          = Var("userInt('highPurity')",              int, doc = "High purity inner track"),
-    newSoftMuonMva      = Var("userFloat('newSoftMuonMva')",      float, doc = "New softMuonMva"),
     hlt_pt              = Var("userFloat('hlt_pt')",              float, doc = "HLT pt"),
     hlt_dr              = Var("userFloat('hlt_dr')",              float, doc = "HLT dR"),
     l1_pt               = Var("userFloat('l1_pt')",               float, doc = "L1 pt"),
@@ -116,6 +127,11 @@ BmmMuonIdVariables = cms.PSet(
 for trigger in triggers:
     setattr(BmmMuonIdVariables, trigger, Var("userInt('%s')" % trigger, int, doc = "Used in trigger"))
 
+for entry in xgboost_models:
+    setattr(BmmMuonIdVariables,
+            "xgb_%s" % entry[1],
+            Var("userFloat('xgb_%s')" % entry[1], float, doc = "New XGBoost MVA id")
+            )
 
 BmmMuonIdMcVariables = merge_psets(
     BmmMuonIdVariables,

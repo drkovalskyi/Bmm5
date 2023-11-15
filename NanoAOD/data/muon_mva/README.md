@@ -14,6 +14,23 @@ The model is trained using muon pt and eta among input features
 without event reweighting. This approach can be sub-optimal for some
 analyses.
 
+
+### Modesl
+
+* Run2022-20230926-1028-Event0
+  * eta and pt re-weighted
+  * selection: pt>2, TrackerMuon or GlobalMuon
+* Run2022-20231115-1932-Event0
+  * eta and pt re-weighted
+  * selection
+     * pt>2 GeV
+     * TrackerMuon or GlobalMuon
+     * HLT trigger
+* Run2022-20231113-0145-Event0.
+  * selection
+     * pt>2 GeV
+     * TrackerMuon or GlobalMuon
+
 ## Run2018
 
 Files starting with Run2018 contain the soft mva id trained with Run2
