@@ -125,13 +125,19 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
         self.tree.addBranch('d0_d2_pt',    'Float_t', 0, "D0 daughter2 pt")
         self.tree.addBranch('d0_d2_eta',   'Float_t', 0, "D0 daughter2 eta")
         self.tree.addBranch('d0_d2_phi',   'Float_t', 0, "D0 daughter2 phi")
+        self.tree.addBranch('d0_pvip',     'Float_t', 0, "D0 impact parameter wrt Primary Vertex in 3D")
+        self.tree.addBranch('d0_spvip',    'Float_t', 0, "D0 impact parameter significance wrt Primary Vertex in 3D")
 
         self.tree.addBranch('d0_alpha',    'Float_t', 0, "D0 pointing angle")
+        self.tree.addBranch('d0_alphaBS',  'Float_t', 0, "D0 pointing angle 2D wrt BS")
         self.tree.addBranch('d0_sl3d',     'Float_t', 0, "D0 significance of flight length 3D")
+        self.tree.addBranch('d0_d1_muid',  'Float_t', -1, "D0 daughter1 soft mva muon id")
+        self.tree.addBranch('d0_d2_muid',  'Float_t', -1, "D0 daughter2 soft mva muon id")
         
         for trigger in self.triggers_to_store:
             self.tree.addBranch(trigger, 'Int_t', -1, "Trigger decision: 1 - fired, 0 - didn't fire, -1 - no information")
-            self.tree.addBranch("%s_ps" % trigger, 'UInt_t', 999999, "Prescale. 0 - Off, 999999 - no information")
+            # self.tree.addBranch("%s_ps" % trigger, 'UInt_t', 999999, "Prescale. 0 - Off, 999999 - no information")
+            self.tree.addBranch("%s_ps" % trigger, 'Float_t', 999999, "Prescale. 0 - Off, 999999 - no information")
             # self.tree.addBranch("%s_matched" % trigger, 'Int_t', 0,  "matched to the trigger objets")
 
     def _fill_tree(self, cand, ncands):
@@ -141,7 +147,7 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
         self.tree['run'] = self.event.run
         self.tree['ls']  = self.event.luminosityBlock
         self.tree['evt'] = self.event.event
-        self.tree['npv'] = self.event.PV_npvsGood
+        self.tree['npv'] = ord(self.event.PV_npvsGood) if isinstance(self.event.PV_npvsGood, str) else self.event.PV_npvsGood
         if hasattr(self.event, 'Pileup_nTrueInt'):
             self.tree['npu']      = self.event.Pileup_nPU
             self.tree['npu_mean'] = self.event.Pileup_nTrueInt
@@ -177,8 +183,11 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                     self.tree['d0_d2_pt']       = self.event.hh_kin_had2_pt[hh_index]
                     self.tree['d0_d2_eta']      = self.event.hh_kin_had2_eta[hh_index]
                     self.tree['d0_d2_phi']      = self.event.hh_kin_had2_phi[hh_index]
+                    self.tree['d0_spvip']       = self.event.hh_kin_spvip[hh_index]
+                    self.tree['d0_pvip']        = self.event.hh_kin_pvip[hh_index]
 
                     self.tree['d0_alpha']       = self.event.hh_kin_alpha[hh_index]
+                    self.tree['d0_alphaBS']     = self.event.hh_kin_alphaBS[hh_index]
                     self.tree['d0_sl3d']        = self.event.hh_kin_sl3d[hh_index]
         elif self.job_info['final_state'] == 'dzmm':
             # mm final state
@@ -206,8 +215,13 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                 self.tree['d0_d2_pt']       = self.event.mm_kin_mu2_pt[mm_index]
                 self.tree['d0_d2_eta']      = self.event.mm_kin_mu2_eta[mm_index]
                 self.tree['d0_d2_phi']      = self.event.mm_kin_mu2_phi[mm_index]
+                self.tree['d0_spvip']       = self.event.mm_kin_spvip[mm_index]
+                self.tree['d0_pvip']        = self.event.mm_kin_pvip[mm_index]
+                self.tree['d0_d1_muid']     = self.event.Muon_softMva[self.event.mm_mu1_index[mm_index]]
+                self.tree['d0_d2_muid']     = self.event.Muon_softMva[self.event.mm_mu2_index[mm_index]]
 
                 self.tree['d0_alpha']       = self.event.mm_kin_alpha[mm_index]
+                self.tree['d0_alphaBS']     = self.event.mm_kin_alphaBS[mm_index]
                 self.tree['d0_sl3d']        = self.event.mm_kin_sl3d[mm_index]
         else:
             raise Exception("Unsupported final state: %s" % self.job_info['final_state'])
@@ -289,14 +303,14 @@ if __name__ == "__main__":
     
     job = {
         "input": [
-            'root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/523/ParkingDoubleMuonLowMass5+Run2022C-PromptReco-v1+MINIAOD/3237cbb0-122b-4d28-bebf-dea5da307147.root',
+            'root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/526/ParkingDoubleMuonLowMass5+Run2022C-PromptReco-v1+MINIAOD/3237cbb0-122b-4d28-bebf-dea5da307147.root',
         ],
         "signal_only" : False,
         "tree_name" : "dzmmData",
         "blind" : False,
         "triggers":["HLT_DoubleMu4_3_LowMass"],
         "pre-selection":"dstar_mm_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
-        "pre-selection-keep":"^(dstar_.*|ndstar|mm_.*|nmm|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        "pre-selection-keep":"^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
         "cut" : (
             "dstar_mm_index>=0 and "
             "mm_mu1_pt[dstar_mm_index]>4 and mm_mu2_pt[dstar_mm_index]>4 and "
@@ -312,7 +326,7 @@ if __name__ == "__main__":
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
 
-    p = FlatNtupleForDstarFit("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/FlatNtuples/523/dstar/ParkingDoubleMuonLowMass3+Run2022F-PromptReco-v1+MINIAOD/058a22ecf4cf8182f9ce50ef6afa4971.job")
+    p = FlatNtupleForDstarFit("/tmp/dmytro/3f0f496cfb86458c8b67602490cae4cd.job")
     # p = FlatNtupleForDstarFit(file_name)
 
     print(p.__dict__)
