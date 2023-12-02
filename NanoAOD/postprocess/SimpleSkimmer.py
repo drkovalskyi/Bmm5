@@ -52,8 +52,12 @@ class SimpleSkimmer(Processor):
     def _process(self):
         t0 = time.time()
 
+        # set default value to keep old jobs functional
+        if 'candidate_loop' not in self.job_info:
+            self.job_info['candidate_loop'] = True
+
         # check for missing information
-        for parameter in ['cut', 'input', 'keep']:
+        for parameter in ['cut', 'input', 'keep', 'candidate_loop']:
             if parameter not in self.job_info:
                 raise Exception("Missing input '%s'" % parameter)
 
@@ -77,8 +81,12 @@ class SimpleSkimmer(Processor):
         n_events = df.Count().GetValue()
         print("Number of events to process: %d" % n_events)
 
-        df2 = df.Define("goodCandidates", self.job_info['cut'])
-        dfFinal = df2.Filter("Sum(goodCandidates) > 0", "Event has good candidates")
+        if self.job_info['candidate_loop'] == True:
+            df2 = df.Define("goodCandidates", self.job_info['cut'])
+            dfFinal = df2.Filter("Sum(goodCandidates) > 0", "Event has good candidates")
+        else:
+            dfFinal = df.Filter(self.job_info['cut'], "Passed selection")
+            
         report = dfFinal.Report()
 
         if 'keep_only_common_branches' in self.job_info and self.job_info['keep_only_common_branches']:
@@ -124,10 +132,10 @@ class SimpleSkimmer(Processor):
         n_processed[0] = n_events
 
         if self.n_gen_all != None:
-            n_gen_all = np.empty((1), dtype="i")
-            n_gen_passed = np.empty((1), dtype="i")
-            t.Branch("n_gen_all", n_gen_all, "n_gen_all/I")
-            t.Branch("n_gen_passed", n_gen_passed, "n_gen_passed/I")
+            n_gen_all = np.empty((1), dtype="u8")
+            n_gen_passed = np.empty((1), dtype="u8")
+            t.Branch("n_gen_all", n_gen_all, "n_gen_all/l")
+            t.Branch("n_gen_passed", n_gen_passed, "n_gen_passed/l")
             n_gen_all[0] = self.n_gen_all
             n_gen_passed[0] = self.n_gen_passed
 
@@ -142,33 +150,15 @@ def unit_test():
     ### create a test job
     job = {
         "input": [
-            "/afs/cern.ch/work/d/dmytro/projects/Run3-Bmm-NanoAODv10/src/test.root"
-            #"root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/523/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v4+MINIAODSIM/eeff8699-4ec6-4a6c-93a9-6df3db3992f8.root"
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/522/ParkingDoubleMuonLowMass0+Run2022C-PromptReco-v1+MINIAOD/48c83780-3bd9-44e2-848f-c05797f3d474.root"
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022D-PromptReco-v1+MINIAOD/308d7ea2-c25d-47c2-a567-f7c4abd117af.root"
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/60ef0541-b8f5-479b-becd-4fdbd0e0599b.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/610c8283-348f-485d-8ece-efe360e4a342.root"
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/610c8283-348f-485d-8ece-efe360e4a342.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/6158d285-e9a5-4a80-bb48-46e99684bc50.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/6181b52f-b6eb-4997-8ff9-db7ab0cfaac0.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61a97910-d8aa-4c1d-b42b-61f8f870778f.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61abcdb2-f5b3-4a9e-b41b-bb9435f99be0.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61b12c0c-7555-416b-874e-bd933fe24d7d.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61b17623-a7f8-4e6d-b28c-c24fd633e8ed.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61c53730-fdff-4ab7-b1f0-fa8cdf82bbc5.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61ca2301-d356-4df7-94be-27f648856583.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61d1e05b-b3c1-4795-aa40-1ce162be32df.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61d23b37-9970-4973-bd9d-fdfd4b739ae0.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61d37cc7-cf04-4df3-af64-70c0213fb8cf.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61e9f9f5-f1a7-436e-a04b-a636dc609f83.root",
-            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/521/EGamma+Run2022C-PromptReco-v1+MINIAOD/61f17f66-f6e3-490e-ad96-8c2a01ef7ecb.root",
+            '/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/526/ParkingDoubleMuonLowMass0+Run2022C-PromptReco-v1+MINIAOD/5114a593-fa24-4fc4-a475-77e6312c0362.root'
         ],
         # "cut": "ks_kin_sipPV<3 && ks_kin_slxy>3 && ks_trk1_sip>5 && ks_trk2_sip>5 && ks_kin_cosAlphaXY>0.999",
         # "cut": "dstar_dm_pv > 0 ",
-        "cut": "Muon_pt>0",
+        "cut": "HLT_Mu4_L1DoubleMu",
         "processor": "SimpleSkimmer",
         # "keep": "^(MuonId_.*|nMuonId|Muon_.*|nMuon)$",
-        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + standard_branches + ")$",
+        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_.*|" + standard_branches + ")$",
+        "candidate_loop": False,
         "verbose": True
 
     }
@@ -176,8 +166,8 @@ def unit_test():
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
 
-    p = SimpleSkimmer(file_name)
-    # p = SimpleSkimmer("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/524/em/ParkingBPH1+Run2018B-UL2018_MiniAODv2-v1+MINIAOD/039c7188cd7498a349a68a58f8ee392f.job")
+    # p = SimpleSkimmer(file_name)
+    p = SimpleSkimmer("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/526/trig/Muon+Run2022E-PromptReco-v1+MINIAOD/04011e9bd966e9590d0df1f91f3c5b40.job")
     print(p.__dict__)
     p.process()
 
