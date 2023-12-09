@@ -88,11 +88,17 @@ namespace {
   }
   
   struct GenMatchInfo{
-    int l1_pdgId{0}, l1_motherPdgId{0}, l2_pdgId{0}, l2_motherPdgId{0},
-      kaon1_pdgId{0}, kaon1_motherPdgId{0}, kaon2_pdgId{0}, kaon2_motherPdgId{0},
-      photon_pdgId{0}, photon_motherPdgId{0},
-      ll_pdgId{0}, ll_motherPdgId{0}, kll_pdgId{0}, kll_motherPdgId{0},
-      kkll_pdgId{0}, llg_pdgId{0};
+    int l1_pdgId{0},   l1_motherPdgId{0},     l1_index{-1},
+      l2_pdgId{0},     l2_motherPdgId{0},     l2_index{-1},
+      kaon1_pdgId{0},  kaon1_motherPdgId{0},  kaon1_index{-1},
+      kaon2_pdgId{0},  kaon2_motherPdgId{0},  kaon2_index{-1},
+      photon_pdgId{0}, photon_motherPdgId{0}, photon_index{-1},
+      ll_pdgId{0},     ll_motherPdgId{0},     ll_index{-1},
+      kll_pdgId{0},    kll_motherPdgId{0},    kll_index{-1},
+      kkll_pdgId{0},                          kkll_index{-1},
+      llg_pdgId{0},                           llg_index{-1},
+      common_mother_index{-1};
+    
     float l1_pt{0}, l2_pt{0}, kaon1_pt{0}, kaon2_pt{0}, photon_pt{0}, ll_mass{0}, ll_pt{0},
       kll_mass{0}, kkll_mass{0}, llg_mass{0}, kll_pt{0}, kkll_pt{0}, llg_pt{0};
     math::XYZPoint ll_prod_vtx, ll_vtx, kll_prod_vtx, kkll_prod_vtx, llg_prod_vtx;
@@ -259,6 +265,11 @@ private:
   
   const reco::Candidate* getGenParticle(const bmm::Candidate& cand);
 
+  // Get index of PackedGenParticle in the list of pruned GenParticle
+  // that is stored in NanoAOD. If not found - return (-1)
+  int nanoGenParticle(const pat::PackedGenParticle& p);
+  int nanoGenParticle(const reco::Candidate* p);
+
   // Two track DOCA
   float 
   distanceOfClosestApproach( const reco::Track* track1,
@@ -389,8 +400,12 @@ private:
   edm::EDGetTokenT<pat::CompositeCandidateCollection> conversionToken_;
   edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandToken_;
   edm::EDGetTokenT<std::vector<reco::GenParticle> >   prunedGenToken_;
+  edm::EDGetTokenT<std::vector<reco::GenParticle> >   nanoGenToken_;
+  edm::EDGetTokenT<edm::Association<reco::GenParticleCollection>> nanoGenAssociationToken_;
   edm::EDGetTokenT<std::vector<pat::PackedGenParticle> >   packedGenToken_;
   const std::vector<reco::GenParticle>* prunedGenParticles_;
+  const std::vector<reco::GenParticle>* nanoGenParticles_;
+  const edm::Association<reco::GenParticleCollection>* nanoGenAssociation_;
   const std::vector<pat::PackedGenParticle>* packedGenParticles_;
 
   const TransientTrackBuilder* theTTBuilder_;
@@ -469,8 +484,12 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   conversionToken_( consumes<pat::CompositeCandidateCollection> ( iConfig.getParameter<edm::InputTag>( "conversionCollection" ) ) ),
   pfCandToken_( consumes<edm::View<pat::PackedCandidate>> ( iConfig.getParameter<edm::InputTag>( "PFCandCollection" ) ) ),
   prunedGenToken_( consumes<std::vector<reco::GenParticle>> ( iConfig.getParameter<edm::InputTag>( "prunedGenParticleCollection" ) ) ),
+  nanoGenToken_( consumes<std::vector<reco::GenParticle>> ( iConfig.getParameter<edm::InputTag>( "nanoGenParticleCollection") ) ),
+  nanoGenAssociationToken_( consumes<edm::Association<reco::GenParticleCollection>> ( iConfig.getParameter<edm::InputTag>( "nanoGenParticleCollection") ) ),
   packedGenToken_( consumes<std::vector<pat::PackedGenParticle>> ( edm::InputTag( "packedGenParticles" ) ) ),
   prunedGenParticles_(nullptr),
+  nanoGenParticles_(nullptr),
+  nanoGenAssociation_(nullptr),
   packedGenParticles_(nullptr),
   theTTBuilder_(nullptr),
   theTTBuilderToken_(esConsumes(edm::ESInputTag{"", "TransientTrackBuilder"})),
@@ -876,16 +895,20 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
   if (isMC_){
     auto gen_ll = getGenMatchInfo(lepton1, lepton2);
     dileptonCand.addUserInt(  "gen_" + lepton1.name() + "1_pdgId",   gen_ll.l1_pdgId);
+    dileptonCand.addUserInt(  "gen_" + lepton1.name() + "1_index",   gen_ll.l1_index);
     dileptonCand.addUserInt(  "gen_" + lepton1.name() + "1_mpdgId",  gen_ll.l1_motherPdgId);
     dileptonCand.addUserFloat("gen_" + lepton1.name() + "1_pt",      gen_ll.l1_pt);
     dileptonCand.addUserInt(  "gen_" + lepton2.name() + "2_pdgId",   gen_ll.l2_pdgId);
+    dileptonCand.addUserInt(  "gen_" + lepton2.name() + "2_index",   gen_ll.l2_index);
     dileptonCand.addUserInt(  "gen_" + lepton2.name() + "2_mpdgId",  gen_ll.l2_motherPdgId);
     dileptonCand.addUserFloat("gen_" + lepton2.name() + "2_pt",      gen_ll.l2_pt);
     dileptonCand.addUserFloat("gen_mass",       gen_ll.ll_mass);
     dileptonCand.addUserFloat("gen_pt",         gen_ll.ll_pt);
     dileptonCand.addUserInt(  "gen_pdgId",      gen_ll.ll_pdgId);
+    dileptonCand.addUserInt(  "gen_index",      gen_ll.ll_index);
     dileptonCand.addUserInt(  "gen_mpdgId",     gen_ll.ll_motherPdgId);
     dileptonCand.addUserInt(  "gen_cpdgId",     gen_ll.common_mother?gen_ll.common_mother->pdgId():0);
+    dileptonCand.addUserInt(  "gen_cindex",     gen_ll.common_mother_index);
     dileptonCand.addUserFloat("gen_prod_x",     gen_ll.ll_prod_vtx.x());
     dileptonCand.addUserFloat("gen_prod_y",     gen_ll.ll_prod_vtx.y());
     dileptonCand.addUserFloat("gen_prod_z",     gen_ll.ll_prod_vtx.z());
@@ -2023,14 +2046,25 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   iEvent.getByToken(pfCandToken_, pfCandHandle_);
     
   edm::Handle<std::vector<reco::GenParticle> > prunedGenParticleHandle;
+  edm::Handle<std::vector<reco::GenParticle> > nanoGenParticleHandle;
+  edm::Handle<edm::Association<reco::GenParticleCollection> > nanoGenAssociationHandle;
   edm::Handle<std::vector<pat::PackedGenParticle> > packedGenParticleHandle;
   if ( isMC_ ) {
-    iEvent.getByToken(prunedGenToken_,prunedGenParticleHandle);
+    iEvent.getByToken(prunedGenToken_, prunedGenParticleHandle);
     prunedGenParticles_ = prunedGenParticleHandle.product();
-    iEvent.getByToken(packedGenToken_,packedGenParticleHandle);
+    
+    iEvent.getByToken(nanoGenToken_, nanoGenParticleHandle);
+    nanoGenParticles_ = nanoGenParticleHandle.product();
+    
+    iEvent.getByToken(nanoGenAssociationToken_, nanoGenAssociationHandle);
+    nanoGenAssociation_ = nanoGenAssociationHandle.product();
+    
+    iEvent.getByToken(packedGenToken_, packedGenParticleHandle);
     packedGenParticles_ = packedGenParticleHandle.product();
   } else {
     prunedGenParticles_ = nullptr;
+    nanoGenParticles_   = nullptr;
+    nanoGenAssociation_ = nullptr;
     packedGenParticles_ = nullptr;
   }
 
@@ -2986,7 +3020,6 @@ namespace{
 
 const reco::Candidate* DileptonPlusXProducer::getGenParticle(const bmm::Candidate& cand)
 {
-  
   if (cand.genParticle()) return cand.genParticle();
 
   for (auto const & genParticle: *packedGenParticles_){
@@ -2995,6 +3028,35 @@ const reco::Candidate* DileptonPlusXProducer::getGenParticle(const bmm::Candidat
   }
   return nullptr;
 }
+
+int DileptonPlusXProducer::nanoGenParticle(const pat::PackedGenParticle& p)
+{
+  auto pruned = p.lastPrunedRef();
+  if (pruned.isNonnull() && pruned->status() == 1){
+    auto nano_pruned = (*nanoGenAssociation_)[pruned];
+    if (nano_pruned.isNonnull())
+      return nano_pruned.key();
+  }
+  return -1;
+}
+
+int DileptonPlusXProducer::nanoGenParticle(const reco::Candidate* p)
+{
+  auto packed = dynamic_cast<const pat::PackedGenParticle*>(p);
+  if (packed)
+    return nanoGenParticle(*packed);
+  
+  auto gen = dynamic_cast<const reco::GenParticle*>(p);
+  if (gen){
+    // GenParticle can be pruned or embeded. Let's just search for a match.
+    for (unsigned int i=0; i < nanoGenParticles_->size(); ++i){
+      if (dr_match(gen->p4(), nanoGenParticles_->at(i).p4()))
+	return i;
+    }
+  }
+  return -1;
+}
+
 
 GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepton1,
 						     const bmm::Candidate& lepton2,
@@ -3012,6 +3074,7 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
   if (result.mc_l1){
     result.l1_pdgId = result.mc_l1->pdgId();
     result.l1_pt    = result.mc_l1->pt();
+    result.l1_index = nanoGenParticle(result.mc_l1);
     if (result.mc_l1->mother()){
       result.l1_motherPdgId = result.mc_l1->mother()->pdgId();
     }
@@ -3022,6 +3085,7 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
   if (result.mc_l2){
     result.l2_pdgId = result.mc_l2->pdgId();
     result.l2_pt    = result.mc_l2->pt();
+    result.l2_index = nanoGenParticle(result.mc_l2);
     if (result.mc_l2->mother()){
       result.l2_motherPdgId = result.mc_l2->mother()->pdgId();
     }
@@ -3037,6 +3101,7 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
       result.ll_mass      = ll_mother->mass();
       result.ll_pt        = ll_mother->pt();
       result.ll_pdgId     = ll_mother->pdgId();
+      result.ll_index     = nanoGenParticle(ll_mother);
       if (ll_mother->mother()) result.ll_motherPdgId = ll_mother->mother()->pdgId();
       result.ll_prod_vtx = getProductionVertex(ll_mother);
     }
@@ -3048,6 +3113,7 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
 	result.mc_kaon1 = &genParticle;
 	daughters.push_back(result.mc_kaon1);
 	result.kaon1_pdgId = genParticle.pdgId();
+	result.kaon1_index = nanoGenParticle(genParticle);
 	result.kaon1_pt    = genParticle.pt();
 	if (genParticle.mother(0)){
 	  result.kaon1_motherPdgId = genParticle.mother(0)->pdgId();
@@ -3060,6 +3126,7 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
       if (mother){
 	result.match        = mother;
 	result.kll_pdgId    = mother->pdgId();
+	result.kll_index    = nanoGenParticle(mother);
 	result.kll_motherPdgId = mother->mother() ? mother->mother()->pdgId() : 0;
 	result.kll_mass     = mother->mass();
 	result.kll_pt       = mother->pt();
@@ -3073,6 +3140,7 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
 	result.mc_kaon2 = &genParticle;
 	daughters.push_back(result.mc_kaon2);
 	result.kaon2_pdgId = genParticle.pdgId();
+	result.kaon2_index = nanoGenParticle(genParticle);
 	result.kaon2_pt    = genParticle.pt();
 	if (genParticle.mother(0)){
 	  result.kaon2_motherPdgId = genParticle.mother(0)->pdgId();
@@ -3085,6 +3153,7 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
       if (mother){
 	result.match         = mother;
 	result.kkll_pdgId    = mother->pdgId();
+	result.kkll_index    = nanoGenParticle(mother);
 	result.kkll_mass     = mother->mass();
 	result.kkll_pt       = mother->pt();
 	result.kkll_prod_vtx = getProductionVertex(mother);
@@ -3098,6 +3167,7 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
 	result.mc_photon = &genParticle;
 	daughters.push_back(result.mc_photon);
 	result.photon_pdgId = genParticle.pdgId();
+	result.photon_index = nanoGenParticle(genParticle);
 	result.photon_pt    = genParticle.pt();
 	if (genParticle.mother(0)){
 	  result.photon_motherPdgId = genParticle.mother(0)->pdgId();
@@ -3110,6 +3180,7 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
       if (mother){
 	result.match        = mother;
 	result.llg_pdgId    = mother->pdgId();
+	result.llg_index    = nanoGenParticle(mother);
 	result.llg_mass     = mother->mass();
 	result.llg_pt       = mother->pt();
 	result.llg_prod_vtx = getProductionVertex(mother);
@@ -3121,6 +3192,7 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
     const auto* mother = find_common_ancestor(daughters); 
     if (mother){ 
       result.common_mother = mother;
+      result.common_mother_index = nanoGenParticle(mother);
     }
   }
 
