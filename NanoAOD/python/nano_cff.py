@@ -15,6 +15,9 @@ def nanoAOD_customizeDileptonPlusX(process):
     # enforce process name
     # process.load('PhysicsTools.NanoAOD.globals_cff')
     process.genFilterTable.src = cms.InputTag("genFilterEfficiencyProducer")
+
+    # keep all genparticles
+    process.finalGenParticles.select = cms.vstring("keep *")
     
     return process
 
