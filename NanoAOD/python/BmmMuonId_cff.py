@@ -42,10 +42,10 @@ triggers = [
 ]
 
 xgboost_models = [
-    ('Run2022-20230926-1356-Event0', 'pt2'),                    # 525 unweight_muon_mva_pt2
-    ('Run2022-20230926-1028-Event0', 'weighted_pt2'),           # 525 weight_muon_mva_pt2
-    ('Run2022-20231115-1932-Event0', 'weighted_pt2_trigger'),   # 525 weight_muon_mva_pt2_trigger
-    ('Run2022-20231113-0145-Event0', 'pt2_trigger'),            # 525 unweight_muon_mva_pt2_trigger
+    # ('Run2022-20230926-1356-Event0', 'pt2'),                    # 525 unweight_muon_mva_pt2
+    ('Run2022-20231030-1731-Event0', 'run3'),                     # eta and pt re-weighted, pt>2, extra inputs
+    # ('Run2022-20231115-1932-Event0', 'weighted_pt2_trigger'),   # 525 weight_muon_mva_pt2_trigger
+    # ('Run2022-20231113-0145-Event0', 'pt2_trigger'),            # 525 unweight_muon_mva_pt2_trigger
 ]
 
 BmmMuonId = cms.EDProducer(
