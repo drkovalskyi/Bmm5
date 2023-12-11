@@ -1,0 +1,28 @@
+Importance scores:
+       trkValidFrac 788.8
+glbTrackProbability 696.4
+     nLostHitsInner 115.8
+     nLostHitsOuter 172.6
+            trkKink 320.8
+  chi2LocalPosition 324.5
+          match2_dX 15.6
+       match2_pullX 24.6
+          match1_dX 17.3
+       match1_pullX 79.2
+            nPixels 87.0
+         nValidHits 23.1
+        nLostHitsOn 384.1
+          match2_dY 24.0
+                eta 20.8
+          match1_dY 19.0
+       match2_pullY 54.3
+       match1_pullY 49.3
+    match2_pullDyDz 10.7
+    match1_pullDyDz 16.9
+    match2_pullDxDz 24.3
+    match1_pullDxDz 23.0
+                 pt 42.8
+        glbNormChi2 99.3
+          trkLayers 32.8
+         highPurity 13.4
+

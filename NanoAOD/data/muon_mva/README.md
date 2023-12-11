@@ -15,8 +15,12 @@ without event reweighting. This approach can be sub-optimal for some
 analyses.
 
 
-### Modesl
+### Models
 
+* Run2022-20231030-1731-Event0
+  * eta and pt re-weighted
+  * selection: pt>2, TrackerMuon or GlobalMuon
+  * additiona inputs: "glbNormChi2", "trkLayers", "highPurity"
 * Run2022-20230926-1028-Event0
   * eta and pt re-weighted
   * selection: pt>2, TrackerMuon or GlobalMuon
