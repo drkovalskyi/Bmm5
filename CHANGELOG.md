@@ -2,6 +2,14 @@
 
 ## New developments
 
+## [NanoAODv12-V03] - 2023/12/12
+### Changes
+	- Latest run3 muon id
+	- added gen index to GenPart for some of the matched
+	objects to be able to investigate background decays
+	- keep all pruned gen particles from MiniAOD by default
+	- lowered minimum hadron pt to 3GeV to match the muon trigger 
+
 ## [NanoAODv12-V02] - 2023/11/13
 ### Changes
 	- bug fixes for XGBoost
