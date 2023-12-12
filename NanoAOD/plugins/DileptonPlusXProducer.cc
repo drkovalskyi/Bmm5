@@ -3047,11 +3047,22 @@ int DileptonPlusXProducer::nanoGenParticle(const reco::Candidate* p)
     return nanoGenParticle(*packed);
   
   auto gen = dynamic_cast<const reco::GenParticle*>(p);
-  if (gen){
-    // GenParticle can be pruned or embeded. Let's just search for a match.
-    for (unsigned int i=0; i < nanoGenParticles_->size(); ++i){
-      if (dr_match(gen->p4(), nanoGenParticles_->at(i).p4()))
+  if (gen) {
+    // GenParticle can be from the pruned collection or embeded into a PAT object
+    
+    // First check if we can find it in the pruned nano list
+    for (unsigned int i=0; i < nanoGenParticles_->size(); ++i) {
+      if (&nanoGenParticles_->at(i) == gen)
 	return i;
+    }
+    
+    // We either don't have all miniaod pruned particles in nano or we
+    // have embedded case. Let's look for a match
+    for (unsigned int i=0; i < nanoGenParticles_->size(); ++i){
+      if (nanoGenParticles_->at(i).pdgId() != gen->pdgId()) continue;
+      if (deltaR(nanoGenParticles_->at(i).p4(), gen->p4()) > 0.01) continue;
+      if (fabs(nanoGenParticles_->at(i).pt() - gen->pt()) / gen->pt() > 0.01) continue;
+      return i;
     }
   }
   return -1;
