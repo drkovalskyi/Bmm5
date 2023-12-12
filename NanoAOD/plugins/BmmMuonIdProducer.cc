@@ -117,6 +117,9 @@ void BmmMuonIdProducer::fillSoftMva(pat::CompositeCandidate& mu_cand){
     softMuonMva_.at(i).set("match1_pullDyDz",     mu_cand.userFloat("match1_pullDyDz"));
     softMuonMva_.at(i).set("match2_pullDxDz",     mu_cand.userFloat("match2_pullDxDz"));
     softMuonMva_.at(i).set("match1_pullDxDz",     mu_cand.userFloat("match1_pullDxDz"));
+    softMuonMva_.at(i).set("glbNormChi2",         mu_cand.userFloat("glbNormChi2"));
+    softMuonMva_.at(i).set("trkLayers",           mu_cand.userInt("trkLayers"));
+    softMuonMva_.at(i).set("highPurity",          mu_cand.userInt("highPurity"));
     
     mu_cand.addUserFloat("xgb_" + xgboost_variable_names_.at(i), softMuonMva_.at(i).predict());
   }
