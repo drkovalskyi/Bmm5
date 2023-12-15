@@ -87,22 +87,28 @@ namespace {
     return photon.p() * 0.044;
   }
   
-  struct GenMatchInfo{
+  struct GenMatchInfo {
     int l1_pdgId{0},   l1_motherPdgId{0},     l1_index{-1},
       l2_pdgId{0},     l2_motherPdgId{0},     l2_index{-1},
+      l3_pdgId{0},     l3_motherPdgId{0},     l3_index{-1},
       kaon1_pdgId{0},  kaon1_motherPdgId{0},  kaon1_index{-1},
       kaon2_pdgId{0},  kaon2_motherPdgId{0},  kaon2_index{-1},
       photon_pdgId{0}, photon_motherPdgId{0}, photon_index{-1},
       ll_pdgId{0},     ll_motherPdgId{0},     ll_index{-1},
+      lll_pdgId{0},    lll_motherPdgId{0},    lll_index{-1},
       kll_pdgId{0},    kll_motherPdgId{0},    kll_index{-1},
       kkll_pdgId{0},                          kkll_index{-1},
       llg_pdgId{0},                           llg_index{-1},
       common_mother_index{-1};
     
-    float l1_pt{0}, l2_pt{0}, kaon1_pt{0}, kaon2_pt{0}, photon_pt{0}, ll_mass{0}, ll_pt{0},
-      kll_mass{0}, kkll_mass{0}, llg_mass{0}, kll_pt{0}, kkll_pt{0}, llg_pt{0};
-    math::XYZPoint ll_prod_vtx, ll_vtx, kll_prod_vtx, kkll_prod_vtx, llg_prod_vtx;
-    const reco::Candidate* mc_l1{nullptr}, *mc_l2{nullptr}, *mc_kaon1{nullptr},
+    float l1_pt{0}, l2_pt{0}, l3_pt{0}, kaon1_pt{0}, kaon2_pt{0}, photon_pt{0},
+      ll_mass{0}, ll_pt{0}, lll_mass{0}, lll_pt{0}, kll_mass{0}, kkll_mass{0},
+      llg_mass{0}, kll_pt{0}, kkll_pt{0}, llg_pt{0};
+    
+    math::XYZPoint ll_prod_vtx, ll_vtx, lll_prod_vtx, lll_vtx,
+      kll_prod_vtx, kkll_prod_vtx, llg_prod_vtx;
+    
+    const reco::Candidate* mc_l1{nullptr}, *mc_l2{nullptr}, *mc_l3{nullptr}, *mc_kaon1{nullptr},
       *mc_kaon2{nullptr}, *mc_photon{nullptr}, *match{nullptr}, *common_mother{nullptr};
     
     const reco::GenParticle* gen_l1(){
@@ -110,6 +116,9 @@ namespace {
     }
     const reco::GenParticle* gen_l2(){
       return dynamic_cast<const reco::GenParticle*>(mc_l2);
+    }
+    const reco::GenParticle* gen_l3(){
+      return dynamic_cast<const reco::GenParticle*>(mc_l3);
     }
   };
 
@@ -154,6 +163,7 @@ private:
 			  int ll_index,
 			  const bmm::Candidate& lepton1,
 			  const bmm::Candidate& lepton2);
+  
   void
   fillDstarInfo(pat::CompositeCandidateCollection& dstar_collection,
 		const edm::Event& iEvent,
@@ -261,7 +271,8 @@ private:
 				const bmm::Candidate& lepton2,
 				const pat::PackedCandidate* kaon1 = 0,
 				const pat::PackedCandidate* kaon2 = 0,
-				const reco::Candidate* photon = 0);
+				const reco::Candidate* photon = 0,
+				const bmm::Candidate* lepton3 = 0);
   
   const reco::Candidate* getGenParticle(const bmm::Candidate& cand);
 
@@ -350,6 +361,13 @@ private:
 		      const bmm::Candidate& muon1,
 		      const bmm::Candidate& muon2,
 		      const pat::CompositeCandidate& photon);
+  void 
+  fill3muInfo(pat::CompositeCandidate& bCand,
+	      const edm::Event& iEvent,
+	      const bmm::Candidate& muon1,
+	      const bmm::Candidate& muon2,
+	      const bmm::Candidate& muon3);
+  
   void 
   fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(pat::CompositeCandidate& btokllCand,
 					       const pat::CompositeCandidate& dimuonCand,
@@ -548,6 +566,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   bdtReader2_("!Color:Silent")
 {
   produces<pat::CompositeCandidateCollection>("MuMu");
+  produces<pat::CompositeCandidateCollection>("MuMuMu");
   produces<pat::CompositeCandidateCollection>("ElEl");
   produces<pat::CompositeCandidateCollection>("ElMu");
   produces<pat::CompositeCandidateCollection>("HH");
@@ -1008,6 +1027,91 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
   addFitInfo(dileptonCand, bToLL_PC, "kinpc");
   
   return kinematicLLVertexFit;
+}
+
+void DileptonPlusXProducer::fill3muInfo(pat::CompositeCandidate& mmmCand,
+					const edm::Event& iEvent,
+					const bmm::Candidate& muon1,
+					const bmm::Candidate& muon2,
+					const bmm::Candidate& muon3)
+{
+  mmmCand.addUserFloat("mu3_pt",     muon3.pt());
+  mmmCand.addUserFloat("mu3_eta",    muon3.eta());
+  mmmCand.addUserFloat("mu3_phi",    muon3.phi());
+  mmmCand.addUserFloat("mu3_dxy_bs", muon3.track()->dxy(*beamSpot_));
+  mmmCand.addUserFloat("mu3_sdxy_bs", muon3.track()->dxyError()>0 ? fabs(muon3.track()->dxy(*beamSpot_))/muon3.track()->dxyError() : 0.0);
+  mmmCand.addUserInt("mu3_charge", muon3.charge());
+  
+  if (isMC_){
+    auto gen_lll = getGenMatchInfo(muon1, muon2, nullptr, nullptr, nullptr, &muon3);
+    mmmCand.addUserInt(  "gen_mu3_pdgId",   gen_lll.l3_pdgId);
+    mmmCand.addUserInt(  "gen_mu3_index",   gen_lll.l3_index);
+    mmmCand.addUserInt(  "gen_mu3_mpdgId",  gen_lll.l3_motherPdgId);
+    mmmCand.addUserFloat("gen_mu3_pt",      gen_lll.l3_pt);
+    mmmCand.addUserFloat("gen_mass",        gen_lll.lll_mass);
+    mmmCand.addUserFloat("gen_pt",          gen_lll.lll_pt);
+    mmmCand.addUserInt(  "gen_pdgId",       gen_lll.lll_pdgId);
+    mmmCand.addUserFloat("gen_prod_x",      gen_lll.lll_prod_vtx.x());
+    mmmCand.addUserFloat("gen_prod_y",      gen_lll.lll_prod_vtx.y());
+    mmmCand.addUserFloat("gen_prod_z",      gen_lll.lll_prod_vtx.z());
+    mmmCand.addUserFloat("gen_l3d",         (gen_lll.lll_prod_vtx - gen_lll.ll_vtx).r());
+    mmmCand.addUserFloat("gen_lxy",         (gen_lll.lll_prod_vtx - gen_lll.ll_vtx).rho());
+    mmmCand.addUserFloat("gen_tau",         computeDecayTime(gen_lll));
+    mmmCand.addUserFloat("gen_cpdgId",      gen_lll.common_mother ? gen_lll.common_mother->pdgId() : 0);
+  }
+
+
+  // Kinematic fit
+  
+  // Rebuild ll vertex to ensure that the KinematicTree remains self
+  // consistent and no elements get out of scope or get deleted
+  // when the tree is used in subsequent fits
+  auto llVertexFit = vertexLeptonsWithKinematicFitter(muon1, muon2);
+  auto tree = llVertexFit.tree();
+  
+  KinematicFitResult result;
+  if (muon1.track()) result.tracks.push_back(muon1.track());
+  if (muon2.track()) result.tracks.push_back(muon2.track());
+  if (muon3.track()) result.tracks.push_back(muon3.track());
+
+  mmmCand.addUserFloat("mm_dist",   -1);
+  mmmCand.addUserFloat("mm_distErr", 0);
+  
+  if (llVertexFit.valid()) {
+    auto mmVtxState = llVertexFit.vtx_state();
+
+    const reco::TransientTrack mu3TT = theTTBuilder_->build(muon3.track());
+
+    KinematicParticleFactoryFromTransientTrack partFactory;
+    KinematicParticleVertexFitter fitter;
+
+    std::vector<RefCountedKinematicParticle> particles;
+    double chi = 0.;
+    double ndf = 0.;
+
+    tree->movePointerToTheTop();
+    particles.push_back(tree->currentParticle());
+    float muonMassErr(MuonMassErr_);
+    particles.push_back(partFactory.particle(mu3TT,MuonMass_,chi,ndf,muonMassErr));
+
+    RefCountedKinematicTree vertexFitTree;
+    try {
+      vertexFitTree = fitter.fit(particles);
+      result.set_tree(vertexFitTree);
+      if (result.valid()) {
+	VertexDistance3D distance3D;
+	auto dist = distance3D.distance(mmVtxState, result.vtx_state() );
+	mmmCand.addUserFloat("mm_dist",    dist.value());
+	mmmCand.addUserFloat("mm_distErr", dist.error());
+      }
+
+    } catch (const std::exception& e) {}
+  }
+
+  result.postprocess(*beamSpot_);
+  auto displacement = compute3dDisplacement(result);
+  addFitInfo(mmmCand, result, "kin", displacement, -1, -1, 1);
+
 }
 
 void DileptonPlusXProducer::fillBtoKllInfo(pat::CompositeCandidate& btokllCand,
@@ -2085,6 +2189,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   auto btokkee = std::make_unique<pat::CompositeCandidateCollection>();
   auto btommg  = std::make_unique<pat::CompositeCandidateCollection>();
   auto dstar_collection = std::make_unique<pat::CompositeCandidateCollection>();
+  auto mmm_collection = std::make_unique<pat::CompositeCandidateCollection>();
   AddFourMomenta addP4;
 
   // Build input lists
@@ -2220,6 +2325,23 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	  }
 	}
 
+	// mmm
+	for (unsigned int imu3 = 0; imu3 < good_muon_candidates.size(); ++imu3) {
+	  if (i == imu3) continue;
+	  if (j == imu3) continue;
+  
+	  const bmm::Candidate & muon3 = good_muon_candidates.at(imu3);
+	  
+	  pat::CompositeCandidate mmmCand;
+	  mmmCand.addUserInt("mm_index", mm_index);
+	  mmmCand.addUserInt("mu3_index", imu3);
+	  mmmCand.addUserFloat("mass", (muon1.p4() + muon2.p4() + muon3.p4()).mass());
+      
+	  fill3muInfo(mmmCand, iEvent, muon1, muon2, muon3);
+	  
+	  mmm_collection->push_back(mmmCand);
+	}
+	
 	// save dimuon
 	mm_collection->push_back(dimuonCand);
       }
@@ -2482,6 +2604,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   // }
 	  
   iEvent.put(std::move(mm_collection),     "MuMu");
+  iEvent.put(std::move(mmm_collection),    "MuMuMu");
   iEvent.put(std::move(ee_collection), "ElEl");
   iEvent.put(std::move(em_collection), "ElMu");
   iEvent.put(std::move(hh_collection),   "HH");
@@ -3073,7 +3196,8 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
 						     const bmm::Candidate& lepton2,
 						     const pat::PackedCandidate* kaon1,
 						     const pat::PackedCandidate* kaon2,
-						     const reco::Candidate* photon)
+						     const reco::Candidate* photon,
+						     const bmm::Candidate* lepton3)
 {
   auto result = GenMatchInfo();
   const reco::Candidate*   ll_mother(0);
@@ -3199,6 +3323,30 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
     }
   }
 
+  if (lepton3){
+    result.mc_l3 = getGenParticle(*lepton3);
+    if (result.mc_l3){
+      result.l3_pdgId = result.mc_l3->pdgId();
+      result.l3_pt    = result.mc_l3->pt();
+      result.l3_index = nanoGenParticle(result.mc_l3);
+      if (result.mc_l3->mother()){
+	result.l3_motherPdgId = result.mc_l3->mother()->pdgId();
+      }
+      daughters.push_back(result.mc_l3);
+    }
+    if (daughters.size()==3){
+      const auto* mother = find_common_ancestor(daughters);
+      if (mother){
+	result.match        = mother;
+	result.lll_pdgId    = mother->pdgId();
+	result.lll_index    = nanoGenParticle(mother);
+	result.lll_mass     = mother->mass();
+	result.lll_pt       = mother->pt();
+	result.lll_prod_vtx = getProductionVertex(mother);
+      }
+    }
+  }
+  
   if (daughters.size() > 1){
     const auto* mother = find_common_ancestor(daughters); 
     if (mother){ 
