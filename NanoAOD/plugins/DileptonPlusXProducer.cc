@@ -1101,8 +1101,8 @@ void DileptonPlusXProducer::fill3muInfo(pat::CompositeCandidate& mmmCand,
       if (result.valid()) {
 	VertexDistance3D distance3D;
 	auto dist = distance3D.distance(mmVtxState, result.vtx_state() );
-	mmmCand.addUserFloat("mm_dist",    dist.value());
-	mmmCand.addUserFloat("mm_distErr", dist.error());
+	mmmCand.addUserFloat("mm_dist",    dist.value(), true);
+	mmmCand.addUserFloat("mm_distErr", dist.error(), true);
       }
 
     } catch (const std::exception& e) {}
