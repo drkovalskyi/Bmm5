@@ -21,7 +21,7 @@ def merge_psets(*argv):
                 setattr(result,name,value)
     return result
 
-def copy_pset(pset,replace_dict):
+def copy_pset(pset, replace_dict=dict()):
     result = cms.PSet()
     for name in pset.parameters_().keys():
         new_name = name
@@ -770,6 +770,64 @@ DileptonsMuMuGammaMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTablePro
     extension=cms.bool(False),
     variables = DileptonsMuMuGammaMcTableVariables
 )
+##################################################################################
+###
+###                              Mu Mu Mu
+###
+##################################################################################
+
+Dileptons3MuTableVariables =  merge_psets(
+    copy_pset(kinematic_pset),
+    cms.PSet(
+        mm_index        = Var("userInt('mm_index')",           int,   doc = "Index of dimuon pair"),
+        ph_index        = Var("userInt('mu3_index')",          int,   doc = "Index of 3d muon"),
+        ph_pt           = Var("userFloat('mu3_pt')",         float,   doc = "3d muon pt"),
+        ph_eta          = Var("userFloat('mu3_eta')",        float,   doc = "3d muon eta"),
+        ph_phi          = Var("userFloat('mu3_phi')",        float,   doc = "3d muon phi"),
+        mass            = Var("userFloat('mass')" ,          float,   doc = "Mass - no fit"),
+        mm_dist         = Var("userFloat('mm_dist')" ,       float,   doc = "Absolute distance between 2mu and 3mu vertices"),
+        mm_distErr      = Var("userFloat('mm_distErr')" ,    float,   doc = "Uncertainty on distance between 2mu and 3mu vertices"),
+    )
+)
+
+Dileptons3MuMcTableVariables = merge_psets(
+    Dileptons3MuTableVariables,
+    cms.PSet(
+        gen_mu3_pdgId   = Var("userInt(  'gen_mu3_pdgId')",        int,   doc = "Gen match: 3d muon pdg Id"),
+        gen_mu3_index   = Var("userInt(  'gen_mu3_index')",        int,   doc = "Gen match: 3d muon index int GenPart"),
+        gen_mu3_mpdgId  = Var("userInt(  'gen_mu3_mpdgId')",       int,   doc = "Gen match: 3d muon mother pdg Id"),
+        gen_mu3_pt      = Var("userFloat('gen_mu3_pt')",         float,   doc = "Gen match: 3d muon pt"),
+        gen_pdgId       = Var("userInt('gen_pdgId')",         int,   doc = "Gen match: mmg pdg Id"),
+        gen_mass        = Var("userFloat('gen_mass')",        float, doc = "Gen match: mmg mass"),
+        gen_pt          = Var("userFloat('gen_pt')",          float, doc = "Gen match: mmg pt"),
+        gen_prod_x      = Var("userFloat('gen_prod_x')",      float, doc = "Gen match: mmg mother production vertex x"),
+        gen_prod_y      = Var("userFloat('gen_prod_y')",      float, doc = "Gen match: mmg mother production vertex y"),
+        gen_prod_z      = Var("userFloat('gen_prod_z')",      float, doc = "Gen match: mmg mother production vertex z"),
+        gen_l3d         = Var("userFloat('gen_l3d')",         float, doc = "Gen match: mmg decay legnth 3D"),
+        gen_lxy         = Var("userFloat('gen_lxy')",         float, doc = "Gen match: mmg decay legnth XY"),
+        gen_tau         = Var("userFloat('gen_tau')",         float, doc = "Gen match: mmg decay time 3D"),
+    )
+)
+
+Dileptons3MuTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","MuMuMu"),
+    cut=cms.string(""),
+    name=cms.string("mmm"),
+    doc=cms.string("Triple Muon Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = Dileptons3MuTableVariables
+)
+
+Dileptons3MuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","MuMuMu"),
+    cut=cms.string(""),
+    name=cms.string("mmm"),
+    doc=cms.string("Triple Muon Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = Dileptons3MuMcTableVariables
+)
 
 ##################################################################################
 ###
@@ -950,9 +1008,11 @@ DileptonPlusXMcSequence = cms.Sequence(DileptonsMc * PrimaryVertexInfoMc * BxToM
 DileptonPlusXTables     = cms.Sequence(DileptonsDiMuonTable   * DileptonsHHTable    * DileptonsElElTable     *
                                        DileptonsElMuTable     * DileptonsKmumuTable * DileptonsKeeTable      *
                                        DileptonsKKmumuTable   * DileptonsKKeeTable  * DileptonsDstarTable    *
+                                       Dileptons3MuTable *
                                        DileptonsMuMuGammaTable * PrimaryVertexInfoTable * prescaleTable)
 DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTable     * DileptonsElElMcTable *
                                        DileptonsElMuMcTable   * DileptonsKmumuMcTable  * DileptonsKeeMcTable  *
                                        DileptonsKKmumuMcTable * DileptonsKKeeMcTable   * DileptonsDstarMcTable *
                                        PrimaryVertexInfoMcTable * DileptonsMuMuGammaMcTable * BxToMuMuGenTable *
+                                       Dileptons3MuMcTable *
                                        BxToMuMuGenSummaryTable * DstarGenTable * prescaleTable)
