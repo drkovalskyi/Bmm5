@@ -174,6 +174,16 @@ private:
 		int hh_index,
 		const bmm::Candidate& daughter1,
 		const bmm::Candidate& daughter2);
+  
+  void
+  fillKstarInfo(pat::CompositeCandidateCollection& kstar_collection,
+		const edm::Event& iEvent,
+		const pat::CompositeCandidate& ksCand,
+		const pat::PackedCandidate& pion,
+		int mm_index,
+		int hh_index,
+		const bmm::Candidate& daughter1,
+		const bmm::Candidate& daughter2);
 
   void
   buildDstarCandidates(pat::CompositeCandidateCollection& dstar_collection,
@@ -182,7 +192,7 @@ private:
 		       const pat::PackedCandidate& had1,
 		       const pat::PackedCandidate& had2);
 
-  void
+  const pat::CompositeCandidate*
   buildKsCandidates(pat::CompositeCandidateCollection& hh_collection,
 		    const edm::Event& iEvent,
 		    const pat::PackedCandidate& had1,
@@ -465,6 +475,7 @@ private:
   bool   recoD0pipi_;
   bool   recoD0Kpi_;
   bool   recoKspipi_;
+  bool   recoKstar_;
   double minBhhTrkPt_;
   double minDhhTrkPt_;
   double minKsTrkPt_;
@@ -480,6 +491,8 @@ private:
   double maxD0Mass_;
   double minKsMass_;
   double maxKsMass_;
+  double minKstarMass_;
+  double maxKstarMass_;
   double minDmmMass_;
   double maxDmmMass_;
   double min_dm_;
@@ -542,6 +555,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   recoD0pipi_(     iConfig.getParameter<bool>( "recoD0pipi" ) ),
   recoD0Kpi_(      iConfig.getParameter<bool>( "recoD0Kpi" ) ),
   recoKspipi_(     iConfig.getParameter<bool>( "recoKspipi" ) ),
+  recoKstar_(      iConfig.getParameter<bool>( "recoKstar" ) ),
   minBhhTrkPt_(        iConfig.getParameter<double>( "minBhhHadronPt" ) ),
   minDhhTrkPt_(        iConfig.getParameter<double>( "minDhhHadronPt" ) ),
   minKsTrkPt_(         iConfig.getParameter<double>( "minKsHadronPt" ) ),
@@ -557,6 +571,8 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   maxD0Mass_(      iConfig.getParameter<double>( "maxD0Mass" ) ),
   minKsMass_(      iConfig.getParameter<double>( "minKsMass" ) ),
   maxKsMass_(      iConfig.getParameter<double>( "maxKsMass" ) ),
+  minKstarMass_(   iConfig.getParameter<double>( "minKstarMass" ) ),
+  maxKstarMass_(   iConfig.getParameter<double>( "maxKstarMass" ) ),
   minDmmMass_(      iConfig.getParameter<double>( "minDmmMass" ) ),
   maxDmmMass_(      iConfig.getParameter<double>( "maxDmmMass" ) ),
   min_dm_(      iConfig.getParameter<double>( "minDm" ) ),
@@ -576,6 +592,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   produces<pat::CompositeCandidateCollection>("BToKKee");
   produces<pat::CompositeCandidateCollection>("BToMuMuGamma");
   produces<pat::CompositeCandidateCollection>("Dstar");
+  produces<pat::CompositeCandidateCollection>("Kstar");
     
   setupTmvaReader(bdtReader0_,(iConfig.getParameter<edm::FileInPath>("bdtEvent0")).fullPath());
   setupTmvaReader(bdtReader1_,(iConfig.getParameter<edm::FileInPath>("bdtEvent1")).fullPath());
@@ -1290,6 +1307,133 @@ DileptonPlusXProducer::fillDstarInfo(pat::CompositeCandidateCollection& dstar_co
   dstarCand.addUserInt("pv_ntrks", pv_ntrks);
   
   dstar_collection.push_back(dstarCand);
+}
+
+void
+DileptonPlusXProducer::fillKstarInfo(pat::CompositeCandidateCollection& kstar_collection,
+				     const edm::Event& iEvent,
+				     const pat::CompositeCandidate& ksCand,
+				     const pat::PackedCandidate& pion,
+				     int mm_index,
+				     int hh_index,
+				     const bmm::Candidate& daughter1,
+				     const bmm::Candidate& daughter2)
+{
+  pat::CompositeCandidate kstarCand;
+  kstarCand.addUserInt("mm_index", mm_index);
+  kstarCand.addUserInt("hh_index", hh_index);
+
+  // pion raw information
+  kstarCand.addUserFloat("pion_pt",     pion.pt());
+  kstarCand.addUserFloat("pion_eta",    pion.eta());
+  kstarCand.addUserFloat("pion_phi",    pion.phi());
+  kstarCand.addUserFloat("pion_dxy_bs", pion.bestTrack()->dxy(*beamSpot_));
+  auto pion_sdxy_bs = 0;
+  if (pion.bestTrack()->dxyError() > 0)
+    pion_sdxy_bs = fabs(pion.bestTrack()->dxy(*beamSpot_))/pion.bestTrack()->dxyError();
+  kstarCand.addUserFloat("pion_sdxy_bs", pion_sdxy_bs);
+  kstarCand.addUserInt("pion_charge", pion.charge());
+
+  // gen info
+  if (isMC_){
+    auto gen_info = getGenMatchInfo(daughter1, daughter2, &pion);
+    kstarCand.addUserInt(  "gen_pion_pdgId",  gen_info.kaon1_pdgId);
+    kstarCand.addUserInt(  "gen_pion_mpdgId", gen_info.kaon1_motherPdgId);
+    kstarCand.addUserFloat("gen_pion_pt",     gen_info.kaon1_pt);
+    kstarCand.addUserFloat("gen_mass",        gen_info.kll_mass);
+    kstarCand.addUserFloat("gen_pt",          gen_info.kll_pt);
+    kstarCand.addUserInt(  "gen_pdgId",       gen_info.kll_pdgId);
+    kstarCand.addUserInt(  "gen_mpdgId",      gen_info.kll_motherPdgId);
+    kstarCand.addUserFloat("gen_prod_x",      gen_info.kll_prod_vtx.x());
+    kstarCand.addUserFloat("gen_prod_y",      gen_info.kll_prod_vtx.y());
+    kstarCand.addUserFloat("gen_prod_z",      gen_info.kll_prod_vtx.z());
+    kstarCand.addUserFloat("gen_l3d",         (gen_info.kll_prod_vtx - gen_info.ll_vtx).r());
+    kstarCand.addUserFloat("gen_lxy",         (gen_info.kll_prod_vtx - gen_info.ll_vtx).rho());
+    kstarCand.addUserFloat("gen_tau",         computeDecayTime(gen_info));
+    kstarCand.addUserInt(  "gen_cpdgId",      gen_info.common_mother ? gen_info.common_mother->pdgId() : 0);
+  }
+
+  // Kinematic fit
+  
+  // Rebuild ll vertex to ensure that the KinematicTree remains self
+  // consistent and no elements get out of scope or get deleted
+  // when the tree is used in subsequent fits
+  auto llVertexFit = vertexLeptonsWithKinematicFitter(daughter1, daughter2);
+  auto tree = llVertexFit.tree();
+
+  KinematicFitResult result;
+  if (daughter1.track()) result.tracks.push_back(daughter1.track());
+  if (daughter2.track()) result.tracks.push_back(daughter2.track());
+  if (pion.bestTrack()) result.tracks.push_back(pion.bestTrack());
+
+  kstarCand.addUserFloat("ks_dist",   -1);
+  kstarCand.addUserFloat("ks_distErr",  0);
+  
+  if (llVertexFit.valid()) {
+    auto ksVtxState = llVertexFit.vtx_state();
+
+    const reco::TransientTrack pionTT = theTTBuilder_->build(pion.bestTrack());
+
+    KinematicParticleFactoryFromTransientTrack partFactory;
+    KinematicParticleVertexFitter fitter;
+
+    std::vector<RefCountedKinematicParticle> particles;
+    double chi = 0.;
+    double ndf = 0.;
+
+    tree->movePointerToTheTop();
+    particles.push_back(tree->currentParticle());
+    float pionMassErr(PionMassErr_);
+    particles.push_back(partFactory.particle(pionTT,PionMass_,chi,ndf,pionMassErr));
+
+    RefCountedKinematicTree vertexFitTree;
+    try {
+      vertexFitTree = fitter.fit(particles);
+      result.set_tree(vertexFitTree);
+      if (result.valid()) {
+	VertexDistance3D distance3D;
+	auto dist = distance3D.distance(ksVtxState, result.vtx_state() );
+	kstarCand.addUserFloat("ks_dist",    dist.value(), true);
+	kstarCand.addUserFloat("ks_distErr", dist.error(), true);
+      }
+    } catch (const std::exception& e) {}
+  }
+
+  result.postprocess(*beamSpot_);
+  auto displacement = compute3dDisplacement(result);
+  addFitInfo(kstarCand, result, "kin", displacement, -1, -1, 1);
+
+  // pion compatibility with PV
+  
+  // refit soft_pion with PV constraint
+  int pvIndex = ksCand.userInt("kin_pvIndex");
+  
+  double pv_prob(0), pv_with_pion_prob(0), pv_sum_pt(0), pv_sum_pt2(0);
+  int pv_ntrks(0);
+  if (pvIndex >= 0){
+    auto fit_results = refitWithVertexConstraint(*pion.bestTrack(), pvIndex);
+    auto& pv_refit = fit_results.first;
+    auto& pv_refit_with_pion = fit_results.second;
+    
+    if (pv_refit_with_pion.valid()){
+      pv_with_pion_prob = pv_refit_with_pion.vtxProb();
+    }
+
+    if (pv_refit.valid()){
+      pv_prob = pv_refit.vtxProb();
+      pv_sum_pt = pv_refit.sumPt();
+      pv_sum_pt2 = pv_refit.sumPt2();
+      pv_ntrks = pv_refit.number_of_daughters();
+    }
+  }
+  
+  kstarCand.addUserFloat("pv_prob", pv_prob);
+  kstarCand.addUserFloat("pv_sum_pt", pv_sum_pt);
+  kstarCand.addUserFloat("pv_sum_pt2", pv_sum_pt2);
+  kstarCand.addUserFloat("pv_with_pion_prob", pv_with_pion_prob);
+  kstarCand.addUserInt("pv_ntrks", pv_ntrks);
+  
+  kstar_collection.push_back(kstarCand);
 }
 
 void DileptonPlusXProducer::fillBtoKKllInfo(pat::CompositeCandidate& bCand,
@@ -2084,36 +2228,37 @@ DileptonPlusXProducer::buildDstarCandidates(pat::CompositeCandidateCollection& d
   }
 }
 
-void
+const pat::CompositeCandidate*
 DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_collection,
 					 const edm::Event& iEvent,
 					 const pat::PackedCandidate& had1,
 					 const pat::PackedCandidate& had2) {
-  if (had1.pt() < minKsTrkPt_ || fabs(had1.eta()) > maxKsTrkEta_) return;
-  if (had2.pt() < minKsTrkPt_ || fabs(had2.eta()) > maxKsTrkEta_) return;
+  if (not recoKspipi_) return nullptr;
+  if (had1.pt() < minKsTrkPt_ || fabs(had1.eta()) > maxKsTrkEta_) return nullptr;
+  if (had2.pt() < minKsTrkPt_ || fabs(had2.eta()) > maxKsTrkEta_) return nullptr;
   AddFourMomenta addP4;
   bmm::Candidate pion1(had1);
   pion1.setType(PionMass_, "had", 211 * had1.charge());
   bmm::Candidate pion2(had2);
   pion2.setType(PionMass_, "had", 211 * had2.charge());
 
-  if (recoKspipi_){
-    double ks_mass = (pion1.p4() + pion2.p4()).mass();
-
-    if (ks_mass > minKsMass_ && ks_mass < maxKsMass_){
+  double ks_mass = (pion1.p4() + pion2.p4()).mass();
+  
+  if (ks_mass > minKsMass_ && ks_mass < maxKsMass_){
 	
-      pat::CompositeCandidate ksCand(std::string("hh"));
-      ksCand.addDaughter( pion1 , "pion1");
-      ksCand.addDaughter( pion2 , "pion2");
-      addP4.set( ksCand );
+    pat::CompositeCandidate ksCand(std::string("hh"));
+    ksCand.addDaughter( pion1 , "pion1");
+    ksCand.addDaughter( pion2 , "pion2");
+    addP4.set( ksCand );
 	
-      if (preprocess(ksCand, iEvent, pion1, pion2)){
-	// Kinematic Fits
-	auto d0VertexFit = fillDileptonInfo(ksCand, iEvent, pion1, pion2);
-	hh_collection.push_back(ksCand);
-      }
+    if (preprocess(ksCand, iEvent, pion1, pion2)){
+      // Kinematic Fits
+      auto d0VertexFit = fillDileptonInfo(ksCand, iEvent, pion1, pion2);
+      hh_collection.push_back(ksCand);
+      return &hh_collection.back();
     }
   }
+  return nullptr;
 }
 
 
@@ -2189,6 +2334,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   auto btokkee = std::make_unique<pat::CompositeCandidateCollection>();
   auto btommg  = std::make_unique<pat::CompositeCandidateCollection>();
   auto dstar_collection = std::make_unique<pat::CompositeCandidateCollection>();
+  auto kstar_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto mmm_collection = std::make_unique<pat::CompositeCandidateCollection>();
   AddFourMomenta addP4;
 
@@ -2324,6 +2470,29 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	    }
 	  }
 	}
+	
+	// Kstar->Kspi->mmpi
+	if (recoKstar_){
+	  for (unsigned int k = 0; k < nPFCands; ++k) {
+	    pat::PackedCandidate pion((*pfCandHandle_)[k]);
+	    if ( not isGoodHadron(pion) ) continue;
+    
+	    if (overlap(muon1, pion) || overlap(muon2, pion)) continue;
+
+	    pion.setMass(PionMass_);
+
+	    double ks_mass = (muon1.p4() + muon2.p4()).mass();
+	    double kstar_mass = (muon1.p4() + muon2.p4() + pion.p4()).mass();
+
+	    if (ks_mass > minKsMass_ && ks_mass < maxKsMass_ &&
+		kstar_mass > minKstarMass_ && kstar_mass < maxKstarMass_) {
+	      fillKstarInfo(*kstar_collection, iEvent, dimuonCand, 
+			    pion, mm_index, -1, muon1, muon2);
+	      kstar_collection->back().addUserFloat("mass", kstar_mass);
+	      
+	    }
+	  }
+	}
 
 	// mmm
 	for (unsigned int imu3 = 0; imu3 < good_muon_candidates.size(); ++imu3) {
@@ -2421,7 +2590,27 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	  
 	buildDstarCandidates(*dstar_collection, *hh_collection, iEvent, had1, had2);
 
-	buildKsCandidates(*hh_collection, iEvent, had1, had2);
+	const auto* ksCand = buildKsCandidates(*hh_collection, iEvent, had1, had2);
+	// Kstar->Kspi->mmpi
+	if (recoKstar_ && ksCand){
+	  for (unsigned int k = 0; k < nPFCands; ++k) {
+	    pat::PackedCandidate pion((*pfCandHandle_)[k]);
+	    if ( not isGoodHadron(pion) ) continue;
+    
+	    if (overlap(had1, pion) || overlap(had2, pion)) continue;
+
+	    pion.setMass(PionMass_);
+
+	    double kstar_mass = (had1.p4() + had2.p4() + pion.p4()).mass();
+
+	    if (kstar_mass > minKstarMass_ && kstar_mass < maxKstarMass_) {
+	      fillKstarInfo(*kstar_collection, iEvent, *ksCand, 
+			    pion, -1, hh_collection->size() - 1, had1, had2);
+	      kstar_collection->back().addUserFloat("mass", kstar_mass);
+	    }
+	  }
+	}
+	  
 	
 	// // reco Btohh
 	// if (dileptonCand.name() == "hh")
@@ -2614,6 +2803,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   iEvent.put(std::move(btokkee),"BToKKee");
   iEvent.put(std::move(btommg), "BToMuMuGamma");
   iEvent.put(std::move(dstar_collection), "Dstar");
+  iEvent.put(std::move(kstar_collection), "Kstar");
 }
 
 KalmanVertexFitResult 

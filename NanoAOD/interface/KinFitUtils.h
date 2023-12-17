@@ -47,7 +47,8 @@ namespace bmm
   const float D0Mass_          = 1.86484;
   const float D0MassErr_       = 0.05e-3;
   const float PhiMass_         = 1.01946;
-  
+
+  // ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> >
   typedef reco::Candidate::LorentzVector LorentzVector;
   typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzM4D<double>> LorentzVectorM;
   typedef ROOT::Math::SMatrix<double, 6, 6, ROOT::Math::MatRepSym<double, 6> > Matrix6S;
