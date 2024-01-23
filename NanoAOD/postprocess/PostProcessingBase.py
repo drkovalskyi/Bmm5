@@ -176,10 +176,10 @@ class FlatNtupleBase(Processor):
             n_processed[0] = n_events
 
             if self.n_gen_all != None:
-                n_gen_all = np.empty((1), dtype="i")
-                n_gen_passed = np.empty((1), dtype="i")
-                t.Branch("n_gen_all", n_gen_all, "n_gen_all/I")
-                t.Branch("n_gen_passed", n_gen_passed, "n_gen_passed/I")
+                n_gen_all = np.empty((1), dtype="u8")
+                n_gen_passed = np.empty((1), dtype="u8")
+                t.Branch("n_gen_all", n_gen_all, "n_gen_all/l")
+                t.Branch("n_gen_passed", n_gen_passed, "n_gen_passed/l")
                 n_gen_all[0] = self.n_gen_all
                 n_gen_passed[0] = self.n_gen_passed
             
@@ -327,8 +327,8 @@ class ResourceHandler(object):
     def _submit_job(self, job):
         raise Exception("Not implemented")
 
-    def number_of_free_slots(self):
-        raise Exception("Not implemented")
+    # def number_of_free_slots(self):
+    #     raise Exception("Not implemented")
 
     def name(self):
         pass
@@ -350,7 +350,7 @@ class ResourceHandler(object):
             return len(self.active_jobs)
 
     def number_of_free_slots(self):
-        n = self.max_njobs - self.number_of_running_jobs()
+        n = self.max_njobs - self.number_of_running_jobs(owned=False)
         if n<0: n=0
         return n
 

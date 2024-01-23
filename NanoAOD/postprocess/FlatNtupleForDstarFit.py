@@ -103,7 +103,10 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
         self.tree.addBranch('dm',         'Float_t', 0, "m(D*) - m(D0)")
         
         self.tree.addBranch('chan',        'UInt_t', 0, "0: Kpi, 1: pipi, 2: mumu")
-        self.tree.addBranch('mc_match',     'Int_t', 0, "PdgId of the MC matched D meson")
+        self.tree.addBranch('mc_match',     'Int_t', 0, "PdgId of MC matched Dstar")
+        self.tree.addBranch('mc_parent',    'Int_t', 0, "PdgId of MC matched parent of Dstar")
+        self.tree.addBranch('mc_d0_ancestor', 'Int_t', 0, "PdgId of a common ancestor of D0 decay products")
+        self.tree.addBranch('mc_dstar_ancestor', 'Int_t', 0, "PdgId of a common ancestor of Dstar decay products")
 
         self.tree.addBranch('dstar_vtx_prob', 'Float_t', 0, "D* PV with soft pion probability")
         # self.tree.addBranch('dstar_pt',       'Float_t', 0, "D* pt")
@@ -148,22 +151,32 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
         self.tree['ls']  = self.event.luminosityBlock
         self.tree['evt'] = self.event.event
         self.tree['npv'] = ord(self.event.PV_npvsGood) if isinstance(self.event.PV_npvsGood, str) else self.event.PV_npvsGood
+
+        ## fill MC information
         if hasattr(self.event, 'Pileup_nTrueInt'):
             self.tree['npu']      = self.event.Pileup_nPU
             self.tree['npu_mean'] = self.event.Pileup_nTrueInt
             self.tree['mc_match'] = self.event.dstar_gen_pdgId[cand]
+            self.tree['mc_parent'] = self.event.dstar_gen_mpdgId[cand]
+            self.tree['mc_dstar_ancestor'] = self.event.dstar_gen_cpdgId[cand]
 
         self.tree['certified_muon']   = self._is_certified(self.event, "muon")
         self.tree['certified_golden'] = self._is_certified(self.event, "golden")
         self.tree['n']   = ncands
 
-        if self.job_info['final_state'] == 'dzpipi':
+        if self.job_info['final_state'] in ['dzpipi', 'dzkpi']:
             # pipi final state
             if self.event.dstar_hh_index[cand] >= 0:
                 hh_index = self.event.dstar_hh_index[cand]
-                if self.event.hh_had1_pdgId[hh_index] * self.event.hh_had2_pdgId[hh_index] == - 211 * 211:
-                
-                    self.tree['chan'] = 1
+                signature = self.event.hh_had1_pdgId[hh_index] * self.event.hh_had2_pdgId[hh_index]
+                if (self.job_info['final_state'] == 'dzpipi' and signature == -211 * 211) or \
+                   (self.job_info['final_state'] == 'dzkpi' and signature == -321 * 211) :
+
+                    if self.job_info['final_state'] == 'dzkpi':
+                        self.tree['chan'] = 0
+                    if self.job_info['final_state'] == 'dzpipi':
+                        self.tree['chan'] = 1
+
                     self.tree['dm'] = self.event.dstar_dm_pv[cand]
 
                     self.tree['dstar_vtx_prob'] = self.event.dstar_pv_with_pion_prob[cand]
@@ -177,22 +190,34 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                     self.tree['d0_phi']         = self.event.hh_kin_phi[hh_index]
                     self.tree['d0_m']           = self.event.hh_kin_mass[hh_index]
                     self.tree['d0_me']          = self.event.hh_kin_massErr[hh_index]
-                    self.tree['d0_d1_pt']       = self.event.hh_kin_had1_pt[hh_index]
-                    self.tree['d0_d1_eta']      = self.event.hh_kin_had1_eta[hh_index]
-                    self.tree['d0_d1_phi']      = self.event.hh_kin_had1_phi[hh_index]
-                    self.tree['d0_d2_pt']       = self.event.hh_kin_had2_pt[hh_index]
-                    self.tree['d0_d2_eta']      = self.event.hh_kin_had2_eta[hh_index]
-                    self.tree['d0_d2_phi']      = self.event.hh_kin_had2_phi[hh_index]
+                    if self.event.hh_kin_had1_pt[hh_index] >= self.event.hh_kin_had2_pt[hh_index]: 
+                        self.tree['d0_d1_pt']       = self.event.hh_kin_had1_pt[hh_index]
+                        self.tree['d0_d1_eta']      = self.event.hh_kin_had1_eta[hh_index]
+                        self.tree['d0_d1_phi']      = self.event.hh_kin_had1_phi[hh_index]
+                        self.tree['d0_d2_pt']       = self.event.hh_kin_had2_pt[hh_index]
+                        self.tree['d0_d2_eta']      = self.event.hh_kin_had2_eta[hh_index]
+                        self.tree['d0_d2_phi']      = self.event.hh_kin_had2_phi[hh_index]
+                    else:
+                        self.tree['d0_d2_pt']       = self.event.hh_kin_had1_pt[hh_index]
+                        self.tree['d0_d2_eta']      = self.event.hh_kin_had1_eta[hh_index]
+                        self.tree['d0_d2_phi']      = self.event.hh_kin_had1_phi[hh_index]
+                        self.tree['d0_d1_pt']       = self.event.hh_kin_had2_pt[hh_index]
+                        self.tree['d0_d1_eta']      = self.event.hh_kin_had2_eta[hh_index]
+                        self.tree['d0_d1_phi']      = self.event.hh_kin_had2_phi[hh_index]
                     self.tree['d0_spvip']       = self.event.hh_kin_spvip[hh_index]
                     self.tree['d0_pvip']        = self.event.hh_kin_pvip[hh_index]
 
                     self.tree['d0_alpha']       = self.event.hh_kin_alpha[hh_index]
                     self.tree['d0_alphaBS']     = self.event.hh_kin_alphaBS[hh_index]
                     self.tree['d0_sl3d']        = self.event.hh_kin_sl3d[hh_index]
+                    
+                    if hasattr(self.event, 'hh_gen_cpdgId'):
+                        self.tree['mc_d0_ancestor'] = self.event.hh_gen_cpdgId[hh_index]
+
         elif self.job_info['final_state'] == 'dzmm':
             # mm final state
             if self.event.dstar_mm_index[cand] >= 0:
-        
+                
                 self.tree['chan'] = 2
                 mm_index = self.event.dstar_mm_index[cand]
 
@@ -209,12 +234,20 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                 self.tree['d0_phi']         = self.event.mm_kin_phi[mm_index]
                 self.tree['d0_m']           = self.event.mm_kin_mass[mm_index]
                 self.tree['d0_me']          = self.event.mm_kin_massErr[mm_index]
-                self.tree['d0_d1_pt']       = self.event.mm_kin_mu1_pt[mm_index]
-                self.tree['d0_d1_eta']      = self.event.mm_kin_mu1_eta[mm_index]
-                self.tree['d0_d1_phi']      = self.event.mm_kin_mu1_phi[mm_index]
-                self.tree['d0_d2_pt']       = self.event.mm_kin_mu2_pt[mm_index]
-                self.tree['d0_d2_eta']      = self.event.mm_kin_mu2_eta[mm_index]
-                self.tree['d0_d2_phi']      = self.event.mm_kin_mu2_phi[mm_index]
+                if self.event.mm_kin_mu1_pt[mm_index] >= self.event.mm_kin_mu2_pt[mm_index]: 
+                    self.tree['d0_d1_pt']       = self.event.mm_kin_mu1_pt[mm_index]
+                    self.tree['d0_d1_eta']      = self.event.mm_kin_mu1_eta[mm_index]
+                    self.tree['d0_d1_phi']      = self.event.mm_kin_mu1_phi[mm_index]
+                    self.tree['d0_d2_pt']       = self.event.mm_kin_mu2_pt[mm_index]
+                    self.tree['d0_d2_eta']      = self.event.mm_kin_mu2_eta[mm_index]
+                    self.tree['d0_d2_phi']      = self.event.mm_kin_mu2_phi[mm_index]
+                else:
+                    self.tree['d0_d2_pt']       = self.event.mm_kin_mu1_pt[mm_index]
+                    self.tree['d0_d2_eta']      = self.event.mm_kin_mu1_eta[mm_index]
+                    self.tree['d0_d2_phi']      = self.event.mm_kin_mu1_phi[mm_index]
+                    self.tree['d0_d1_pt']       = self.event.mm_kin_mu2_pt[mm_index]
+                    self.tree['d0_d1_eta']      = self.event.mm_kin_mu2_eta[mm_index]
+                    self.tree['d0_d1_phi']      = self.event.mm_kin_mu2_phi[mm_index]
                 self.tree['d0_spvip']       = self.event.mm_kin_spvip[mm_index]
                 self.tree['d0_pvip']        = self.event.mm_kin_pvip[mm_index]
                 self.tree['d0_d1_muid']     = self.event.Muon_softMva[self.event.mm_mu1_index[mm_index]]
@@ -223,6 +256,9 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                 self.tree['d0_alpha']       = self.event.mm_kin_alpha[mm_index]
                 self.tree['d0_alphaBS']     = self.event.mm_kin_alphaBS[mm_index]
                 self.tree['d0_sl3d']        = self.event.mm_kin_sl3d[mm_index]
+                
+                if hasattr(self.event, 'mm_gen_cpdgId'):
+                    self.tree['mc_d0_ancestor'] = self.event.mm_gen_cpdgId[mm_index]
         else:
             raise Exception("Unsupported final state: %s" % self.job_info['final_state'])
 
@@ -325,8 +361,8 @@ if __name__ == "__main__":
     
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
-
-    p = FlatNtupleForDstarFit("/tmp/dmytro/3f0f496cfb86458c8b67602490cae4cd.job")
+    
+    p = FlatNtupleForDstarFit("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/FlatNtuples/526/dzkpi/ZeroBias+Run2022F-PromptReco-v1+MINIAOD/00fa2c63d9f5bbb1ab34a51281bdb2d7.job")
     # p = FlatNtupleForDstarFit(file_name)
 
     print(p.__dict__)

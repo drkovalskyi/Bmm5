@@ -190,6 +190,8 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
         self.tree.addBranch('sim_mpdgId',            'Int_t', 0, "PDG id of SIM mother")
         self.tree.addBranch('jpsi_mass',           'Float_t', 0, "Jpsi mass")
         self.tree.addBranch('jpsi_massErr',        'Float_t', 0, "Jpsi mass uncertainty")
+        self.tree.addBranch('hlt_pt',              'Float_t', -1, "HLT muon object pt")
+        self.tree.addBranch('l1_pt',               'Float_t', -1, "L1 trigger muon object pt")
         
         self.tree.addBranch('HLT_DoubleMu4_3_LowMass',        'UInt_t', 0)
         self.tree.addBranch('HLT_DoubleMu4_3_Jpsi',           'UInt_t', 0)
@@ -209,8 +211,8 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
         self.tree['run']         = self.event.run
         self.tree['ls']          = self.event.luminosityBlock
         self.tree['evt']         = self.event.event
-        self.tree['PV_npvs']     = self.event.PV_npvs
-        self.tree['PV_npvsGood'] = self.event.PV_npvsGood
+        self.tree['PV_npvs']     = ord(self.event.PV_npvs) if isinstance(self.event.PV_npvs, str) else self.event.PV_npvs
+        self.tree['PV_npvsGood'] = ord(self.event.PV_npvsGood) if isinstance(self.event.PV_npvsGood, str) else self.event.PV_npvsGood
 
         self.tree['pt']     = self.event.Muon_pt[i]
         self.tree['eta']    = self.event.Muon_eta[i]
@@ -276,6 +278,8 @@ class FlatNtupleForMuonMVA(FlatNtupleBase):
         self.tree['trkLostLayersOuter']  = self.event.MuonId_trkLostLayersOuter[i]
 
         self.tree['highPurity']          = self.event.MuonId_highPurity[i]
+        self.tree['l1_pt']               = self.event.MuonId_l1_pt[i]
+        self.tree['hlt_pt']              = self.event.MuonId_hlt_pt[i]
 
         # Signal Jpsi Triggers
         trigger = 0
