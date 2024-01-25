@@ -27,10 +27,10 @@ Here is a list required cmsDriver options to get analysis specific parts include
       * conditions: 130X_mcRun3_2022_realistic_v5
       * Example:
       	* ```cmsDriver.py RECO --conditions 130X_mcRun3_2022_realistic_v5 --datatier NANOAOD --era Run3 --eventcontent NANOAODSIM --filein /store/mc/Run3Summer22MiniAODv4/DstarToD0Pi_D0To2Mu_MuFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen/MINIAODSIM/130X_mcRun3_2022_realistic_v5-v1/30000/71ec4425-d76b-446d-9d89-a7b250c56568.root --fileout file:/tmp/dmytro/test.root --nThreads 4 -n 1000 --no_exec --python_filename test.py --scenario pp --step NANO --mc --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"```
-    * **Run3Summer23BPixNanoAODv12** (Run3Summer23BPixNanoAODv12)
+    * **Run3Summer23BPixMiniAODv4** (Run3Summer23BPixNanoAODv12)
       * era: Run3_2023
       * conditions: 130X_mcRun3_2023_realistic_postBPix_v2
-    * **Run3Summer23NanoAODv12** (Run3Summer23NanoAODv12)
+    * **Run3Summer23MiniAODv4** (Run3Summer23NanoAODv12)
       * era: Run3_2023
       * conditions: 130X_mcRun3_2023_realistic_v14
     * **MiniAODv3**
