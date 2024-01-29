@@ -34,8 +34,7 @@ active_tasks = {
     "Skims":[
         # "ks","phi", "dstar", "dstar2"
         # "ks", "phi", "dstar"
-        # "ks"
-        "phi"
+        # "ks", "phi"
         # "ksmm"
         #"em", "dzpipi"
         # "dzmm"
@@ -60,6 +59,9 @@ active_tasks = {
         # "muon_mva"
         # "fit-em"
         # "dstar", "dzpipi", "dzkpi"
+        # "dzpipi"
+        # "dzpipi_otherZB"
+        "dzkpi"
         # "ksmm",
         # "kspipi"
     ]
@@ -128,7 +130,8 @@ cuts = {
 
     "dstar_dzpipi" : (
         "dstar_hh_index>=0 and "
-        "hh_had1_pt[dstar_hh_index]>4 and hh_had2_pt[dstar_hh_index]>3 and "
+        "max(hh_had1_pt[dstar_hh_index], hh_had2_pt[dstar_hh_index])>4 and "
+        "min(hh_had1_pt[dstar_hh_index], hh_had2_pt[dstar_hh_index])>3 and "
         "hh_kin_alpha[dstar_hh_index]<0.1 and hh_kin_sl3d[dstar_hh_index]>3 and "
         "hh_kin_vtx_prob[dstar_hh_index]>0.01 and dstar_pv_with_pion_prob>0.1 and "
         "dstar_dm_pv>0.140 and dstar_dm_pv<0.155 and "
@@ -138,7 +141,9 @@ cuts = {
     ),
     "dstar_dzkpi" : (
         "dstar_hh_index>=0 and "
-        "hh_had1_pt[dstar_hh_index]>4 and hh_had2_pt[dstar_hh_index]>3 and "
+        "max(hh_had1_pt[dstar_hh_index], hh_had2_pt[dstar_hh_index])>4 and "
+        "min(hh_had1_pt[dstar_hh_index], hh_had2_pt[dstar_hh_index])>3 and "
+        # "hh_had1_pt[dstar_hh_index]>4 and hh_had2_pt[dstar_hh_index]>3 and "
         "hh_kin_alpha[dstar_hh_index]<0.1 and hh_kin_sl3d[dstar_hh_index]>3 and "
         "hh_kin_vtx_prob[dstar_hh_index]>0.01 and dstar_pv_with_pion_prob>0.1 and "
         "dstar_dm_pv>0.140 and dstar_dm_pv<0.155 and "
@@ -1179,7 +1184,7 @@ tasks = [
     {
         "input_pattern":"DstarToD0Pi_D0To2Pi_PiFilter",
         "processor":"FlatNtupleForDstarFit",
-        "name":"dstar",
+        "name":"dzpipi",
         "type":"FlatNtuples",
         "files_per_job":20,
         "tree_name" : "dzpipiMC",
@@ -1232,7 +1237,7 @@ tasks = [
     {
         "input_pattern":"ZeroBias",
         "processor":"FlatNtupleForDstarFit",
-        "name":"dstar",
+        "name":"dzpipi",
         "type":"FlatNtuples",
         "files_per_job":100,
         "tree_name" : "dzpipiData",
@@ -1241,6 +1246,23 @@ tasks = [
         "final_state" : "dzpipi",
         "best_candidate": "",
         "triggers":["HLT_ZeroBias"],
+        "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
+        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias|" + common_branches + ")$",
+    },
+    {
+        "input_pattern":"ZeroBias",
+        "processor":"FlatNtupleForDstarFit",
+        "name":"dzpipi_otherZB",
+        "type":"FlatNtuples",
+        "files_per_job":100,
+        "tree_name" : "dzpipiData",
+        "blind" : False,
+        "cut" : cuts["dstar_dzpipi"],
+        "final_state" : "dzpipi",
+        "best_candidate": "",
+        "triggers":["HLT_ZeroBias_FirstBXAfterTrain", "HLT_ZeroBias_FirstCollisionAfterAbortGap",
+                    "HLT_ZeroBias_FirstCollisionInTrain", "HLT_ZeroBias_IsolatedBunches",
+                    "HLT_ZeroBias_LastCollisionInTrain"],
         "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
         "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias|" + common_branches + ")$",
     },
@@ -1290,7 +1312,7 @@ tasks = [
         "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|" + common_branches + ")$",
     },
     {
-        "input_pattern":"Inclusive",
+        "input_pattern":"Inclusive|DStartoD0Pi_D0toKPi",
         "processor":"FlatNtupleForDstarFit",
         "name":"dzkpi",
         "type":"FlatNtuples",
