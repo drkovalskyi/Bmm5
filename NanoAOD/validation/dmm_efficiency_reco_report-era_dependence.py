@@ -6,34 +6,78 @@ from base_efficiency_reco_report import EfficiencyReport
 limit = 10000
 path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529"
 samples = [
+    # {
+    #     'final_state':'kpi',
+    #     'name':'\dzkpi 22',
+    #     'files': glob.glob(f'{path}/DstarToD0Pi_D0ToKPi_KPiFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv4-130X_mcRun3_2022_realistic_v5-v2+MINIAODSIM/*.root')[:limit],
+    #     'chain':None
+    # },
+    # {
+    #     'final_state':'kpi',
+    #     'name':'\dzkpi 22EE',
+    #     'files': glob.glob(f'{path}/DstarToD0Pi_D0ToKPi_KPiFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22EEMiniAODv4-130X_mcRun3_2022_realistic_postEE_v6-v2+MINIAODSIM/*.root')[:limit],
+    #     'chain':None
+    # },
+    # {
+    #     'final_state':'kpi',
+    #     'name':'\dzkpi 23',
+    #     'files': glob.glob(f'{path}/DstarToD0Pi_D0ToKPi_KPiFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v15-v1+MINIAODSIM/*.root')[:limit],
+    #     'chain':None
+    # },
+    # {
+    #     'final_state':'kpi',
+    #     'name':'\dzkpi 23BPix',
+    #     'files': glob.glob(f'{path}/DstarToD0Pi_D0ToKPi_KPiFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer23BPixMiniAODv4-130X_mcRun3_2023_realistic_postBPix_v5-v1+MINIAODSIM/*.root')[:limit],
+    #     'chain':None
+    # },
     {
         'final_state':'mm',
-        'name':'\dzmm',
-        'scale':1e3,
+        'name':'\dzmm 22',
         'files': glob.glob(f'{path}/DstarToD0Pi_D0To2Mu_MuFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v1+MINIAODSIM/*.root')[:limit],
         'chain':None
     },
     {
-        'final_state':'pipi',
-        'name':'\dzpipi',
-        'scale':1e3,
-        'files': glob.glob(f'{path}/DstarToD0Pi_D0To2Pi_PiFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v1+MINIAODSIM/*.root')[:limit],
+        'final_state':'mm',
+        'name':'\dzmm 22EE',
+        'files': glob.glob(f'{path}/DstarToD0Pi_D0To2Mu_MuFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22EEMiniAODv3-124X_mcRun3_2022_realistic_postEE_v1-v1+MINIAODSIM/*.root')[:limit],
         'chain':None
     },
     {
-        'final_state':'kpi',
-        'name':'\dzkpi',
-        'scale':1e3,
-        'files': glob.glob(f'{path}/DstarToD0Pi_D0ToKPi_KPiFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv4-130X_mcRun3_2022_realistic_v5-v2+MINIAODSIM/*.root')[:limit],
+        'final_state':'mm',
+        'name':'\dzmm 23',
+        'files': glob.glob(f'{path}/DstarToD0Pi_D0To2Mu_MuFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v1+MINIAODSIM/*.root')[:limit],
         'chain':None
     },
     {
-        'final_state':'fakes',
-        'name':r'\dzpipimm',
-        'scale':1e9/50/50,
-        'files': glob.glob(f'{path}/DstarToD0Pi_D0To2Pi_PiToMu_PiFilter_PiLifetime0p02_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22EEMiniAODv4-130X_mcRun3_2022_realistic_postEE_v6-v3+MINIAODSIM/*.root')[:limit],
+        'final_state':'mm',
+        'name':'\dzmm 23BPix',
+        'files': glob.glob(f'{path}/DstarToD0Pi_D0To2Mu_MuFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer23BPixMiniAODv4-130X_mcRun3_2023_realistic_postBPix_v2-v1+MINIAODSIM/*.root')[:limit],
         'chain':None
     },
+    # {
+    #     'final_state':'pipi',
+    #     'name':'\dzpipi 22',
+    #     'files': glob.glob(f'{path}/DstarToD0Pi_D0To2Pi_PiFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v1+MINIAODSIM/*.root')[:limit],
+    #     'chain':None
+    # },
+    # {
+    #     'final_state':'pipi',
+    #     'name':'\dzpipi 22EE',
+    #     'files': glob.glob(f'{path}/DstarToD0Pi_D0To2Pi_PiFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22EEMiniAODv3-124X_mcRun3_2022_realistic_postEE_v1-v1+MINIAODSIM/*.root')[:limit],
+    #     'chain':None
+    # },
+    # {
+    #     'final_state':'pipi',
+    #     'name':'\dzpipi 23',
+    #     'files': glob.glob(f'{path}/DstarToD0Pi_D0To2Pi_PiFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v1+MINIAODSIM/*.root')[:limit],
+    #     'chain':None
+    # },
+    # {
+    #     'final_state':'pipi',
+    #     'name':'\dzpipi 23BPix',
+    #     'files': glob.glob(f'{path}/DstarToD0Pi_D0To2Pi_PiFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer23BPixMiniAODv4-130X_mcRun3_2023_realistic_postBPix_v2-v1+MINIAODSIM/*.root')[:limit],
+    #     'chain':None
+    # },
 ]
 
 cuts = [
@@ -126,5 +170,5 @@ cuts = [
 ]
 
 report = EfficiencyReport(samples, cuts)
-report.make_report("gen", r"%7.4f")
+report.make_report("gen", r"%8.5f")
 

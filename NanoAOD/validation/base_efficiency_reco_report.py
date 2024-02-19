@@ -1,4 +1,5 @@
 import ROOT
+import glob
 
 class EfficiencyReport:
     def __init__(self, samples, cuts):
@@ -174,32 +175,46 @@ class EfficiencyReport:
                 first_line = False
 
 if __name__ == "__main__":
-    path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/523"
+    path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/526"
 
     samples = [
-        {
-            'final_state':'mm',
-            'name':'\dzmm',
-            'files':[
-                path + "/DstarToD0Pi_D0To2Mu_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v2+MINIAODSIM/089fcee0-0260-470b-8f08-a458129f2c4a.root",
-            ],
-        },
+        # {
+        #     'final_state':'mm',
+        #     'name':'\dzmm',
+        #     'scale':1000.,
+        #     'files': [
+        #         # f for f in glob.glob(path + "/DstarToD0Pi_D0To2Mu_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v2+MINIAODSIM/*.root")
+        #         f for f in glob.glob(path + "/DstarToD0Pi_D0To2Mu_MuFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v1+MINIAODSIM/*.root")
+        #     ],
+        # },
         {
             'final_state':'pipi',
             'name':'\dzpipi',
+            'scale':1000.,
             'files':[
-                "/eos/cms/store/group/phys_muon/dmytro/tmp/DstarToD0Pi_D0To2Pi_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen.root",
+                # "/eos/cms/store/group/phys_bphys/bmm/dmytro/tmp/DstarToD0Pi_D0To2Pi_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen.root",
+                # "/afs/cern.ch/work/d/dmytro/projects/Run3-Bmm-NanoAODv12/src/DstarToD0Pi_D0To2Pi_b-quark_NANOAODSIM_Bmm.root"
+                f for f in glob.glob(path + "/DstarToD0Pi_D0To2Pi_PiFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v1+MINIAODSIM/*.root")
             ],
         },
+        # {
+        #     'final_state':'mm',
+        #     'name':'\dzpipimm',
+        #     'scale':1e9/50/50,
+        #     'files':[
+        #         f for f in glob.glob(path + "/DstarToD0Pi_D0To2Pi_PiToMu_PiFilter_PiLifetime0p1_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv4-130X_mcRun3_2022_realistic_v5-v2+MINIAODSIM/*.root")
+        #         f for f in glob.glob(path + "/DstarToD0Pi_D0To2Pi_PiToMu_PiFilter_PiLifetime0p02_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22EEMiniAODv4-130X_mcRun3_2022_realistic_postEE_v6-v3+MINIAODSIM/*.root")
+        #     ],
+        # },
     ]
 
     cuts = [
         {
             'cut':{
-                'mm':'dstar_gen_pdgId!=0 && dstar_mm_index>=0 && mm_mu1_pt[dstar_mm_index]>4 && mm_mu2_pt[dstar_mm_index]>4',
-                'pipi':'dstar_hh_index>=0&&abs(dstar_gen_pdgId)==413&&abs(hh_gen_had1_pdgId)==211&&abs(hh_gen_had2_pdgId)==211 && hh_had1_pt[dstar_hh_index]>4 && hh_had2_pt[dstar_hh_index]>4',
+                'mm':'dstar_mm_index>=0 && abs(dstar_gen_pdgId)==413 && mm_mu1_pt[dstar_mm_index]>4 && mm_mu2_pt[dstar_mm_index]>4 && Muon_isGlobal[mm_mu1_index[dstar_mm_index]] && Muon_isGlobal[mm_mu2_index[dstar_mm_index]]',
+                'pipi':'dstar_hh_index>=0&&abs(dstar_gen_pdgId)==413 && abs(hh_gen_had1_pdgId[dstar_hh_index])==211&&abs(hh_gen_had2_pdgId[dstar_hh_index])==211 && hh_had1_pt[dstar_hh_index]>4 && hh_had2_pt[dstar_hh_index]>4 && abs(hh_gen_pdgId[dstar_hh_index])==421 && abs(hh_had1_pdgId[dstar_hh_index])==211 && abs(hh_had2_pdgId[dstar_hh_index])==211',
             },
-            'name':'MC matched baseline',
+            'name':'MC matched preselection',
         },
         {
             'cut':{
@@ -235,12 +250,12 @@ if __name__ == "__main__":
             },
             'name':'$\PDstpm$ vertex probability $> 0.1$',
         },
-        {
-            'cut':{
-                'mm':'Muon_softMva[mm_mu1_index[dstar_mm_index]] > 0.45 && Muon_softMva[mm_mu2_index[dstar_mm_index]] > 0.45',
-            },
-            'name':'Muon identification',
-        },
+        # {
+        #     'cut':{
+        #         'mm':'Muon_softMva[mm_mu1_index[dstar_mm_index]] > 0.45 && Muon_softMva[mm_mu2_index[dstar_mm_index]] > 0.45',
+        #     },
+        #     'name':'Muon identification',
+        # },
         {
             'cut':{
                 'mm':'mm_kin_sl3d[dstar_mm_index]>3',
