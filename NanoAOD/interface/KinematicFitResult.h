@@ -19,7 +19,10 @@ class KinematicFitResult{
   void set_tree(RefCountedKinematicTree tree);
   
   bool valid() const;
+
+  // compute displacement with respect to the beam spot
   void postprocess(const reco::BeamSpot& beamSpot);
+  
   float mass() const;
   float refit_mass(unsigned int i, unsigned int j) const;
   GlobalVector p3() const;
