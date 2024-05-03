@@ -34,7 +34,11 @@ namespace bmm
   };
 
 
-  bool dr_match(const LorentzVector& reco , const LorentzVector& gen);
+  template <typename T1, typename T2> bool dr_match(const T1& reco , const T2& gen){
+    if (fabs(reco.pt()-gen.pt())/gen.pt()<0.1 and deltaR(reco,gen)<0.02)
+      return true;
+    return false;
+  }
   
   std::vector<unsigned int> 
   get_depth_from_permutation(const std::vector<unsigned int>& elements);

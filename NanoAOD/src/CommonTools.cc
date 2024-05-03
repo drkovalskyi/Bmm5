@@ -86,13 +86,6 @@ CloseTrackInfo::fillCandInfo(pat::CompositeCandidate& cand, int pvIndex, std::st
   cand.addUserFloat( name + "docatrk",     minDoca(0.03, pvIndex) );
 }
 
-bool
-bmm::dr_match(const LorentzVector& reco , const LorentzVector& gen){
-  if (fabs(reco.pt()-gen.pt())/gen.pt()<0.1 and deltaR(reco,gen)<0.02)
-    return true;
-  return false;
-}
-
 std::vector<unsigned int> 
 bmm::get_depth_from_permutation(const std::vector<unsigned int>& elements){
   std::vector<unsigned int> result;
