@@ -96,7 +96,7 @@ namespace bmm
   };
 
   LorentzVector makeLorentzVectorFromPxPyPzM(double px, double py, double pz, double m);
-
+  LorentzVector makeLorentzVectorFromP3M(const math::XYZVector& p,  double m);
   
 }
 
