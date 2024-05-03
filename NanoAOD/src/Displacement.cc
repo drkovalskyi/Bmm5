@@ -80,6 +80,7 @@ namespace {
 
 void bmm::Displacement::compute_displacement()
 {
+  if (not fit_.valid()) return;
   auto candTransientTrack = fit_.particle()->refittedTransientTrack();
   auto impactParameter3D = IPTools::absoluteImpactParameter3D(candTransientTrack, prodVertex_);
   auto impactParameterZ  = IPTools::signedDecayLength3D(candTransientTrack, GlobalVector(0,0,1), prodVertex_);
