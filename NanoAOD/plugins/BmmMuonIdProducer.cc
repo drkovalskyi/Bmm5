@@ -19,6 +19,7 @@
 #include <algorithm>
 
 #include "Bmm5/NanoAOD/interface/XGBooster.h"
+#include "Bmm5/NanoAOD/interface/CommonTools.h"
 #include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
 #include "DataFormats/L1Trigger/interface/Muon.h"
 
@@ -188,6 +189,7 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 	mu_cand.addUserFloat("trkValidFrac",  muon.innerTrack()->validFraction());
 	mu_cand.addUserFloat("trkNormChi2",   muon.innerTrack()->normalizedChi2());
 	
+	mu_cand.addUserInt("pixelPattern",    bmm::get_pixel_pattern(muon.innerTrack()->hitPattern()));
 	mu_cand.addUserInt("nPixels",         muon.innerTrack()->hitPattern().numberOfValidPixelHits());
 	mu_cand.addUserInt("nValidHits",      muon.innerTrack()->hitPattern().numberOfValidTrackerHits());
 	mu_cand.addUserInt("nLostHitsInner",  muon.innerTrack()->hitPattern().numberOfLostTrackerHits(reco::HitPattern::MISSING_INNER_HITS));
@@ -205,6 +207,7 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 	mu_cand.addUserFloat("trkValidFrac",  0);
 	mu_cand.addUserFloat("trkNormChi2",   9999.);
 	
+	mu_cand.addUserInt("pixelPattern",    0);
 	mu_cand.addUserInt("nPixels",         0);
 	mu_cand.addUserInt("nValidHits",      0);
 	mu_cand.addUserInt("nLostHitsInner",  0);

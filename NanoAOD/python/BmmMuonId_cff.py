@@ -99,6 +99,7 @@ BmmMuonIdVariables = cms.PSet(
     match2_pullY        = Var("userFloat('match2_pullY')",        float, doc = "Station 2 local segment-track dY/dErr"),
     match2_pullDyDz     = Var("userFloat('match2_pullDyDz')",     float, doc = "Station 2 local segment-track direction matching in y"),
 
+    pixelPattern        = Var("userInt('pixelPattern')",            int, doc = "Masks: barrel 0b1111, endcap 0b1110000"),
     nPixels             = Var("userInt('nPixels')",                 int, doc = "Number of valid pixel hits"),
     nValidHits          = Var("userInt('nValidHits')",              int, doc = "Number of valid hits"),
     staValidHits        = Var("userInt('staValidHits')",            int, doc = "Number of valid hits for outter track"),
