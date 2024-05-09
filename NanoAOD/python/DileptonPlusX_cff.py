@@ -21,9 +21,16 @@ def merge_psets(*argv):
                 setattr(result,name,value)
     return result
 
-def copy_pset(pset, replace_dict=dict()):
+def copy_pset(pset, replace_dict=dict(), drop_patterns=[]):
     result = cms.PSet()
     for name in pset.parameters_().keys():
+        drop_param = False
+        for pattern in drop_patterns:
+            if re.search(pattern, name):
+                drop_param = True
+                break
+        if drop_param:
+            continue
         new_name = name
         for pattern,repl in replace_dict.items():
             new_name = re.sub(pattern,repl,new_name)
@@ -325,6 +332,117 @@ DileptonsDiMuonMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer
     extension=cms.bool(False),
     variables = DileptonsDiMuonMcTableVariables
 )
+
+### Relevant Track Information
+
+TrackTableVariables = cms.PSet(
+    pt       = Var("userFloat('pt')",          float, doc = "pt"),
+    eta      = Var("userFloat('eta')",         float, doc = "eta"),
+    phi      = Var("userFloat('phi')",         float, doc = "phi"),
+    charge   = Var("userInt('charge')",          int, doc = "charge"),
+    vtx_x    = Var("userFloat('vtx_x')",       float, doc = "reference point"),
+    vtx_y    = Var("userFloat('vtx_y')",       float, doc = "reference point"),
+    vtx_z    = Var("userFloat('vtx_z')",       float, doc = "reference point"),
+    trkValidFrac   = Var("userFloat('trkValidFrac')",   float, doc = "N_valid/(N_valid + N_lost + N_lostIn + N_lostOut)"),
+    trkNormChi2    = Var("userFloat('trkNormChi2')",    float, doc = "Normalized chi2"),
+    pixelPattern   = Var("userInt('pixelPattern')",       int, doc = "Masks: barrel 0b1111, endcap 0b1110000"),
+    nPixels        = Var("userInt('nPixels')",            int, doc = "Number Of Valid Pixel Hits"),
+    nValidHits     = Var("userInt('nValidHits')",         int, doc = "Number Of Valid Tracker Hits"),
+    trkLayers           = Var("userInt('trkLayers')",          int, doc = "Tracker Layers With Measurement"),
+    trkLostLayersInner  = Var("userInt('trkLostLayersInner')", int, doc = "Missing inner layers"),
+    trkLostLayersOn     = Var("userInt('trkLostLayersOn')",    int, doc = "Missing layers on the track"),
+    trkLostLayersOuter  = Var("userInt('trkLostLayersOuter')", int, doc = "Missing outter layers"),
+)
+
+TrackMcTableVariables = merge_psets(
+    TrackTableVariables,
+    cms.PSet(
+        gen_pdgId       = Var("userInt('gen_pdgId')",          int, doc = "Gen match pdgId"),
+        gen_mpdgId      = Var("userInt('gen_mpdgId')",         int, doc = "Gen match mother pdgId"),
+    ),
+)
+
+DileptonTrackTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","InterestingTracks"),
+    cut=cms.string(""),
+    name=cms.string("trk"),
+    doc=cms.string("Track Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = TrackTableVariables
+)
+DileptonTrackMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","InterestingTracks"),
+    cut=cms.string(""),
+    name=cms.string("trk"),
+    doc=cms.string("Track Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = TrackMcTableVariables
+)
+
+IsoTableVariables = cms.PSet(
+    trk_index       = Var("userInt('trk_index')",           int, doc = "Track index"),
+    mm_index        = Var("userInt('mm_index')",            int, doc = "mm index"),
+    dr              = Var("userFloat('dr')",              float, doc = "deltaR(track,dimuon)"),
+    pv_ip3d_status  = Var("userInt('pv_ip3d_status')",      int, doc = "Track impact parameter wrt PV: status"),
+    pv_ip3d         = Var("userFloat('pv_ip3d')",         float, doc = "Track impact parameter wrt PV: value"),
+    pv_sip3d        = Var("userFloat('pv_sip3d')",        float, doc = "Track impact parameter wrt PV: significance"),
+    mu1_doca        = Var("userFloat('mu1_doca')",        float, doc = "Track distance of closest approach wrt muon 1"),
+    mu1_vtx_prob    = Var("userFloat('mu1_vtx_prob')",    float, doc = "Track-mu1 vertex: probability"),
+    mu1_vtx_x       = Var("userFloat('mu1_vtx_x')",       float, doc = "Track-mu1 vertex: x"),
+    mu1_vtx_y       = Var("userFloat('mu1_vtx_y')",       float, doc = "Track-mu1 vertex: y"),
+    mu1_vtx_z       = Var("userFloat('mu1_vtx_z')",       float, doc = "Track-mu1 vertex: z"),
+    mu1_vtx_xErr    = Var("userFloat('mu1_vtx_xErr')",    float, doc = "Track-mu1 vertex: xErr"),
+    mu1_vtx_yErr    = Var("userFloat('mu1_vtx_yErr')",    float, doc = "Track-mu1 vertex: yErr"),
+    mu1_vtx_zErr    = Var("userFloat('mu1_vtx_zErr')",    float, doc = "Track-mu1 vertex: zErr"),
+    mu1_vtx_alphaBS = Var("userFloat('mu1_vtx_alphaBS')", float, doc = "Track-mu1 vertex: pointing angle 2D"),
+    mu1_vtx_alpha   = Var("userFloat('mu1_vtx_alpha')",   float, doc = "Track-mu1 vertex: pointing angle 3D"),
+    mu1_vtx_pv_l3d  = Var("userFloat('mu1_vtx_pv_l3d')",  float, doc = "Track-mu1 vertex: decay length 3D wrt PV"),
+    mu1_vtx_pv_sl3d = Var("userFloat('mu1_vtx_pv_sl3d')", float, doc = "Track-mu1 vertex: decay length significance 3D wrt PV"),
+    mu1_vtx_mm_l3d  = Var("userFloat('mu1_vtx_mm_l3d')",  float, doc = "Track-mu1 vertex: decay length 3D wrt mm vertex"),
+    mu1_vtx_mm_sl3d = Var("userFloat('mu1_vtx_mm_sl3d')", float, doc = "Track-mu1 vertex: decay length significance 3D wrt mm vertex"),
+    mu2_doca        = Var("userFloat('mu2_doca')",        float, doc = "Track distance of closest approach wrt muon 2"),
+    mu2_vtx_prob    = Var("userFloat('mu2_vtx_prob')",    float, doc = "Track-mu2 vertex: probability"),
+    mu2_vtx_x       = Var("userFloat('mu2_vtx_x')",       float, doc = "Track-mu2 vertex: x"),
+    mu2_vtx_y       = Var("userFloat('mu2_vtx_y')",       float, doc = "Track-mu2 vertex: y"),
+    mu2_vtx_z       = Var("userFloat('mu2_vtx_z')",       float, doc = "Track-mu2 vertex: z"),
+    mu2_vtx_xErr    = Var("userFloat('mu2_vtx_xErr')",    float, doc = "Track-mu2 vertex: xErr"),
+    mu2_vtx_yErr    = Var("userFloat('mu2_vtx_yErr')",    float, doc = "Track-mu2 vertex: yErr"),
+    mu2_vtx_zErr    = Var("userFloat('mu2_vtx_zErr')",    float, doc = "Track-mu2 vertex: zErr"),
+    mu2_vtx_alpha   = Var("userFloat('mu2_vtx_alpha')",   float, doc = "Track-mu2 vertex: pointing angle 3D"),
+    mu2_vtx_alphaBS = Var("userFloat('mu2_vtx_alphaBS')", float, doc = "Track-mu2 vertex: pointing angle 2D"),
+    mu2_vtx_pv_l3d  = Var("userFloat('mu2_vtx_pv_l3d')",  float, doc = "Track-mu2 vertex: decay length 3D wrt PV"),
+    mu2_vtx_pv_sl3d = Var("userFloat('mu2_vtx_pv_sl3d')", float, doc = "Track-mu2 vertex: decay length significance 3D wrt PV"),
+    mu2_vtx_mm_l3d  = Var("userFloat('mu2_vtx_mm_l3d')",  float, doc = "Track-mu2 vertex: decay length 3D wrt mm vertex"),
+    mu2_vtx_mm_sl3d = Var("userFloat('mu2_vtx_mm_sl3d')", float, doc = "Track-mu2 vertex: decay length significance 3D wrt mm vertex"),
+    mm_vtx_prob     = Var("userFloat('mm_vtx_prob')",     float, doc = "Track-mm vertex: probability"),
+)
+
+IsoMcTableVariables = merge_psets(
+    IsoTableVariables,
+    cms.PSet(),
+)
+
+DileptonIsoTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","MuMuIso"),
+    cut=cms.string(""),
+    name=cms.string("mmiso"),
+    doc=cms.string("Isolation information"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = IsoTableVariables
+)
+DileptonIsoMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","MuMuIso"),
+    cut=cms.string(""),
+    name=cms.string("mmiso"),
+    doc=cms.string("Isolation information"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = IsoMcTableVariables
+)
+
 
 ### hh
 
@@ -1090,11 +1208,14 @@ DileptonPlusXMcSequence = cms.Sequence(DileptonsMc * PrimaryVertexInfoMc * BxToM
 DileptonPlusXTables     = cms.Sequence(DileptonsDiMuonTable   * DileptonsHHTable    * DileptonsElElTable     *
                                        DileptonsElMuTable     * DileptonsKmumuTable * DileptonsKeeTable      *
                                        DileptonsKKmumuTable   * DileptonsKKeeTable  * DileptonsDstarTable    *
-                                       Dileptons3MuTable      * DileptonsKstarTable *
+                                       Dileptons3MuTable      * DileptonsKstarTable * DileptonTrackTable     *
+                                       DileptonIsoTable       * 
                                        DileptonsMuMuGammaTable * PrimaryVertexInfoTable * prescaleTable)
+
 DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTable     * DileptonsElElMcTable *
                                        DileptonsElMuMcTable   * DileptonsKmumuMcTable  * DileptonsKeeMcTable  *
                                        DileptonsKKmumuMcTable * DileptonsKKeeMcTable   * DileptonsDstarMcTable *
                                        PrimaryVertexInfoMcTable * DileptonsMuMuGammaMcTable * BxToMuMuGenTable *
-                                       Dileptons3MuMcTable    * DileptonsKstarMcTable  *
+                                       Dileptons3MuMcTable    * DileptonsKstarMcTable  * DileptonTrackMcTable *
+                                       DileptonIsoMcTable     *
                                        BxToMuMuGenSummaryTable * DstarGenTable * prescaleTable)
