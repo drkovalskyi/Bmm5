@@ -18,6 +18,14 @@ def nanoAOD_customizeDileptonPlusX(process):
 
     # keep all genparticles
     process.finalGenParticles.select = cms.vstring("keep *")
+
+    # save gen particle vertex
+    process.genParticleTable.variables = cms.PSet(
+        process.genParticleTable.variables,
+        vx = Var("vx", "float", doc="x coordinate of vertex position"),
+        vy = Var("vy", "float", doc="y coordinate of vertex position"),
+        vz = Var("vz", "float", doc="z coordinate of vertex position")
+    )
     
     return process
 
