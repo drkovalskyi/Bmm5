@@ -51,7 +51,7 @@ namespace bmm
   const reco::Candidate* 
     find_common_ancestor(const std::vector<const reco::Candidate*>& particles, 
 			 unsigned int max_depth=10);
-  
-}
 
+  int get_pixel_pattern(const reco::HitPattern& hit_pattern);
+}
 #endif

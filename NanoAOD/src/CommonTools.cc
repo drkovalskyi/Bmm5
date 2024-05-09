@@ -161,3 +161,17 @@ bmm::find_common_ancestor(const std::vector<const reco::Candidate*>& particles,
   }
   return 0;
 }
+
+int bmm::get_pixel_pattern(const reco::HitPattern& hit_pattern) {
+  // using int is safe since we don't expect more than 8 bits
+  int pattern(0);
+  for (unsigned int layer=1; layer <= 4; ++layer) {
+    if (hit_pattern.hasValidHitInPixelLayer(PixelSubdetector::PixelBarrel, layer))
+      pattern += 1 << (layer - 1);
+  }
+  for (unsigned int disk=1; disk <= 3; ++disk) {
+    if (hit_pattern.hasValidHitInPixelLayer(PixelSubdetector::PixelEndcap, disk))
+      pattern += 1 << (disk + 3);
+  }
+  return pattern;
+}
