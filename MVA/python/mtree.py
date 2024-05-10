@@ -12,7 +12,8 @@ class MTree:
             'Int_t':{'array':'i','root':'I'}, 
             'UInt_t':{'array':'I','root':'i'}, 
             'Float_t':{'array':'f','root':'F'},
-            'ULong64_t':{'array':'L','root':'l'}
+            'ULong64_t':{'array':'L','root':'l'},
+            'Long64_t':{'array':'l','root':'L'},
         }
         self.defaults = dict()
         self.variables = dict()
