@@ -2,6 +2,13 @@
 
 ## New developments
 
+## [NanoAODv12-V05] - 2024/05/10
+### Changes
+	- Added kstar->ks pi
+	- Added HLT scouting prototype
+	- Added tracks and isolation information
+	- Added pixel pattern information for muons and tracks
+
 ## [NanoAODv12-V04] - 2023/12/15
 ### Changes
 	- Added tripple muon final state
