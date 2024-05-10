@@ -43,6 +43,8 @@ active_tasks = {
         # "trig"
         # "mm_mva0p9"
         # "tau3mu"
+        # "mm_vtx"
+        # "dzkpimm"
     ],
 
     # Flat ntuples with task specific content
@@ -58,9 +60,10 @@ active_tasks = {
         # "fit-bkkmm"
         # "muon_mva"
         # "fit-em"
-        # "dstar", "dzpipi", "dzkpi"
-        # "dzpipi"
-        # "dzpipi_otherZB"
+        "dstar",
+        "dzpipi",
+        # "dzpipi_otherZB",
+        # "dzkpi_otherZB"
         "dzkpi"
         # "ksmm",
         # "kspipi"
@@ -166,9 +169,9 @@ cuts = {
         "mm_mu1_pt[dstar_mm_index]>4 and mm_mu2_pt[dstar_mm_index]>3 and "
         "mm_kin_alpha[dstar_mm_index]<0.1 and mm_kin_sl3d[dstar_mm_index]>3 and "
         "mm_kin_vtx_prob[dstar_mm_index]>0.01 and dstar_pv_with_pion_prob>0.1 and "
-        "dstar_dm_pv>0.140 and dstar_dm_pv<0.155 and "
+        # "dstar_dm_pv>0.140 and dstar_dm_pv<0.155 and "
         # "mm_kin_mass[dstar_mm_index]>1.76 and mm_kin_mass[dstar_mm_index]<1.94 and "
-        "mm_kin_mass[dstar_mm_index]>1.65 and mm_kin_mass[dstar_mm_index]<2.4 and "
+        "mm_kin_mass[dstar_mm_index]>1.5 and mm_kin_mass[dstar_mm_index]<2.4 and "
         "Muon_isGlobal[mm_mu1_index[dstar_mm_index]] and "
         "Muon_isGlobal[mm_mu2_index[dstar_mm_index]]"
         # "Muon_softMva[mm_mu1_index[dstar_mm_index]] > 0.45 and "
@@ -191,9 +194,10 @@ cuts = {
         "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] < 0 and "
         "Muon_softMva[mm_mu1_index] > 0.45 and mm_mu1_pt>4 and "
         "Muon_softMva[mm_mu2_index] > 0.45 and mm_mu2_pt>4 and "
-        "abs(mm_kin_mass-0.45)<0.1 and "
-        "mm_kin_slxy>10 and mm_kin_lxy>1 and mm_kin_alpha<0.001 and "
-        "mm_kin_vtx_prob>0.01 and "
+        # "abs(mm_kin_mass-0.45)<0.1 and "
+        "abs(mm_kin_mass-0.50)<0.15 and "
+        # "mm_kin_slxy>10 and mm_kin_lxy>1 and mm_kin_alpha<0.01 and "
+        "mm_kin_slxy>3 and mm_kin_alpha<0.1 and "
         "HLT_DoubleMu4_3_LowMass"
     ),
     "kspipi": (
@@ -387,6 +391,15 @@ tasks = [
         "files_per_job":50
     },
     {
+        "input_pattern":"Inclusive",
+        "processor":"SimpleSkimmer",
+        "cut":"abs(mm_gen_pdgId)==421",
+        "name":"dzkpimm",
+        "type":"Skims",
+        "keep": "^(GenPart_.*|nGenPart|dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|HLT_.*" + common_branches + ")$",
+        "files_per_job":200
+    },
+    {
         "input_pattern":"EGamma|DoubleEG|SingleElectron|SinglePhoton|MINIAODSIM",
         # "input_pattern":"EGamma|DoubleEG|SingleElectron|SinglePhoton",
         "processor":"Skimmer",
@@ -446,7 +459,7 @@ tasks = [
         "name":"ksmm",
         "type":"Skims",
         "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + common_branches + ")$",
-        "files_per_job":200
+        "files_per_job":100
     },
     {
         "input_pattern":"InclusiveDileptonMinBias",
@@ -455,7 +468,7 @@ tasks = [
         "name":"ksmm",
         "type":"Skims",
         "keep": "^(GenPart_.*|nGenPart|mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + common_branches + ")$",
-        "files_per_job":200
+        "files_per_job":100
     },
     {
         "input_pattern":"K0sToMuMu",
@@ -1198,7 +1211,7 @@ tasks = [
         "processor":"FlatNtupleForDstarFit",
         "name":"dstar",
         "type":"FlatNtuples",
-        "files_per_job":20,
+        "files_per_job":10,
         "tree_name" : "dzmmMC",
         "blind" : False,
         "cut" : cuts["dstar_dzmm"],
@@ -1220,6 +1233,32 @@ tasks = [
         "best_candidate": "",
     },
     {
+        "input_pattern":"DstarToD0Pi_D0ToKMuNu",
+        "processor":"FlatNtupleForDstarFit",
+        "name":"dstar",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "dzkmunuMC",
+        "blind" : False,
+        "cut" : cuts["dstar_dzmm"],
+        "final_state" : "dzmm",
+        "triggers":["HLT_DoubleMu4_3_LowMass"],
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"DstarToD0Pi_D0ToPiMuNu",
+        "processor":"FlatNtupleForDstarFit",
+        "name":"dstar",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "dzpimunuMC",
+        "blind" : False,
+        "cut" : cuts["dstar_dzmm"],
+        "final_state" : "dzmm",
+        "triggers":["HLT_DoubleMu4_3_LowMass"],
+        "best_candidate": "",
+    },
+    {
         "input_pattern":"ParkingDoubleMuonLowMass",
         "processor":"FlatNtupleForDstarFit",
         "name":"dstar",
@@ -1231,7 +1270,8 @@ tasks = [
         "final_state" : "dzmm",
         "best_candidate": "",
         "triggers":["HLT_DoubleMu4_3_LowMass"],
-        "pre-selection":"dstar_mm_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
+        # "pre-selection":"dstar_mm_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
+        "pre-selection":"dstar_mm_index>=0",
         "pre-selection-keep":"^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
     },
     {
@@ -1264,7 +1304,7 @@ tasks = [
                     "HLT_ZeroBias_FirstCollisionInTrain", "HLT_ZeroBias_IsolatedBunches",
                     "HLT_ZeroBias_LastCollisionInTrain"],
         "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
-        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias|" + common_branches + ")$",
+        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias.*|" + common_branches + ")$",
     },
     {
         "input_pattern":"ParkingDoubleElectronLowMass|ParkingDoubleMuonLowMass",
@@ -1297,6 +1337,23 @@ tasks = [
         "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias|" + common_branches + ")$",
     },
     {
+        "input_pattern":"ZeroBias",
+        "processor":"FlatNtupleForDstarFit",
+        "name":"dzkpi_otherZB",
+        "type":"FlatNtuples",
+        "files_per_job":100,
+        "tree_name" : "dzkpiData",
+        "blind" : False,
+        "cut" : cuts["dstar_dzkpi"],
+        "final_state" : "dzkpi",
+        "best_candidate": "",
+        "triggers":["HLT_ZeroBias_FirstBXAfterTrain", "HLT_ZeroBias_FirstCollisionAfterAbortGap",
+                    "HLT_ZeroBias_FirstCollisionInTrain", "HLT_ZeroBias_IsolatedBunches",
+                    "HLT_ZeroBias_LastCollisionInTrain"],
+        "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
+        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias.*|" + common_branches + ")$",
+    },
+    {
         "input_pattern":"ParkingDoubleElectronLowMass|ParkingDoubleMuonLowMass",
         "processor":"FlatNtupleForDstarFit",
         "name":"dzkpi",
@@ -1312,7 +1369,7 @@ tasks = [
         "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|" + common_branches + ")$",
     },
     {
-        "input_pattern":"Inclusive|DStartoD0Pi_D0toKPi",
+        "input_pattern":"Inclusive|DStartoD0Pi_D0toKPi|DstarToD0Pi_D0ToKPi",
         "processor":"FlatNtupleForDstarFit",
         "name":"dzkpi",
         "type":"FlatNtuples",
@@ -1330,15 +1387,16 @@ tasks = [
         "processor":"FlatNtupleForDstarFit",
         "name":"dstar",
         "type":"FlatNtuples",
-        "files_per_job":200,
+        "files_per_job":100,
         "tree_name" : "dzmmMcBkg",
         "blind" : False,
         "cut" : cuts["dstar_dzmm"],
         "final_state" : "dzmm",
         "best_candidate": "",
         "triggers":["HLT_DoubleMu4_3_LowMass"],
-        "pre-selection":"dstar_mm_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
-        "pre-selection-keep":"^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        # "pre-selection":"dstar_mm_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
+        "pre-selection":"dstar_mm_index>=0",
+        "pre-selection-keep":"^(GenPart_.*|nGenPart|dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
     },
     ################ dstar loose ##################
     # {
@@ -1457,6 +1515,16 @@ tasks = [
         "files_per_job":500,
         "keep": "^(mm_.*|nmm|Muon_.*|nMuon|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|HLT_Mu3_PFJet40|HLT_Mu8|HLT_Mu12_IP6.*|" + common_branches + ")$",
     },
+    {
+        "input_pattern":"ZeroBias|DoubleElectron",
+        "processor":"SimpleSkimmer",
+        "cut":"mm_kin_vtx_prob>0.1",
+        "name":"mm_vtx",
+        "candidate_loop":True,
+        "type":"Skims",
+        "files_per_job":100,
+        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|bkmm_.*|nbkmm|bkkmm_.*|nbkkmm|" + common_branches + ")$",
+    },
     # {
     #     "input_pattern":"InclusiveDileptonMinBias",
     #     "processor":"SimpleSkimmer",
@@ -1500,45 +1568,49 @@ tasks = [
         "blind" : False,
         "cut" : cuts["ksmm"],
         "final_state" : "mm",
+        "mm_extra_info": True,
     },
     {
      	"input_pattern":"ParkingDoubleMuonLowMass",
         "processor":"FlatNtupleForMLFit",
         "name":"ksmm",
 	"type":"FlatNtuples",
-	"files_per_job":200,
+	"files_per_job":100,
         "tree_name" : "ksmmData",
         "blind" : False,
         "cut" : cuts["ksmm"],
         "final_state" : "mm",
-        "pre-selection":"abs(mm_kin_mass-0.45)<0.1 && mm_kin_slxy>10 && mm_kin_vtx_prob>0.01", 
+        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
         "pre-selection-keep":"^(mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        "mm_extra_info": True,
     },
     {
      	"input_pattern":"InclusiveDileptonMinBias",
         "processor":"FlatNtupleForMLFit",
         "name":"ksmm",
 	"type":"FlatNtuples",
-	"files_per_job":200,
+	"files_per_job":100,
         "tree_name" : "ksmmMcBkg",
         "blind" : False,
         "cut" : cuts["ksmm"],
         "final_state" : "mm",
-        "pre-selection":"abs(mm_kin_mass-0.45)<0.1 && mm_kin_slxy>10 && mm_kin_vtx_prob>0.01", 
+        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
         "pre-selection-keep":"^(mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        "mm_extra_info": True,
     },
     {
      	"input_pattern":"K0sTo2PiTo2Mu_K0sFilter_MuFilter",
         "processor":"FlatNtupleForMLFit",
         "name":"ksmm",
 	"type":"FlatNtuples",
-	"files_per_job":20,
+	"files_per_job":10,
         "tree_name" : "kspipimmMc",
         "blind" : False,
         "cut" : cuts["ksmm"],
         "final_state" : "mm",
-        "pre-selection":"abs(mm_kin_mass-0.45)<0.1 && mm_kin_slxy>10 && mm_kin_vtx_prob>0.01", 
+        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
         "pre-selection-keep":"^(mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        "mm_extra_info": True,
     },
     {
      	"input_pattern":"InclusiveDileptonMinBias",

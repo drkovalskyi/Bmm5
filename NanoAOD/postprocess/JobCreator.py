@@ -9,8 +9,18 @@ class JobCreator(object):
 
     def load_existing_jobs(self):
         """Find existings jobs and store their input"""
-        command = 'find -L %s -type f -name "*job" -path "*/%u/*"' % (cfg.output_location, cfg.version)
-        all_jobs = subprocess.check_output(command, shell=True, encoding='utf8').splitlines()
+        # command = 'find -L %s -type f -name "*job" -path "*/%u/*"' % (cfg.output_location, cfg.version)
+        command = "eos find -f -name 'job$' %s|grep '/%u/'" % (cfg.output_location, cfg.version)
+        all_jobs = []
+        try:
+            all_jobs = subprocess.check_output(command, shell=True, encoding='utf8').splitlines()
+        except subprocess.CalledProcessError as e:
+            exit_code = e.returncode
+            if exit_code == 1:
+                # grep finds no matches - it's acceptable
+                pass
+            else:
+                raise
         print("Found %u jobs" % len(all_jobs))
         njobs = 0
         for job in all_jobs:
@@ -40,7 +50,8 @@ class JobCreator(object):
         """Find all files and splits them in datasets"""
         # # look for files that were not modified at least for 30 mins to avoid interferences with transfers
         # command = 'find -L %s/%s -mmin +30 -type f -name "*root"' % (cfg.input_location, cfg.version)
-        command = 'find -L %s -type f -name "*root"' % (cfg.input_location)
+        # command = 'find -L %s -type f -name "*root"' % (cfg.input_location)
+        command = "eos find -f -name 'root$' %s" % (cfg.input_location)
         all_inputs = subprocess.check_output(command, shell=True, encoding='utf8').splitlines()
         all_inputs.sort()
         print("Total number of input file: %u" % len(all_inputs))

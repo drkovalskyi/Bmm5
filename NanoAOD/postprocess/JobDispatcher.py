@@ -7,6 +7,9 @@ from FlatNtupleForBmmMva import FlatNtupleForBmmMva
 from FlatNtupleForMLFit import FlatNtupleForMLFit
 from pprint import pprint
 
+def eos_remove(file):
+    subprocess.call("eos rm %s" % file, shell=True)
+
 class JobDispatcher(object):
     """Job scheduling"""
     def __init__(self, lifetime=36000):
@@ -97,7 +100,8 @@ class JobDispatcher(object):
     def _load_existing_jobs(self):
         """Find existings jobs and store their input"""
         print("Loading existing jobs...")
-        command = 'find -L %s -type f -name "*job" -path "*/%u/*"' % (cfg.output_location, cfg.version)
+        # command = 'find -L %s -type f -name "*job" -path "*/%u/*"' % (cfg.output_location, cfg.version)
+        command = "eos find -f -name 'job$' %s|grep '/%u/'" % (cfg.output_location, cfg.version)
         self.all_jobs = subprocess.check_output(command, shell=True, encoding='utf8').splitlines()
         print("Found %u jobs" % len(self.all_jobs))
 
@@ -220,6 +224,7 @@ class JobDispatcher(object):
                 # remove previous backups
                 if os.path.exists(f + ".failed"):
                     os.remove(f + ".failed")
+                    # eos_remove(f + ".failed")
                 # backup latest failure
                 if os.path.exists(f):
                     shutil.move(f, f + ".failed")
@@ -369,12 +374,14 @@ class JobDispatcher(object):
 if __name__ == "__main__":
     jd = JobDispatcher()
     # jd.kill_all_jobs()
-    # jd.show_resource_availability()
+    jd.show_resource_availability()
     # jd.update_status_of_jobs()
     # jd.job_report()
     
-    jd.reset_failures()
+    # jd.reset_failures()
     jd.process_jobs()
     jd.show_failures()
+    # jd.reset_failures()
+    # jd.show_failures()
     
     # jd.clean_up()
