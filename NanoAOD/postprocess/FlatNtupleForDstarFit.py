@@ -5,6 +5,10 @@ import multiprocessing
 from datetime import datetime
 import hashlib
 
+import ROOT
+
+LorentzVector = ROOT.ROOT.Math.LorentzVector('ROOT::Math::PtEtaPhiM4D<double>')
+
 class FlatNtupleForDstarFit(FlatNtupleBase):
     """Flat ROOT ntuple producer for Bmm5 UML fit"""
 
@@ -38,8 +42,7 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                 max_value = values[i]
 
         return [best_candidate]
-        
-            
+    
     def _process_events(self):
         """Event loop"""
 
@@ -101,9 +104,12 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
         self.tree.addBranch('n',           'UInt_t', 0, "Number of candidates")
         
         self.tree.addBranch('dm',         'Float_t', 0, "m(D*) - m(D0)")
+        self.tree.addBranch('dm_kpi',     'Float_t', 0, "m(D*) - m(D0) D0->Kpi->mm")
         
         self.tree.addBranch('chan',        'UInt_t', 0, "0: Kpi, 1: pipi, 2: mumu")
         self.tree.addBranch('mc_match',     'Int_t', 0, "PdgId of MC matched Dstar")
+        self.tree.addBranch('mc_signature', 'Int_t', 0, "Product of PdgIds of gen matched tracks")
+        self.tree.addBranch('mc_d0_signature', 'Long64_t', 0, "Product of PDG ids of gen decay products of MC matched D0")
         self.tree.addBranch('mc_parent',    'Int_t', 0, "PdgId of MC matched parent of Dstar")
         self.tree.addBranch('mc_d0_ancestor', 'Int_t', 0, "PdgId of a common ancestor of D0 decay products")
         self.tree.addBranch('mc_dstar_ancestor', 'Int_t', 0, "PdgId of a common ancestor of Dstar decay products")
@@ -121,6 +127,7 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
         self.tree.addBranch('d0_eta',      'Float_t', 0, "D0 eta")
         self.tree.addBranch('d0_phi',      'Float_t', 0, "D0 phi")
         self.tree.addBranch('d0_m',        'Float_t', 0, "D0 mass")
+        self.tree.addBranch('d0_kpi_m',    'Float_t', 0, "D0->Kpi->mm mass")
         self.tree.addBranch('d0_me',       'Float_t', 0, "D0 mass error")
         self.tree.addBranch('d0_d1_pt',    'Float_t', 0, "D0 daughter1 pt")
         self.tree.addBranch('d0_d1_eta',   'Float_t', 0, "D0 daughter1 eta")
@@ -157,6 +164,7 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
             self.tree['npu']      = self.event.Pileup_nPU
             self.tree['npu_mean'] = self.event.Pileup_nTrueInt
             self.tree['mc_match'] = self.event.dstar_gen_pdgId[cand]
+            self.tree['mc_signature'] = self.event.dstar_gen_pion_pdgId[cand]
             self.tree['mc_parent'] = self.event.dstar_gen_mpdgId[cand]
             self.tree['mc_dstar_ancestor'] = self.event.dstar_gen_cpdgId[cand]
 
@@ -176,6 +184,17 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                         self.tree['chan'] = 0
                     if self.job_info['final_state'] == 'dzpipi':
                         self.tree['chan'] = 1
+
+                    if hasattr(self.event, 'Pileup_nTrueInt'):
+                        self.tree['mc_signature'] *= self.event.hh_gen_had1_pdgId[hh_index]
+                        self.tree['mc_signature'] *= self.event.hh_gen_had2_pdgId[hh_index]
+                        if self.event.hh_gen_cindex[hh_index] >= 0:
+                            self.tree['mc_d0_signature'] = 1
+                            for igen in range(self.event.nGenPart):
+                                if self.event.GenPart_genPartIdxMother[igen] == self.event.hh_gen_cindex[hh_index]:
+                                    self.tree['mc_d0_signature'] *= self.event.GenPart_pdgId[igen]
+                        else:
+                            self.tree['mc_d0_signature'] = 0
 
                     self.tree['dm'] = self.event.dstar_dm_pv[cand]
 
@@ -221,6 +240,17 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                 self.tree['chan'] = 2
                 mm_index = self.event.dstar_mm_index[cand]
 
+                if hasattr(self.event, 'Pileup_nTrueInt'):
+                    self.tree['mc_signature'] *= self.event.mm_gen_mu1_pdgId[mm_index]
+                    self.tree['mc_signature'] *= self.event.mm_gen_mu2_pdgId[mm_index]
+                    if self.event.mm_gen_cindex[mm_index] >= 0:
+                        self.tree['mc_d0_signature'] = 1
+                        for igen in range(self.event.nGenPart):
+                            if self.event.GenPart_genPartIdxMother[igen] == self.event.mm_gen_cindex[mm_index]:
+                                self.tree['mc_d0_signature'] *= self.event.GenPart_pdgId[igen]
+                    else:
+                        self.tree['mc_d0_signature'] = 0
+
                 self.tree['dm'] = self.event.dstar_dm_pv[cand]
 
                 self.tree['dstar_vtx_prob'] = self.event.dstar_pv_with_pion_prob[cand]
@@ -256,6 +286,32 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                 self.tree['d0_alpha']       = self.event.mm_kin_alpha[mm_index]
                 self.tree['d0_alphaBS']     = self.event.mm_kin_alphaBS[mm_index]
                 self.tree['d0_sl3d']        = self.event.mm_kin_sl3d[mm_index]
+
+                # D0->Kpi->mm
+                # kaon charge is negative
+                # muon PDG id signa is opposite of its charge
+                if self.event.dstar_pion_charge[cand] * self.event.mm_mu1_pdgId[mm_index] > 0:
+                    kaon_mu_index = self.event.mm_mu1_index[mm_index]
+                    pion_mu_index = self.event.mm_mu2_index[mm_index]
+                else:
+                    kaon_mu_index = self.event.mm_mu2_index[mm_index]
+                    pion_mu_index = self.event.mm_mu1_index[mm_index]
+
+                kaon_p4 = LorentzVector(self.event.Muon_pt[kaon_mu_index],
+                                        self.event.Muon_eta[kaon_mu_index],
+                                        self.event.Muon_phi[kaon_mu_index], 0.497648)
+                    
+                pion_p4 = LorentzVector(self.event.Muon_pt[pion_mu_index],
+                                        self.event.Muon_eta[pion_mu_index],
+                                        self.event.Muon_phi[pion_mu_index], 0.139570)
+                    
+                soft_p4 = LorentzVector(self.event.dstar_pion_pt[cand],
+                                        self.event.dstar_pion_eta[cand],
+                                        self.event.dstar_pion_phi[cand], 0.139570)
+                
+                self.tree['d0_kpi_m'] = (kaon_p4 + pion_p4).mass()
+                
+                self.tree['dm_kpi'] = (kaon_p4 + pion_p4 + soft_p4).mass() - self.tree['d0_kpi_m']
                 
                 if hasattr(self.event, 'mm_gen_cpdgId'):
                     self.tree['mc_d0_ancestor'] = self.event.mm_gen_cpdgId[mm_index]
@@ -273,6 +329,8 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
 if __name__ == "__main__":
 
     ### create a test job
+    
+    common_branches = 'PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock'
     
     # job = {
     #     "input": [
@@ -315,14 +373,57 @@ if __name__ == "__main__":
     #     "best_candidate": "",
     #   }
 
+    input_path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/529/dzkpimm/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/"
+    job = {
+        "input": [
+            input_path + "016efedcfb512dc565f3c12ed733bd36.root",
+            input_path + "5b902bfcd14e27228d9e3ef0e62f77ac.root",
+            input_path + "198b4ac8be5b86428a0060af0b2c9fb0.root",
+            input_path + "4adaa92b58ed22c509c0d78d43863a6f.root",
+            input_path + "8b66894bb677aa556e83ea30f305eaa9.root",
+            input_path + "b24b04b46c6efebc23a82c9feea852fa.root",
+            input_path + "6d90f1337f551d51cb070f63ecd76a0c.root",
+            input_path + "47bd4fb54daef9c5e281e98e5007081a.root",
+            input_path + "43db4b25b39dc2698ea307269c3cfcd8.root",
+            input_path + "2d09fe05fc08d23696fa471d54157ff3.root",
+            input_path + "5694d5997d63bd72f8cbce8803c85235.root",
+            input_path + "71f1534316bfd0635d4344417cea5953.root",
+            input_path + "06b35e7ff81bf7944b55bfa132a413ed.root",
+            input_path + "b1776360b268e61474b929878641293e.root",
+            input_path + "1bbc2b0ff8ecdeb2a9dd519bb95c3cba.root",
+            input_path + "6699e4a7763ee81656d85c4f812b789d.root",
+            input_path + "25aedb32644787efc5c23d6fb757e0bc.root",
+            input_path + "4bb41e7ec4baa739c16f407fa6406b02.root",
+            input_path + "0faa06bc41097fc29457284027af3c99.root",
+            input_path + "41c4a6f9b52125bdf0668d40734b36ee.root",
+            # '/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/6516d29c-8ef7-4142-a9ff-da9ba5b3f787.root',
+        ],
+        "signal_only" : False,
+        "tree_name" : "dzmmMC",
+        "blind" : False,
+        "triggers":[],
+        "cut" : (
+            "dstar_mm_index>=0 and "
+            # "mm_mu1_pt[dstar_mm_index]>4 and mm_mu2_pt[dstar_mm_index]>4 and "
+            # "mm_kin_alpha[dstar_mm_index]<0.1 and mm_kin_sl3d[dstar_mm_index]>3 and "
+            # "mm_kin_vtx_prob[dstar_mm_index]>0.01 and dstar_pv_with_pion_prob>0.1 and "
+            "dstar_dm_pv>0.140 and dstar_dm_pv<0.155 and "
+            "mm_kin_mass[dstar_mm_index]>1.5 and mm_kin_mass[dstar_mm_index]<1.94"
+        ),
+        "final_state" : "dzmm",
+        "best_candidate": "",
+      }
+
     # job = {
     #     "input": [
-    #         'root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/523/DstarToD0Pi_D0To2Mu_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22EEMiniAODv3-124X_mcRun3_2022_realistic_postEE_v1-v2+MINIAODSIM/1211fb7f-8f51-41fb-87f4-266a5db414e5.root',
+    #         'root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/526/ParkingDoubleMuonLowMass5+Run2022C-PromptReco-v1+MINIAOD/3237cbb0-122b-4d28-bebf-dea5da307147.root',
     #     ],
     #     "signal_only" : False,
-    #     "tree_name" : "dzmmMC",
+    #     "tree_name" : "dzmmData",
     #     "blind" : False,
-    #     "triggers":[],
+    #     "triggers":["HLT_DoubleMu4_3_LowMass"],
+    #     "pre-selection":"dstar_mm_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
+    #     "pre-selection-keep":"^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
     #     "cut" : (
     #         "dstar_mm_index>=0 and "
     #         "mm_mu1_pt[dstar_mm_index]>4 and mm_mu2_pt[dstar_mm_index]>4 and "
@@ -334,36 +435,12 @@ if __name__ == "__main__":
     #     "final_state" : "dzmm",
     #     "best_candidate": "",
     #   }
-
-    common_branches = 'PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock'
-    
-    job = {
-        "input": [
-            'root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/526/ParkingDoubleMuonLowMass5+Run2022C-PromptReco-v1+MINIAOD/3237cbb0-122b-4d28-bebf-dea5da307147.root',
-        ],
-        "signal_only" : False,
-        "tree_name" : "dzmmData",
-        "blind" : False,
-        "triggers":["HLT_DoubleMu4_3_LowMass"],
-        "pre-selection":"dstar_mm_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
-        "pre-selection-keep":"^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
-        "cut" : (
-            "dstar_mm_index>=0 and "
-            "mm_mu1_pt[dstar_mm_index]>4 and mm_mu2_pt[dstar_mm_index]>4 and "
-            "mm_kin_alpha[dstar_mm_index]<0.1 and mm_kin_sl3d[dstar_mm_index]>3 and "
-            "mm_kin_vtx_prob[dstar_mm_index]>0.01 and dstar_pv_with_pion_prob>0.1 and "
-            "dstar_dm_pv>0.140 and dstar_dm_pv<0.155 and "
-            "mm_kin_mass[dstar_mm_index]>1.81 and mm_kin_mass[dstar_mm_index]<1.94"
-        ),
-        "final_state" : "dzmm",
-        "best_candidate": "",
-      }
     
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
     
-    p = FlatNtupleForDstarFit("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/FlatNtuples/526/dzkpi/ZeroBias+Run2022F-PromptReco-v1+MINIAOD/00fa2c63d9f5bbb1ab34a51281bdb2d7.job")
-    # p = FlatNtupleForDstarFit(file_name)
+    # p = FlatNtupleForDstarFit("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/FlatNtuples/526/dzkpi/ZeroBias+Run2022F-PromptReco-v1+MINIAOD/00fa2c63d9f5bbb1ab34a51281bdb2d7.job")
+    p = FlatNtupleForDstarFit(file_name)
 
     print(p.__dict__)
         
