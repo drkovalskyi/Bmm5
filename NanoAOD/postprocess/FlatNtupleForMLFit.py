@@ -43,6 +43,11 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         'HLT_Mu12_IP6',
         'HLT_DoubleMu4_3_LowMass',
     ]
+    
+    mm_extra_floats = ["mm_kin_alpha", "mm_kin_alphaBS", "mm_kin_spvip", "mm_kin_pvip", 
+		       "mm_iso", "mm_m1iso", "mm_m2iso", "mm_kin_sl3d", "mm_kin_vtx_chi2dof", 
+		       "mm_otherVtxMaxProb1", "mm_otherVtxMaxProb2", "mm_kin_slxy", "mm_kin_lxy"]
+    mm_extra_ints = ["mm_nBMTrks",]
 
     def _validate_inputs(self):
         """Task specific input validation"""
@@ -167,9 +172,12 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             self.tree.addBranch('m2bdt',      'Float_t', 0, "Muon BDT. 1 for hadrons")
             
             if self.job_info['final_state'] == "mm" and \
-               "add_bdt_inputs" in job_info['final_state'] and \
-               job_info['final_state'] == True:
-                
+               "mm_extra_info" in self.job_info and \
+               self.job_info["mm_extra_info"] == True:
+                for var in self.mm_extra_floats:
+                    self.tree.addBranch(var, "Float_t", 0)
+                for var in self.mm_extra_ints:
+                    self.tree.addBranch(var, "Int_t", 0)
             
         elif self.job_info['final_state'] == 'em':
             self.tree.addBranch('id',          'UInt_t', 0, "Tight electron and muon selections")
@@ -261,6 +269,13 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             if hasattr(self.event, 'mm_gen_tau'):
                 self.tree['gtau'] = self.event.mm_gen_tau[cand]
                 self.tree['mc_match'] = self.event.mm_gen_pdgId[cand]
+
+            if "mm_extra_info" in self.job_info and \
+               self.job_info["mm_extra_info"] == True:
+                for var in self.mm_extra_floats:
+                    self.tree[var] = getattr(self.event, var)[cand]
+                for var in self.mm_extra_ints:
+                    self.tree[var] = getattr(self.event, var)[cand]
 
             mu1 = self.event.mm_mu1_index[cand]
             mu2 = self.event.mm_mu2_index[cand]
@@ -674,21 +689,40 @@ if __name__ == "__main__":
     #     "best_candidate": "",
     #   }
     
+    # job = {
+    #     "input": [
+    #         "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/773b2d13-8f06-4e51-b8d3-10105c737f7d.root"
+    #         ],
+    #     "signal_only" : False,
+    #     "tree_name" : "kspipiMc",
+    #     "blind" : False,
+    #     "cut" : (
+    #         "hh_had1_pdgId * hh_had2_pdgId == -211*211 and "
+    #         "abs(hh_kin_mass-0.45) < 0.1 and "
+    #         "hh_kin_slxy>10 and hh_kin_lxy>1 and hh_kin_alpha<0.001 and "
+    #         "hh_kin_vtx_prob>0.01 and hh_gen_pdgId==310"
+    #     ),
+    #     "final_state" : "",
+    #     "best_candidate": "",
+    #   }
+    
     job = {
         "input": [
-            "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/526/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/773b2d13-8f06-4e51-b8d3-10105c737f7d.root"
+            "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/773b2d13-8f06-4e51-b8d3-10105c737f7d.root"
             ],
         "signal_only" : False,
-        "tree_name" : "kspipiMc",
+        "tree_name" : "ksmm",
         "blind" : False,
-        "cut" : (
-            "hh_had1_pdgId * hh_had2_pdgId == -211*211 and "
-            "abs(hh_kin_mass-0.45) < 0.1 and "
-            "hh_kin_slxy>10 and hh_kin_lxy>1 and hh_kin_alpha<0.001 and "
-            "hh_kin_vtx_prob>0.01 and hh_gen_pdgId==310"
-        ),
-        "final_state" : "hh",
+        "cut" :
+            "mm_mu1_index>=0 and mm_mu2_index>=0 and "
+            "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] < 0 and "
+            "abs(mm_kin_mass-0.45)<0.2 and "
+            "mm_kin_slxy>10 and mm_kin_lxy>1 and mm_kin_alpha<0.1 and "
+            "mm_kin_vtx_prob>0.01 and "
+            "HLT_DoubleMu4_3_LowMass",
+        "final_state" : "mm",
         "best_candidate": "",
+        "mm_extra_info": True,
       }
     
     file_name = "/tmp/dmytro/test.job"
