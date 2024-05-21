@@ -2,6 +2,10 @@
 
 ## New developments
 
+## [NanoAODv12-V06] - 2024/05/21
+### Changes
+	- bug fix for invalid pv index
+
 ## [NanoAODv12-V05] - 2024/05/10
 ### Changes
 	- Added kstar->ks pi
