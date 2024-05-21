@@ -1830,7 +1830,7 @@ DileptonPlusXProducer::fillIsolationInfo(const pat::CompositeCandidate& dilepton
 					 const bmm::Candidate& lepton1,
 					 const bmm::Candidate& lepton2)
 {
-  unsigned int pv_index = dileptonCand.userInt("kin_pvIndex");
+  int pv_index = dileptonCand.userInt("kin_pvIndex");
   
   for (const auto& pfCand: *pfCandHandle_.product()) {
 
@@ -1932,13 +1932,21 @@ DileptonPlusXProducer::fillIsolationInfo(const pat::CompositeCandidate& dilepton
 
     // compute 3D impact parameter and its significance
     const reco::TransientTrack tt = theTTBuilder_->build(track);
-    std::pair<bool, Measurement1D> result =
-      IPTools::signedImpactParameter3D(tt, GlobalVector(track->px(), track->py(), track->pz()),
-				       pvHandle_->at(pv_index));
-    cand.addUserInt("pv_ip3d_status", result.first);
-    cand.addUserFloat("pv_ip3d",      result.second.value());
-    cand.addUserFloat("pv_sip3d",     result.second.significance());
 
+    // check if we have a primary vertex
+    if (pv_index >= 0) {
+      std::pair<bool, Measurement1D> result =
+	IPTools::signedImpactParameter3D(tt, GlobalVector(track->px(), track->py(), track->pz()),
+					 pvHandle_->at(pv_index));
+      cand.addUserInt("pv_ip3d_status", result.first);
+      cand.addUserFloat("pv_ip3d",      result.second.value());
+      cand.addUserFloat("pv_sip3d",     result.second.significance());
+    } else {
+      cand.addUserInt("pv_ip3d_status", 0);
+      cand.addUserFloat("pv_ip3d",      -1.0);
+      cand.addUserFloat("pv_sip3d",     -1.0);
+    }
+      
     //// mu + track
     // - doca of two tracks
     // - vertex probability
@@ -1947,9 +1955,6 @@ DileptonPlusXProducer::fillIsolationInfo(const pat::CompositeCandidate& dilepton
     cand.addUserFloat("mu2_doca", mu2_doca);
 
     KinematicFitResult mu1_vtx = vertexWithKinematicFitter(lepton1, track);
-    bmm::Displacement  mu1_vtx_pv("mu1_vtx_pv", mu1_vtx, pvHandle_->at(pv_index), pv_index);
-    bmm::Displacement  mu1_vtx_mm("mu1_vtx_mm", mu1_vtx, llVertexFit.vertex(), -1);
-    
     cand.addUserFloat("mu1_vtx_prob",    mu1_vtx.vtxProb());
     cand.addUserFloat("mu1_vtx_x",       mu1_vtx.vtx_position().x());
     cand.addUserFloat("mu1_vtx_y",       mu1_vtx.vtx_position().y());
@@ -1958,16 +1963,24 @@ DileptonPlusXProducer::fillIsolationInfo(const pat::CompositeCandidate& dilepton
     cand.addUserFloat("mu1_vtx_yErr",    mu1_vtx.vtx_error().cyy() > 0 ? sqrt(mu1_vtx.vtx_error().cyy()):0);
     cand.addUserFloat("mu1_vtx_zErr",    mu1_vtx.vtx_error().czz() > 0 ? sqrt(mu1_vtx.vtx_error().czz()):0);
     cand.addUserFloat("mu1_vtx_alphaBS", mu1_vtx.alphaBS());
-    cand.addUserFloat("mu1_vtx_alpha",   mu1_vtx_pv.alpha());
-    cand.addUserFloat("mu1_vtx_pv_l3d",     mu1_vtx_pv.decayLength());
-    cand.addUserFloat("mu1_vtx_pv_sl3d",    mu1_vtx_pv.decayLengthSig());
+    
+    // check if we have a primary vertex
+    if (pv_index >= 0) {
+      bmm::Displacement  mu1_vtx_pv("mu1_vtx_pv", mu1_vtx, pvHandle_->at(pv_index), pv_index);
+      cand.addUserFloat("mu1_vtx_alpha",      mu1_vtx_pv.alpha());
+      cand.addUserFloat("mu1_vtx_pv_l3d",     mu1_vtx_pv.decayLength());
+      cand.addUserFloat("mu1_vtx_pv_sl3d",    mu1_vtx_pv.decayLengthSig());
+    } else {
+      cand.addUserFloat("mu1_vtx_alpha",     9999.);
+      cand.addUserFloat("mu1_vtx_pv_l3d",     -1.0);
+      cand.addUserFloat("mu1_vtx_pv_sl3d",    -1.0);
+    }
+    
+    bmm::Displacement  mu1_vtx_mm("mu1_vtx_mm", mu1_vtx, llVertexFit.vertex(), -1);
     cand.addUserFloat("mu1_vtx_mm_l3d",     mu1_vtx_mm.decayLength());
     cand.addUserFloat("mu1_vtx_mm_sl3d",    mu1_vtx_mm.decayLengthSig());
     
     KinematicFitResult mu2_vtx = vertexWithKinematicFitter(lepton2, track);
-    bmm::Displacement  mu2_vtx_pv("mu2_vtx_pv", mu2_vtx, pvHandle_->at(pv_index), pv_index);
-    bmm::Displacement  mu2_vtx_mm("mu2_vtx_mm", mu2_vtx, llVertexFit.vertex(), -1);
-
     cand.addUserFloat("mu2_vtx_prob",    mu2_vtx.vtxProb());
     cand.addUserFloat("mu2_vtx_x",       mu2_vtx.vtx_position().x());
     cand.addUserFloat("mu2_vtx_y",       mu2_vtx.vtx_position().y());
@@ -1976,9 +1989,20 @@ DileptonPlusXProducer::fillIsolationInfo(const pat::CompositeCandidate& dilepton
     cand.addUserFloat("mu2_vtx_yErr",    mu2_vtx.vtx_error().cyy() > 0 ? sqrt(mu2_vtx.vtx_error().cyy()):0);
     cand.addUserFloat("mu2_vtx_zErr",    mu2_vtx.vtx_error().czz() > 0 ? sqrt(mu2_vtx.vtx_error().czz()):0);
     cand.addUserFloat("mu2_vtx_alphaBS", mu2_vtx.alphaBS());
-    cand.addUserFloat("mu2_vtx_alpha",   mu2_vtx_pv.alpha());
-    cand.addUserFloat("mu2_vtx_pv_l3d",     mu2_vtx_pv.decayLength());
-    cand.addUserFloat("mu2_vtx_pv_sl3d",    mu2_vtx_pv.decayLengthSig());
+    
+    // check if we have a primary vertex
+    if (pv_index >= 0) {
+      bmm::Displacement  mu2_vtx_pv("mu2_vtx_pv", mu2_vtx, pvHandle_->at(pv_index), pv_index);
+      cand.addUserFloat("mu2_vtx_alpha",      mu2_vtx_pv.alpha());
+      cand.addUserFloat("mu2_vtx_pv_l3d",     mu2_vtx_pv.decayLength());
+      cand.addUserFloat("mu2_vtx_pv_sl3d",    mu2_vtx_pv.decayLengthSig());
+    } else {
+      cand.addUserFloat("mu2_vtx_alpha",      9999.);
+      cand.addUserFloat("mu2_vtx_pv_l3d",     -1.0);
+      cand.addUserFloat("mu2_vtx_pv_sl3d",    -1.0);
+    }
+    
+    bmm::Displacement  mu2_vtx_mm("mu2_vtx_mm", mu2_vtx, llVertexFit.vertex(), -1);
     cand.addUserFloat("mu2_vtx_mm_l3d",     mu2_vtx_mm.decayLength());
     cand.addUserFloat("mu2_vtx_mm_sl3d",    mu2_vtx_mm.decayLengthSig());
 
