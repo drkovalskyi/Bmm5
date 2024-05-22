@@ -8,6 +8,10 @@ import hashlib
 class FlatNtupleForMLFit(FlatNtupleBase):
     """Flat ROOT ntuple producer for Bmm5 UML fit"""
 
+    final_states = {
+        'mm', 'bkmm', 'bkkmm', 'em', 'hh', 'jpsimm'
+    }
+    
     leaf_counts = { 
         'mm':    'nmm',
         'hh':    'nhh',
@@ -59,6 +63,9 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         for parameter in ['input', 'blind', 'cut', 'final_state']:
             if parameter not in self.job_info:
                 raise Exception("Missing input '%s'" % parameter)
+            
+            if parameter['final_state'] not in final_states:
+                raise Exception("Unsupported final state: %s" % self.job_info['final_state'])
 
     def __select_candidates(self, candidates):
         """Select candidates to be stored"""
