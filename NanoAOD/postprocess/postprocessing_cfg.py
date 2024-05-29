@@ -2,7 +2,7 @@
 from resources_cfg import resources
 
 workdir = "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv8/src/Bmm5/NanoAOD/postprocess/"
-version = 529
+version = 'crab-140x-mm'
 
 input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/" + str(version)
 # input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/523/bkmm"
@@ -60,13 +60,14 @@ active_tasks = {
         # "fit-bkkmm"
         # "muon_mva"
         # "fit-em"
-        "dstar",
-        "dzpipi",
-        # "dzpipi_otherZB",
-        # "dzkpi_otherZB"
-        "dzkpi"
+        # "dstar", "dzpipi", "dzkpi"
+        # "dzpipi"
+        # "dzpipi_otherZB"
+        # "dzkpi"
         # "ksmm",
         # "kspipi"
+        # "bkkmm"
+        "bkmm"
     ]
 }
 
@@ -114,6 +115,17 @@ cuts = {
         " and abs(bkmm_jpsimc_mass-5.4)<0.5 && bkmm_jpsimc_alpha<0.2"
     ),
     
+    # BuToJpsiK validation
+    "bkmm-validation" : (
+        "mm_mu1_index[bkmm_mm_index]>=0 and "
+        "mm_mu2_index[bkmm_mm_index]>=0 and "
+        "mm_mu1_pdgId[bkmm_mm_index] * mm_mu2_pdgId[bkmm_mm_index] < 0 and "
+        "bkmm_jpsimc_vtx_prob>0.1 and "
+        "bkmm_jpsimc_sl3d>5 and "
+        "abs(bkmm_jpsimc_alpha)<0.01 and "
+        "abs(bkmm_jpsimc_mass-5.4)<0.5"
+    ),
+    
     "fit-bkkmm" :
     "mm_mu1_index[bkkmm_mm_index]>=0 and "\
     "mm_mu2_index[bkkmm_mm_index]>=0 and "\
@@ -130,6 +142,18 @@ cuts = {
     "bkkmm_jpsikk_vtx_prob>0.025 and "\
     "abs(bkkmm_jpsikk_mass-5.4)<0.5 and "\
     "abs(bkkmm_jpsikk_kk_mass-1.02)<0.03",
+
+    # BsToJpsiPhi validation
+    "bkkmm" : (
+        "mm_mu1_index[bkkmm_mm_index]>=0 and "
+        "mm_mu2_index[bkkmm_mm_index]>=0 and "
+        "mm_mu1_pdgId[bkkmm_mm_index] * mm_mu2_pdgId[bkkmm_mm_index] < 0 and "
+        "abs(bkkmm_jpsikk_alpha)<0.01 and "
+        "bkkmm_jpsikk_sl3d>5 and "
+        "bkkmm_jpsikk_vtx_prob>0.1 and "
+        "abs(bkkmm_jpsikk_mass-5.4)<0.5 and "
+        "abs(bkkmm_kk_mass-1.02)<0.01"
+    ),
 
     "dstar_dzpipi" : (
         "dstar_hh_index>=0 and "
@@ -1029,8 +1053,38 @@ tasks = [
         "final_state" : "bkkmm",
         "best_candidate": "",
     },
+
+    {
+        "input_pattern":"ScoutingPFRun3|ParkingDoubleMuonLowMass",
+        "processor":"FlatNtupleForMLFit",
+        "name":"bkkmm",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bspsiphiData",
+        "blind" : False,
+        "cut" : cuts["bkkmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "final_state" : "bkkmm",
+        "pre-selection":"abs(bkkmm_kk_mass-1.02)<0.01&&bkkmm_jpsikk_sl3d>5",
+        "pre-selection-keep":"^(mm_.*|nmm|bkkmm_.*|nbkkmm|HLT_*|" + common_branches + ")$",
+    },
+
+    {
+        "input_pattern":"ScoutingPFRun3|ParkingDoubleMuonLowMass",
+        "processor":"FlatNtupleForMLFit",
+        "name":"bkmm",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bupsikData",
+        "blind" : False,
+        "cut" : cuts["bkmm-validation"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "final_state" : "bkmm",
+        "pre-selection":"bkmm_jpsimc_sl3d>5 && abs(bkmm_jpsimc_mass-5.4)<0.5 && abs(bkmm_jpsimc_alpha)<0.01",
+        "pre-selection-keep":"^(mm_.*|nmm|bkmm_.*|nbkmm|HLT_*|" + common_branches + ")$",
+    },
     
-    ################ dimuon ################
+    ################ Dimuon ################
     # {
     #     "input_pattern":"BsToMuMu",
     #     "processor":"FlatNtupleForMLFit",

@@ -101,7 +101,7 @@ class JobDispatcher(object):
         """Find existings jobs and store their input"""
         print("Loading existing jobs...")
         # command = 'find -L %s -type f -name "*job" -path "*/%u/*"' % (cfg.output_location, cfg.version)
-        command = "eos find -f -name 'job$' %s|grep '/%u/'" % (cfg.output_location, cfg.version)
+        command = "eos find -f -name 'job$' %s|grep '/%s/'" % (cfg.output_location, cfg.version)
         self.all_jobs = subprocess.check_output(command, shell=True, encoding='utf8').splitlines()
         print("Found %u jobs" % len(self.all_jobs))
 

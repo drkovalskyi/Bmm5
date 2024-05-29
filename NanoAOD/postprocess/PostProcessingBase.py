@@ -215,7 +215,7 @@ class FlatNtupleBase(Processor):
         self.tree = MTree(self.job_info['tree_name'], '')
         self._configure_output_tree()
 
-        fin = TFile(input_file)
+        fin = TFile.Open(input_file)
 
         # GenFilterInfo
         lumis = fin.Get("LuminosityBlocks")
@@ -241,7 +241,7 @@ class FlatNtupleBase(Processor):
         nevents = input_tree.GetEntries()
         print(nevents)
 
-        if 'pre-selection' in self.job_info:
+        if 'pre-selection' in self.job_info and nevents > 0:
             keep = ""
             if "pre-selection-keep" in self.job_info:
                 keep = self.job_info['pre-selection-keep']
@@ -259,7 +259,7 @@ class FlatNtupleBase(Processor):
         print('Selected %d / %d entries from %s (%.2f%%)' % (nout, nevents, input_file, 100.*nout/nevents if nevents else 0))
         fout.Write()
         fout.Close()
-        if 'pre-selection' in self.job_info:
+        if 'pre-selection' in self.job_info and nevents > 0:
             subprocess.call("rm -v %s" % (skim_filename), shell=True)
 
         return output_filename, nevents

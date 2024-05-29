@@ -10,7 +10,7 @@ class JobCreator(object):
     def load_existing_jobs(self):
         """Find existings jobs and store their input"""
         # command = 'find -L %s -type f -name "*job" -path "*/%u/*"' % (cfg.output_location, cfg.version)
-        command = "eos find -f -name 'job$' %s|grep '/%u/'" % (cfg.output_location, cfg.version)
+        command = "eos find -f -name 'job$' %s|grep '/%s/'" % (cfg.output_location, cfg.version)
         all_jobs = []
         try:
             all_jobs = subprocess.check_output(command, shell=True, encoding='utf8').splitlines()
@@ -24,9 +24,10 @@ class JobCreator(object):
         print("Found %u jobs" % len(all_jobs))
         njobs = 0
         for job in all_jobs:
-            match = re.search("([^\/]+)\/(\d+)\/([^\/]+)\/([^\/]+)", job)
+            # print(job)
+            match = re.search("([^\/]+)\/([^\/]+)\/([^\/]+)\/([^\/]+)\/[^\/]*?.job$", job)
             if match:
-                if int(match.group(2)) != cfg.version:
+                if match.group(2) != cfg.version:
                     continue
                 task_id = "%s-%s" % (match.group(1), match.group(3))
                 if task_id not in self.files_in_use_by_task_and_dataset:
@@ -45,6 +46,7 @@ class JobCreator(object):
                     else:
                         self.files_in_use_by_task_and_dataset[task_id][dataset][file] = 1
         print("Number of processed valid jobs: %u" % njobs)
+        # exit()
 
     def find_all_inputs(self):
         """Find all files and splits them in datasets"""
