@@ -8,9 +8,9 @@ import hashlib
 class FlatNtupleForMLFit(FlatNtupleBase):
     """Flat ROOT ntuple producer for Bmm5 UML fit"""
 
-    final_states = {
+    final_states = [
         'mm', 'bkmm', 'bkkmm', 'em', 'hh', 'jpsimm'
-    }
+    ]
     
     leaf_counts = { 
         'mm':    'nmm',
@@ -64,7 +64,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             if parameter not in self.job_info:
                 raise Exception("Missing input '%s'" % parameter)
             
-            if parameter['final_state'] not in final_states:
+            if self.job_info['final_state'] not in self.final_states:
                 raise Exception("Unsupported final state: %s" % self.job_info['final_state'])
 
     def __select_candidates(self, candidates):
@@ -368,25 +368,34 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             mu2 = self.event.mm_mu2_index[mm_index]
 
             if mu1 >= 0:
-                self.tree['m1pt']  = self.event.Muon_pt[mu1]
-                self.tree['m1eta'] = self.event.Muon_eta[mu1]
-                self.tree['m1phi'] = self.event.Muon_phi[mu1]
-                self.tree['m1q']   = self.event.Muon_charge[mu1]
+                self.tree['m1pt']  = self.event.mm_mu1_pt[mm_index]
+                self.tree['m1eta'] = self.event.mm_mu1_eta[mm_index]
+                self.tree['m1phi'] = self.event.mm_mu1_phi[mm_index]
+                try:
+                    self.tree['m1q']   = self.event.Muon_charge[mu1]
+                    self.tree['m1bdt'] = self.event.Muon_softMva[mu1]
+                except:
+                    pass
                 if hasattr(self.event, 'mm_gen_mu1_mpdgId'):
                     self.tree['m1mc']  = self.event.mm_gen_mu1_mpdgId[mm_index]
-                self.tree['m1bdt'] = self.event.Muon_softMva[mu1]
 
             if mu2 >= 0:
-                self.tree['m2pt']  = self.event.Muon_pt[mu2]
-                self.tree['m2eta'] = self.event.Muon_eta[mu2]
-                self.tree['m2phi'] = self.event.Muon_phi[mu2]
-                self.tree['m2q']   = self.event.Muon_charge[mu2]
+                self.tree['m2pt']  = self.event.mm_mu2_pt[mm_index]
+                self.tree['m2eta'] = self.event.mm_mu2_eta[mm_index]
+                self.tree['m2phi'] = self.event.mm_mu2_phi[mm_index]
+                try:
+                    self.tree['m2q']   = self.event.Muon_charge[mu2]
+                    self.tree['m2bdt'] = self.event.Muon_softMva[mu2]
+                except:
+                    pass
                 if hasattr(self.event, 'mm_gen_mu2_mpdgId'):
                     self.tree['m2mc']  = self.event.mm_gen_mu2_mpdgId[mm_index]
-                self.tree['m2bdt'] = self.event.Muon_softMva[mu2]
 
             if mu1 >= 0 and mu2 >= 0:
-                self.tree['muid']   = self.event.Muon_softMvaId[mu1] and self.event.Muon_softMvaId[mu2]
+                try:
+                    self.tree['muid']   = self.event.Muon_softMvaId[mu1] and self.event.Muon_softMvaId[mu2]
+                except:
+                    pass
 
         elif self.job_info['final_state'] == 'bkkmm':
             # B to Jpsi Phi 
@@ -742,21 +751,24 @@ if __name__ == "__main__":
 
     job = {
         "input": [
-            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/crab-140x/ScoutingPFRun3+Run2024D-v1+HLTSCOUT/bkkmm_scouting_data_186.root",
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/crab-140x-mm/ScoutingPFRun3+Run2024D-v1+HLTSCOUT/mm_scouting_data_961.root",
             ],
         "signal_only" : False,
-        "tree_name" : "bspsiphiData",
+        "tree_name" : "bupsikiData",
         "blind" : False,
         "cut" : (
-            "mm_mu1_index[bkkmm_mm_index]>=0 and mm_mu2_index[bkkmm_mm_index]>=0 and "
-            "mm_mu1_pdgId[bkkmm_mm_index] * mm_mu2_pdgId[bkkmm_mm_index] < 0 and "
-            "abs(bkkmm_jpsikk_alpha)<0.01 and bkkmm_jpsikk_sl3d>5 and bkkmm_jpsikk_vtx_prob>0.1 and "
-            "abs(bkkmm_jpsikk_mass-5.4)<0.5 and abs(bkkmm_kk_mass-1.02)<0.01"
+            "mm_mu1_index[bkmm_mm_index]>=0 and "
+            "mm_mu2_index[bkmm_mm_index]>=0 and "
+            "mm_mu1_pdgId[bkmm_mm_index] * mm_mu2_pdgId[bkmm_mm_index] < 0 and "
+            "bkmm_jpsimc_vtx_prob>0.1 and "
+            "bkmm_jpsimc_sl3d>5 and "
+            "abs(bkmm_jpsimc_alpha)<0.01 and "
+            "abs(bkmm_jpsimc_mass-5.4)<0.5"
         ),
-        "final_state" : "bkkmm",
+        "final_state" : "bkmm",
         "best_candidate": "",
-        "pre-selection":"abs(bkkmm_kk_mass-1.02)<0.01&&bkkmm_jpsikk_sl3d>5",
-        "pre-selection-keep":"^(mm_.*|nmm|bkkmm_.*|nbkkmm)$",
+        "pre-selection":"bkmm_jpsimc_sl3d>5 && abs(bkmm_jpsimc_mass-5.4)<0.5 && abs(bkmm_jpsimc_alpha)<0.01",
+        "pre-selection-keep":"^(mm_.*|nmm|bkmm_.*|nbkmm|HLT_*|)$",
       }
     
     file_name = "/tmp/dmytro/test.job"
