@@ -63,11 +63,12 @@ active_tasks = {
         # "dstar", "dzpipi", "dzkpi"
         # "dzpipi"
         # "dzpipi_otherZB"
+        "dstar",
         # "dzkpi"
         # "ksmm",
         # "kspipi"
         # "bkkmm"
-        "bkmm"
+        # "bkmm"
     ]
 }
 
@@ -227,9 +228,11 @@ cuts = {
     "kspipi": (
         "hh_had1_pdgId * hh_had2_pdgId == -211*211 and "
         "hh_had1_pt>4 and hh_had2_pt>4 and "
-        "abs(hh_kin_mass-0.45) < 0.1 and "
-        "hh_kin_slxy>10 and hh_kin_lxy>1 and hh_kin_alpha<0.001 and "
-        "hh_kin_vtx_prob>0.01"
+        # "abs(hh_kin_mass-0.45) < 0.1 and "
+        "abs(hh_kin_mass-0.50)<0.15 and "
+        # "hh_kin_slxy>10 and hh_kin_lxy>1 and hh_kin_alpha<0.001 and "
+        "hh_kin_slxy>3 and hh_kin_alpha<0.1"
+        # "hh_kin_vtx_prob>0.01"
     ),
 }
 
@@ -1341,7 +1344,7 @@ tasks = [
         "best_candidate": "",
         "triggers":["HLT_ZeroBias"],
         "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
-        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias|" + common_branches + ")$",
+        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
     },
     {
         "input_pattern":"ZeroBias",
@@ -1666,19 +1669,19 @@ tasks = [
         "pre-selection-keep":"^(mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
         "mm_extra_info": True,
     },
-    {
-     	"input_pattern":"InclusiveDileptonMinBias",
-        "processor":"FlatNtupleForMLFit",
-        "name":"kspipi",
-	"type":"FlatNtuples",
-	"files_per_job":200,
-        "tree_name" : "kspipiMc",
-        "blind" : False,
-        "cut" : cuts["kspipi"],
-        "final_state" : "hh",
-        "pre-selection":"hh_gen_pdgId==310", 
-        "pre-selection-keep":"^(hh_.*|nhh|" + common_branches + ")$",
-    },
+    # {
+    #  	"input_pattern":"InclusiveDileptonMinBias",
+    #     "processor":"FlatNtupleForMLFit",
+    #     "name":"kspipi",
+    #     "type":"FlatNtuples",
+    #     "files_per_job":200,
+    #     "tree_name" : "kspipiMc",
+    #     "blind" : False,
+    #     "cut" : cuts["kspipi"],
+    #     "final_state" : "hh",
+    #     "pre-selection":"hh_gen_pdgId==310", 
+    #     "pre-selection-keep":"^(hh_.*|nhh|" + common_branches + ")$",
+    # },
     {
      	"input_pattern":"ZeroBias",
         "processor":"FlatNtupleForMLFit",
@@ -1690,7 +1693,7 @@ tasks = [
         "cut" : cuts["kspipi"],
         "triggers": ["HLT_ZeroBias"],
         "final_state" : "hh",
-        "pre-selection":"abs(hh_kin_mass-0.45)<0.1 && hh_kin_slxy>10 && hh_kin_vtx_prob>0.01", 
+        "pre-selection":"abs(hh_kin_mass-0.50)<0.15 && hh_kin_slxy>3 && hh_kin_alpha<0.1", 
         "pre-selection-keep":"^(hh_.*|nhh|HLT_ZeroBias|" + common_branches + ")$",
     },
 
