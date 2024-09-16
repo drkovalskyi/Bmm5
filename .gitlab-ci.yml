@@ -1,0 +1,30 @@
+stages:
+  - build
+
+cmssw_compile:
+  stage: build
+  only:
+    - gitlab-ci
+  tags:
+    - cvmfs
+  variables:
+    CMS_PATH: /cvmfs/cms.cern.ch
+    CMSSW_RELEASE: CMSSW_10_2_18
+  script:
+    - set -ex
+    - shopt -s expand_aliases
+    - set +u && source ${CMS_PATH}/cmsset_default.sh; set -u
+    - cmsrel ${CMSSW_RELEASE}
+    - cd ${CMSSW_RELEASE}/src
+    - cmsenv
+    - git cms-init --upstream-only
+    - git cms-addpkg PhysicsTools/NanoAOD
+    - mkdir -p Bmm5
+    - mv ${CI_PROJECT_DIR}/GenFragments Bmm5
+    - mv ${CI_PROJECT_DIR}/MCProduction Bmm5
+    - mv ${CI_PROJECT_DIR}/MVA Bmm5
+    - mv ${CI_PROJECT_DIR}/NanoAOD Bmm5
+    - scram setup Bmm5/NanoAOD/external-tools/rabit.xml
+    - scram setup Bmm5/NanoAOD/external-tools/xgboost.xml
+    - scram b
+
