@@ -185,7 +185,7 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                     if self.job_info['final_state'] == 'dzpipi':
                         self.tree['chan'] = 1
 
-                    if hasattr(self.event, 'Pileup_nTrueInt'):
+                    if hasattr(self.event, 'Pileup_nTrueInt') and hasattr(self.event, 'nGenPart'):
                         self.tree['mc_signature'] *= self.event.hh_gen_had1_pdgId[hh_index]
                         self.tree['mc_signature'] *= self.event.hh_gen_had2_pdgId[hh_index]
                         if self.event.hh_gen_cindex[hh_index] >= 0:

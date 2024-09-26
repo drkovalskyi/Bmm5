@@ -4,7 +4,7 @@ import postprocessing_cfg as cfg
 
 class SSHResourceHandler(ResourceHandler):
     """Resource handler for ssh-based job execution"""
-    def __init__(self, site, max_number_of_jobs_running):
+    def __init__(self, site, max_number_of_jobs_running, arch=""):
         super(SSHResourceHandler, self).__init__()
         self.site = site
         self.max_njobs = max_number_of_jobs_running
@@ -15,10 +15,12 @@ class SSHResourceHandler(ResourceHandler):
                                      )
         # prepare working area
         workdir = os.getcwd()
-        self._send_command_and_get_response("""
-        cd %s
-        eval `scramv1 runtime -sh`
-        """ % workdir)
+        command = f"cd {workdir}\n" 
+        if arch:
+            command += "cmssw-env --cmsos %s\n" % arch
+        command += "eval `scramv1 runtime -sh`"
+
+        self._send_command_and_get_response(command)
 
     def _non_block_read(self):
         fd = self.proc.stdout.fileno()

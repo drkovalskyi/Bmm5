@@ -11,6 +11,7 @@ from pprint import pprint
 import hashlib
 import fcntl
 import sys
+import shutil
 
 from Bmm5.MVA.mtree import MTree
 from ROOT import TFile, TTree, RDataFrame
@@ -69,7 +70,7 @@ class Processor(object):
 
         # check if we own the lock
         if info['pid'] == os.getpid():
-            if re.search('^\/eos\/', self.job_lock):
+            if re.search('^\/eos\/', self.job_lock) and shutil.which("eos") is not None:
                 # subprocess.call("rm -v %s " % self.job_lock, shell=True)
                 subprocess.call("eos rm %s " % self.job_lock, shell=True)
             else:

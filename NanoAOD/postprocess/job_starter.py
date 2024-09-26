@@ -7,6 +7,7 @@
 from FlatNtupleForBmmMva  import FlatNtupleForBmmMva
 from FlatNtupleForBmmMvaJpsiK import FlatNtupleForBmmMvaJpsiK
 from FlatNtupleForMLFit   import FlatNtupleForMLFit
+from FlatNtupleForKsmm   import FlatNtupleForKsmm
 from FlatNtupleForDstarFit   import FlatNtupleForDstarFit
 from FlatNtupleForMuonMVA import FlatNtupleForMuonMVA
 from FlatNtupleForTrigEfficiency import FlatNtupleForTrigEfficiency

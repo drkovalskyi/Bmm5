@@ -1,14 +1,15 @@
 # Config file for the postprocessor
 from resources_cfg import resources
 
-workdir = "/afs/cern.ch/work/d/dmytro/projects/RunII-NanoAODv8/src/Bmm5/NanoAOD/postprocess/"
-version = 'crab-140x-mm'
+workdir = "/afs/cern.ch/work/d/dmytro/projects/Run3-Bmm-NanoAODv12/src/Bmm5/NanoAOD/postprocess/"
+# version = 'crab-140x-mm'
+version = '530'
 
 input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/" + str(version)
 # input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/523/bkmm"
 
-# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing-NEW"
-output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing"
+output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing-NEW"
+# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing"
 
 xrootd_prefix = "root://eoscms.cern.ch:/"
 web_report_path = "/afs/cern.ch/user/d/dmytro/www/public_html/bmm5/postprocessing/"
@@ -57,15 +58,15 @@ active_tasks = {
         # "trig-eff",
         # "trig-info"
         # "fit"
-        # "fit-bkkmm"
+        # "fit-bkmm", "fit-bkkmm"
         # "muon_mva"
         # "fit-em"
         # "dstar", "dzpipi", "dzkpi"
         # "dzpipi"
         # "dzpipi_otherZB"
-        "dstar",
+        # "dstar",
         # "dzkpi"
-        # "ksmm",
+        "ksmm",
         # "kspipi"
         # "bkkmm"
         # "bkmm"
@@ -94,22 +95,27 @@ cuts = {
     "abs(em_kin_mass-5.4)<1.0 and "\
     "em_kin_vtx_prob>0.025",
 
-    "fit-bkmm" :
-    "mm_mu1_index[bkmm_mm_index]>=0 and "\
-    "mm_mu2_index[bkmm_mm_index]>=0 and "\
-    "Muon_charge[mm_mu1_index[bkmm_mm_index]] * Muon_charge[mm_mu2_index[bkmm_mm_index]] < 0 and "\
-    "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 and "\
-    "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 and "\
-    "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 and "\
-    "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 and "\
-    "Muon_softMva[mm_mu1_index[bkmm_mm_index]] > 0.45 and "\
-    "Muon_softMva[mm_mu2_index[bkmm_mm_index]] > 0.45 and "\
-    "mm_kin_pt[bkmm_mm_index]>7.0 and "\
-    "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "\
-    "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and "\
-    "bkmm_jpsimc_vtx_prob>0.025 and "\
-    "mm_kin_sl3d[bkmm_mm_index]>4 and "\
-    "abs(bkmm_jpsimc_mass-5.4)<0.5",
+    "fit-bkmm" : (
+        "mm_mu1_index[bkmm_mm_index]>=0 and "
+        "mm_mu2_index[bkmm_mm_index]>=0 and "
+        "Muon_charge[mm_mu1_index[bkmm_mm_index]] * Muon_charge[mm_mu2_index[bkmm_mm_index]] < 0 and "
+        # "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 and "
+        # "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 and "
+        # "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 and "
+        # "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 and "
+        # "Muon_softMva[mm_mu1_index[bkmm_mm_index]] > 0.45 and "
+        # "Muon_softMva[mm_mu2_index[bkmm_mm_index]] > 0.45 and "
+        "Muon_isGlobal[mm_mu1_index[bkmm_mm_index]] and "
+        "Muon_isGlobal[mm_mu2_index[bkmm_mm_index]] and "
+        # "mm_kin_pt[bkmm_mm_index]>7.0 and "
+        # "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "
+        "mm_kin_vtx_prob[bkmm_mm_index]>0.01 and "
+        "bkmm_jpsimc_vtx_prob>0.025 and "
+        "bkmm_jpsimc_sl3d>3 and "
+        "abs(bkmm_jpsimc_alpha) < 0.1 and "
+        # "mm_kin_sl3d[bkmm_mm_index]>4 and "
+        "abs(bkmm_jpsimc_mass-5.4)<0.5"
+    ),
 
     "bkmm_skim" : (
         "bkmm_jpsimc_vtx_prob>0.025 and bkmm_jpsimc_sl3d>3"
@@ -127,22 +133,22 @@ cuts = {
         "abs(bkmm_jpsimc_mass-5.4)<0.5"
     ),
     
-    "fit-bkkmm" :
-    "mm_mu1_index[bkkmm_mm_index]>=0 and "\
-    "mm_mu2_index[bkkmm_mm_index]>=0 and "\
-    "Muon_charge[mm_mu1_index[bkkmm_mm_index]] * Muon_charge[mm_mu2_index[bkkmm_mm_index]] < 0 and "\
-    "abs(Muon_eta[mm_mu1_index[bkkmm_mm_index]])<1.4 and "\
-    "Muon_pt[mm_mu1_index[bkkmm_mm_index]]>4 and "\
-    "abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4 and "\
-    "Muon_pt[mm_mu2_index[bkkmm_mm_index]]>4 and "\
-    "Muon_softMva[mm_mu1_index[bkkmm_mm_index]] > 0.45 and "\
-    "Muon_softMva[mm_mu2_index[bkkmm_mm_index]] > 0.45 and "\
-    "mm_kin_alphaBS[bkkmm_mm_index]<0.4 and "\
-    "mm_kin_vtx_prob[bkkmm_mm_index]>0.1 and "\
-    "bkkmm_jpsikk_sl3d>4 and "\
-    "bkkmm_jpsikk_vtx_prob>0.025 and "\
-    "abs(bkkmm_jpsikk_mass-5.4)<0.5 and "\
-    "abs(bkkmm_jpsikk_kk_mass-1.02)<0.03",
+    # "fit-bkkmm" :
+    # "mm_mu1_index[bkkmm_mm_index]>=0 and "\
+    # "mm_mu2_index[bkkmm_mm_index]>=0 and "\
+    # "Muon_charge[mm_mu1_index[bkkmm_mm_index]] * Muon_charge[mm_mu2_index[bkkmm_mm_index]] < 0 and "\
+    # "abs(Muon_eta[mm_mu1_index[bkkmm_mm_index]])<1.4 and "\
+    # "Muon_pt[mm_mu1_index[bkkmm_mm_index]]>4 and "\
+    # "abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4 and "\
+    # "Muon_pt[mm_mu2_index[bkkmm_mm_index]]>4 and "\
+    # "Muon_softMva[mm_mu1_index[bkkmm_mm_index]] > 0.45 and "\
+    # "Muon_softMva[mm_mu2_index[bkkmm_mm_index]] > 0.45 and "\
+    # "mm_kin_alphaBS[bkkmm_mm_index]<0.4 and "\
+    # "mm_kin_vtx_prob[bkkmm_mm_index]>0.1 and "\
+    # "bkkmm_jpsikk_sl3d>4 and "\
+    # "bkkmm_jpsikk_vtx_prob>0.025 and "\
+    # "abs(bkkmm_jpsikk_mass-5.4)<0.5 and "\
+    # "abs(bkkmm_jpsikk_kk_mass-1.02)<0.03",
 
     # BsToJpsiPhi validation
     "bkkmm" : (
@@ -154,6 +160,27 @@ cuts = {
         "bkkmm_jpsikk_vtx_prob>0.1 and "
         "abs(bkkmm_jpsikk_mass-5.4)<0.5 and "
         "abs(bkkmm_kk_mass-1.02)<0.01"
+    ),
+
+    "fit-bkkmm" : (
+        "mm_mu1_index[bkkmm_mm_index]>=0 and "
+        "mm_mu2_index[bkkmm_mm_index]>=0 and "
+        "Muon_charge[mm_mu1_index[bkkmm_mm_index]] * Muon_charge[mm_mu2_index[bkkmm_mm_index]] < 0 and "
+        # "abs(Muon_eta[mm_mu1_index[bkkmm_mm_index]])<1.4 and "
+        # "Muon_pt[mm_mu1_index[bkkmm_mm_index]]>4 and "
+        # "abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4 and "
+        # "Muon_pt[mm_mu2_index[bkkmm_mm_index]]>4 and "
+        # "Muon_softMva[mm_mu1_index[bkkmm_mm_index]] > 0.45 and "
+        # "Muon_softMva[mm_mu2_index[bkkmm_mm_index]] > 0.45 and "
+        "Muon_isGlobal[mm_mu1_index[bkkmm_mm_index]] and "
+        "Muon_isGlobal[mm_mu2_index[bkkmm_mm_index]] and "
+        # "mm_kin_alphaBS[bkkmm_mm_index]<0.4 and "
+        "mm_kin_vtx_prob[bkkmm_mm_index]>0.01 and "
+        "bkkmm_jpsikk_vtx_prob>0.025 and "
+        "bkkmm_jpsikk_sl3d>3 and "
+        "abs(bkkmm_jpsikk_alpha) < 0.1 and "        
+        "abs(bkkmm_jpsikk_mass-5.4)<0.5 and "
+        "abs(bkkmm_kk_mass-1.02)<0.03"
     ),
 
     "dstar_dzpipi" : (
@@ -479,33 +506,33 @@ tasks = [
         "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + common_branches + ")$",
         "files_per_job":100
     },
-    {
-        "input_pattern":"ParkingDoubleMuonLowMass",
-        "processor":"SimpleSkimmer",
-        "cut":"mm_kin_vtx_prob>0.01&&mm_kin_slxy>10&&mm_kin_lxy>1&&mm_kin_alpha<0.01&&mm_mu1_pdgId==-mm_mu2_pdgId&&abs(mm_kin_mass-0.5)<0.2",
-        "name":"ksmm",
-        "type":"Skims",
-        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + common_branches + ")$",
-        "files_per_job":100
-    },
+    # {
+    #     "input_pattern":"ParkingDoubleMuonLowMass",
+    #     "processor":"SimpleSkimmer",
+    #     "cut":"mm_kin_vtx_prob>0.01&&mm_kin_slxy>10&&mm_kin_lxy>1&&mm_kin_alpha<0.01&&mm_mu1_pdgId==-mm_mu2_pdgId&&abs(mm_kin_mass-0.5)<0.2",
+    #     "name":"ksmm",
+    #     "type":"Skims",
+    #     "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + common_branches + ")$",
+    #     "files_per_job":100
+    # },
     {
         "input_pattern":"InclusiveDileptonMinBias",
         "processor":"SimpleSkimmer",
         "cut":"mm_kin_vtx_prob>0.01&&mm_kin_slxy>10&&mm_kin_lxy>1&&mm_kin_alpha<0.01&&mm_mu1_pdgId==-mm_mu2_pdgId&&abs(mm_kin_mass-0.5)<0.2",
         "name":"ksmm",
         "type":"Skims",
-        "keep": "^(GenPart_.*|nGenPart|mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + common_branches + ")$",
+        "keep": "^(GenPart_.*|nGenPart|mm_.*|nmm|trk_.*|ntrk|mmiso_.*|nmmiso|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + common_branches + ")$",
         "files_per_job":100
     },
-    {
-        "input_pattern":"K0sToMuMu",
-        "processor":"SimpleSkimmer",
-        "cut":"mm_kin_vtx_prob>0.01&&mm_kin_slxy>10&&mm_kin_lxy>1&&mm_kin_alpha<0.01&&mm_mu1_pdgId==-mm_mu2_pdgId&&abs(mm_kin_mass-0.5)<0.2",
-        "name":"ksmm",
-        "type":"Skims",
-        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + common_branches + ")$",
-        "files_per_job":10
-    },
+    # {
+    #     "input_pattern":"K0sToMuMu",
+    #     "processor":"SimpleSkimmer",
+    #     "cut":"mm_kin_vtx_prob>0.01&&mm_kin_slxy>10&&mm_kin_lxy>1&&mm_kin_alpha<0.01&&mm_mu1_pdgId==-mm_mu2_pdgId&&abs(mm_kin_mass-0.5)<0.2",
+    #     "name":"ksmm",
+    #     "type":"Skims",
+    #     "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + common_branches + ")$",
+    #     "files_per_job":10
+    # },
     {
         "input_pattern":"EGamma|DoubleEG|SingleElectron|SinglePhoton",
         "processor":"Skimmer",
@@ -977,7 +1004,8 @@ tasks = [
         "files_per_job":20,
         "tree_name" : "bupsikMc",
         "blind" : False,
-        "cut" : cuts["fit-bkmm"], "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "cut" : cuts["fit-bkmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
         "final_state" : "bkmm",
         "best_candidate": "",
     },
@@ -989,21 +1017,25 @@ tasks = [
         "files_per_job":20,
         "tree_name" : "bupsipiMc",
         "blind" : False,
-        "cut" : cuts["fit-bkmm"], "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "cut" : cuts["fit-bkmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
         "final_state" : "bkmm",
         "best_candidate": "",
     },
     {
-        "input_pattern":"Charmonium",
+        "input_pattern":"Charmonium|ParkingDoubleMuonLowMass",
         "processor":"FlatNtupleForMLFit",
         "name":"fit-bkmm",
         "type":"FlatNtuples",
         "files_per_job":20,
         "tree_name" : "bupsikData",
         "blind" : False,
-        "cut" : cuts["fit-bkmm"], "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "cut" : cuts["fit-bkmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
         "final_state" : "bkmm",
         "best_candidate": "",
+        "pre-selection":"bkmm_jpsimc_sl3d>3",
+        "pre-selection-keep":"^(bkmm_.*|nbkmm|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|HLT_DoubleMu2_Jpsi_LowPt|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2|" + common_branches + ")$",
     },
     {
         "input_pattern":"ParkingDoubleMuonLowMass",
@@ -1028,7 +1060,8 @@ tasks = [
         "files_per_job":20,
         "tree_name" : "bspsiphiMc",
         "blind" : False,
-        "cut" : cuts["fit-bkkmm"], "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "cut" : cuts["fit-bkkmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
         "final_state" : "bkkmm",
         "best_candidate": "",
     },
@@ -1040,21 +1073,25 @@ tasks = [
         "files_per_job":20,
         "tree_name" : "bdpsikstarMc",
         "blind" : False,
-        "cut" : cuts["fit-bkkmm"], "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "cut" : cuts["fit-bkkmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
         "final_state" : "bkkmm",
         "best_candidate": "",
     },
     {
-        "input_pattern":"Charmonium",
+        "input_pattern":"Charmonium|ParkingDoubleMuonLowMass",
         "processor":"FlatNtupleForMLFit",
         "name":"fit-bkkmm",
         "type":"FlatNtuples",
-        "files_per_job":20,
+        "files_per_job":100,
         "tree_name" : "bspsiphiData",
         "blind" : False,
-        "cut" : cuts["fit-bkkmm"], "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "cut" : cuts["fit-bkkmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
         "final_state" : "bkkmm",
         "best_candidate": "",
+        "pre-selection":"abs(bkkmm_kk_mass-1.02)<0.01&&bkkmm_jpsikk_sl3d>5",
+        "pre-selection-keep":"^(bkkmm_.*|nbkkmm|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|HLT_DoubleMu2_Jpsi_LowPt|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2|" + common_branches + ")$",
     },
 
     {
@@ -1296,6 +1333,19 @@ tasks = [
         "type":"FlatNtuples",
         "files_per_job":20,
         "tree_name" : "dzkmunuMC",
+        "blind" : False,
+        "cut" : cuts["dstar_dzmm"],
+        "final_state" : "dzmm",
+        "triggers":["HLT_DoubleMu4_3_LowMass"],
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"DstarToD0Pi_D0ToKPi_KPiToMuMu",
+        "processor":"FlatNtupleForDstarFit",
+        "name":"dstar",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "dzkpimmMC",
         "blind" : False,
         "cut" : cuts["dstar_dzmm"],
         "final_state" : "dzmm",
@@ -1617,7 +1667,7 @@ tasks = [
     ##############################################
     {
      	"input_pattern":"K0sToMuMu",
-        "processor":"FlatNtupleForMLFit",
+        "processor":"FlatNtupleForKsmm",
         "name":"ksmm",
 	"type":"FlatNtuples",
 	"files_per_job":50,
@@ -1629,7 +1679,7 @@ tasks = [
     },
     {
      	"input_pattern":"ParkingDoubleMuonLowMass",
-        "processor":"FlatNtupleForMLFit",
+        "processor":"FlatNtupleForKsmm",
         "name":"ksmm",
 	"type":"FlatNtuples",
 	"files_per_job":100,
@@ -1638,12 +1688,12 @@ tasks = [
         "cut" : cuts["ksmm"],
         "final_state" : "mm",
         "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
-        "pre-selection-keep":"^(mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        # "pre-selection-keep":"^(mm_.*|nmm|mmiso_.*|nmmiso|trk_.*|ntrk|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
         "mm_extra_info": True,
     },
     {
      	"input_pattern":"InclusiveDileptonMinBias",
-        "processor":"FlatNtupleForMLFit",
+        "processor":"FlatNtupleForKsmm",
         "name":"ksmm",
 	"type":"FlatNtuples",
 	"files_per_job":100,
@@ -1652,12 +1702,12 @@ tasks = [
         "cut" : cuts["ksmm"],
         "final_state" : "mm",
         "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
-        "pre-selection-keep":"^(mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        # "pre-selection-keep":"^(mm_.*|nmm|mmiso_.*|nmmiso|trk_.*|ntrk|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
         "mm_extra_info": True,
     },
     {
      	"input_pattern":"K0sTo2PiTo2Mu_K0sFilter_MuFilter",
-        "processor":"FlatNtupleForMLFit",
+        "processor":"FlatNtupleForKsmm",
         "name":"ksmm",
 	"type":"FlatNtuples",
 	"files_per_job":10,
@@ -1666,7 +1716,7 @@ tasks = [
         "cut" : cuts["ksmm"],
         "final_state" : "mm",
         "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
-        "pre-selection-keep":"^(mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        # "pre-selection-keep":"^(mm_.*|nmm|mmiso_.*|nmmiso|trk_.*|ntrk|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
         "mm_extra_info": True,
     },
     # {

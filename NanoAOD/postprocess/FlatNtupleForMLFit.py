@@ -46,6 +46,11 @@ class FlatNtupleForMLFit(FlatNtupleBase):
         # Run 3
         'HLT_Mu12_IP6',
         'HLT_DoubleMu4_3_LowMass',
+        'HLT_DoubleMu2_Jpsi_LowPt',
+        'L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5',
+        'L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4',
+        'L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4',
+        'L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2'
     ]
     
     mm_extra_floats = ["mm_kin_alpha", "mm_kin_alphaBS", "mm_kin_spvip", "mm_kin_pvip", 
@@ -404,7 +409,7 @@ class FlatNtupleForMLFit(FlatNtupleBase):
             self.tree['phi']    = self.event.bkkmm_jpsikk_phi[cand]
             self.tree['m']      = self.event.bkkmm_jpsikk_mass[cand]
             self.tree['me']     = self.event.bkkmm_jpsikk_massErr[cand]
-            self.tree['kk_mass'] = self.event.bkkmm_jpsikk_kk_mass[cand]
+            self.tree['kk_mass'] = self.event.bkkmm_kk_mass[cand]
 
             self.tree['tau']    = self.event.bkkmm_jpsikk_tau[cand]
             self.tree['taue']   = self.event.bkkmm_jpsikk_taue[cand]
@@ -531,6 +536,8 @@ if __name__ == "__main__":
 
     ### create a test job
 
+    common_branches = "PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock"
+    
     # job = {
     #     "input": [
     #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/517/BdToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+RunIISummer20UL18MiniAOD-106X_upgrade2018_realistic_v11_L1v1-v1+MINIAODSIM/06387049-7142-D749-A447-C97E700210BF.root",
@@ -748,29 +755,55 @@ if __name__ == "__main__":
     #     "best_candidate": "",
     #     "mm_extra_info": True,
     #   }
+    # job = {
+    #     "input": [
+    #         "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/crab-140x-mm/ScoutingPFRun3+Run2024D-v1+HLTSCOUT/mm_scouting_data_961.root",
+    #         ],
+    #     "signal_only" : False,
+    #     "tree_name" : "bupsikiData",
+    #     "blind" : False,
+    #     "cut" : (
+    #         "mm_mu1_index[bkmm_mm_index]>=0 and "
+    #         "mm_mu2_index[bkmm_mm_index]>=0 and "
+    #         "mm_mu1_pdgId[bkmm_mm_index] * mm_mu2_pdgId[bkmm_mm_index] < 0 and "
+    #         "bkmm_jpsimc_vtx_prob>0.1 and "
+    #         "bkmm_jpsimc_sl3d>5 and "
+    #         "abs(bkmm_jpsimc_alpha)<0.01 and "
+    #         "abs(bkmm_jpsimc_mass-5.4)<0.5"
+    #     ),
+    #     "final_state" : "bkmm",
+    #     "best_candidate": "",
+    #     "pre-selection":"bkmm_jpsimc_sl3d>5 && abs(bkmm_jpsimc_mass-5.4)<0.5 && abs(bkmm_jpsimc_alpha)<0.01",
+    #     "pre-selection-keep":"^(mm_.*|nmm|bkmm_.*|nbkmm|HLT_*|)$",
+    # }
 
     job = {
         "input": [
-            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/crab-140x-mm/ScoutingPFRun3+Run2024D-v1+HLTSCOUT/mm_scouting_data_961.root",
-            ],
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/ParkingDoubleMuonLowMass0+Run2022D-PromptReco-v1+MINIAOD/4e83dd1a-a5db-42a9-a30a-2f618d520065.root",
+            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/ParkingDoubleMuonLowMass0+Run2023D-PromptReco-v1+MINIAOD/7d38be11-28f4-47cb-8e41-6afcc361aca0.root",
+        ],
         "signal_only" : False,
-        "tree_name" : "bupsikiData",
+        "tree_name" : "bspsiphiData",
         "blind" : False,
         "cut" : (
-            "mm_mu1_index[bkmm_mm_index]>=0 and "
-            "mm_mu2_index[bkmm_mm_index]>=0 and "
-            "mm_mu1_pdgId[bkmm_mm_index] * mm_mu2_pdgId[bkmm_mm_index] < 0 and "
-            "bkmm_jpsimc_vtx_prob>0.1 and "
-            "bkmm_jpsimc_sl3d>5 and "
-            "abs(bkmm_jpsimc_alpha)<0.01 and "
-            "abs(bkmm_jpsimc_mass-5.4)<0.5"
+            "mm_mu1_index[bkkmm_mm_index]>=0 and "
+            "mm_mu2_index[bkkmm_mm_index]>=0 and "
+            "Muon_charge[mm_mu1_index[bkkmm_mm_index]] * Muon_charge[mm_mu2_index[bkkmm_mm_index]] < 0 and "
+            "Muon_isGlobal[mm_mu1_index[bkkmm_mm_index]] and "
+            "Muon_isGlobal[mm_mu2_index[bkkmm_mm_index]] and "
+            "mm_kin_vtx_prob[bkkmm_mm_index]>0.01 and "
+            "bkkmm_jpsikk_vtx_prob>0.025 and "
+            "bkkmm_jpsikk_sl3d>3 and "
+            "abs(bkkmm_jpsikk_alpha) < 0.1 and "        
+            "abs(bkkmm_jpsikk_mass-5.4)<0.5 and "
+            "abs(bkkmm_kk_mass-1.02)<0.03"
         ),
-        "final_state" : "bkmm",
+        "final_state" : "bkkmm",
         "best_candidate": "",
-        "pre-selection":"bkmm_jpsimc_sl3d>5 && abs(bkmm_jpsimc_mass-5.4)<0.5 && abs(bkmm_jpsimc_alpha)<0.01",
-        "pre-selection-keep":"^(mm_.*|nmm|bkmm_.*|nbkmm|HLT_*|)$",
-      }
-    
+        "pre-selection":"abs(bkkmm_kk_mass-1.02)<0.03&&bkkmm_jpsikk_sl3d>3",
+        "pre-selection-keep":"^(bkkmm_.*|nbkkmm|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|HLT_DoubleMu2_Jpsi_LowPt|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2|" + common_branches + ")$",
+      }  
+
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
 
