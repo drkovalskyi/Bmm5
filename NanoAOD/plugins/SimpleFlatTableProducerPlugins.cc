@@ -9,8 +9,8 @@ typedef EventSingletonSimpleFlatTableProducer<GenEventInfoProduct> SimpleGenEven
 #include "SimDataFormats/HTXS/interface/HiggsTemplateCrossSections.h"
 typedef EventSingletonSimpleFlatTableProducer<HTXS::HiggsClassification> SimpleHTXSFlatTableProducer;
 
-#include "DataFormats/Candidate/interface/CompositeCandidate.h"
-typedef SimpleFlatTableProducer<reco::CompositeCandidate> SimpleCompositeCandidateFlatTableProducer;
+#include "DataFormats/PatCandidates/interface/CompositeCandidate.h"
+typedef SimpleFlatTableProducer<pat::CompositeCandidate> SimpleCompositeCandidateFlatTableProducer;
 
 #include "FWCore/Framework/interface/MakerMacros.h"
 DEFINE_FWK_MODULE(SimpleCompositeCandidateFlatTableProducer);
