@@ -1,11 +1,12 @@
 from PostProcessingBase import Processor
 import time
 import json
+import ROOT
 from ROOT import TChain, RDataFrame, TFile, std, TTree
 import sys
 import re
 import numpy as np
-
+import os
 
 class SimpleSkimmer(Processor):
     """Processor to Skim and Slim files."""
@@ -14,17 +15,41 @@ class SimpleSkimmer(Processor):
         self.n_gen_all = None
         self.n_gen_passed = None
         self.common_branches = None
+        self.valid_files = []
         super(SimpleSkimmer, self).__init__(job_filename, take_ownership)
+
+    @staticmethod
+    def __get_branches(root_file):
+        tree = root_file.Get("Events")
+        branches = tree.GetListOfBranches()
+
+        branch_names = []
+        for j in range(branches.GetEntries()):
+            branch_names.append(branches.At(j).GetName())
+
+        return branch_names
 
     def _preprocess(self):
         input_files = self.job_info['input']
+
+        lumi_mask_type = None
+        if 'lumi_mask' in self.job_info:
+            lumi_mask_type = self.job_info['lumi_mask']
+
         for file_name in input_files:
             root_file = TFile.Open(file_name)
+            skip_file = False
+            if lumi_mask_type:
+                skip_file = True
 
             # GenFilterInfo
             lumis = root_file.Get("LuminosityBlocks")
             if lumis:
                 for lumi in lumis:
+                    if lumi_mask_type:
+                        if not self._is_certified_run_lumi(lumi.run, lumi.luminosityBlock, lumi_mask_type):
+                            continue
+                        skip_file = False
                     if hasattr(lumi, 'GenFilter_numEventsPassed'):
                         if self.n_gen_all == None:
                             self.n_gen_all = 0
@@ -32,20 +57,30 @@ class SimpleSkimmer(Processor):
                         self.n_gen_passed += lumi.GenFilter_numEventsPassed
                         self.n_gen_all    += lumi.GenFilter_numEventsTotal
 
-            # Find common branches preserving their order
-            tree = root_file.Get("Events")
-            branches = tree.GetListOfBranches()
+            if not skip_file:
+                # Find common branches preserving their order
+                current_branches = self.__get_branches(root_file)
 
-            current_branches = []
-            for j in range(branches.GetEntries()):
-                branch_name = branches.At(j).GetName()
-                current_branches.append(branch_name)
-
-            if self.common_branches == None:
-                self.common_branches = current_branches
+                if self.common_branches == None:
+                    self.common_branches = current_branches
+                else:
+                    self.common_branches = [
+                        branch
+                        for branch in self.common_branches
+                        if branch in current_branches
+                    ]
+                self.valid_files.append(file_name)
             else:
-                self.common_branches = [branch for branch in self.common_branches if branch in current_branches]
+                print(f"Ignore {file_name} - not certified")
 
+            if 'save_branches' in self.job_info and self.job_info['save_branches'] == True:
+                branch_info_file_name = re.sub(r'\.root$', '.branches', file_name)
+                branch_info_file_name = re.sub(r'^.*?\/eos\/cms', '/eos/cms', branch_info_file_name)
+                branch_names = self.__get_branches(root_file)
+                branch_names.sort()
+                with open(branch_info_file_name, 'w') as file:
+                    json.dump(branch_names, file, indent=4)
+                    
             root_file.Close()
 
 
@@ -61,8 +96,15 @@ class SimpleSkimmer(Processor):
             if parameter not in self.job_info:
                 raise Exception("Missing input '%s'" % parameter)
 
-        ## get a list of common branches
+        # preprocess
         self._preprocess()
+        if len(self.valid_files) == 0:
+            print("No valid input selected. Write empty ROOT file.")
+            f = TFile.Open(self.job_output_tmp, "recreate")
+            f.Close()
+            return
+        
+        ## get a list of common branches
         filtered_list = std.vector('string')()
         for column in self.common_branches:
             if re.search(self.job_info['keep'], str(column)):
@@ -70,14 +112,19 @@ class SimpleSkimmer(Processor):
         print(filtered_list)
 
         # setup input TChain
-        input_files = self.job_info['input']
         chain = TChain("Events")
-        for file in input_files:
+        for file in self.valid_files:
             chain.Add(file)
 
         sys.stdout.flush()
 
         df = RDataFrame(chain)
+        if 'lumi_mask' in self.job_info:
+            self._declare_lumi_mask_code()
+            lumi_mask = self._get_lumi_mask(self.job_info['lumi_mask'])
+            ROOT.gInterpreter.ProcessLine(f'lumi_mask_string = "{lumi_mask}";')
+            df = df.Define("certified", "passed_lumi_mask(run, luminosityBlock)")
+            df = df.Filter("certified == 1", "Passed data certification")
         n_events = df.Count().GetValue()
         print("Number of events to process: %d" % n_events)
 
@@ -148,26 +195,37 @@ def unit_test():
     standard_branches = 'PV_npvsGood|PV_npvs|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock'
 
     ### create a test job
+    # job = {
+    #     "input": [
+    #         '/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/526/ParkingDoubleMuonLowMass0+Run2022C-PromptReco-v1+MINIAOD/5114a593-fa24-4fc4-a475-77e6312c0362.root'
+    #     ],
+    #     # "cut": "ks_kin_sipPV<3 && ks_kin_slxy>3 && ks_trk1_sip>5 && ks_trk2_sip>5 && ks_kin_cosAlphaXY>0.999",
+    #     # "cut": "dstar_dm_pv > 0 ",
+    #     "cut": "HLT_Mu4_L1DoubleMu",
+    #     "processor": "SimpleSkimmer",
+    #     # "keep": "^(MuonId_.*|nMuonId|Muon_.*|nMuon)$",
+    #     "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_.*|" + standard_branches + ")$",
+    #     "candidate_loop": False,
+    #     "verbose": True
+
+    # }
     job = {
-        "input": [
-            '/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/526/ParkingDoubleMuonLowMass0+Run2022C-PromptReco-v1+MINIAOD/5114a593-fa24-4fc4-a475-77e6312c0362.root'
-        ],
-        # "cut": "ks_kin_sipPV<3 && ks_kin_slxy>3 && ks_trk1_sip>5 && ks_trk2_sip>5 && ks_kin_cosAlphaXY>0.999",
-        # "cut": "dstar_dm_pv > 0 ",
-        "cut": "HLT_Mu4_L1DoubleMu",
+        # "save_branches": true,
+        "lumi_mask": "muon",
         "processor": "SimpleSkimmer",
-        # "keep": "^(MuonId_.*|nMuonId|Muon_.*|nMuon)$",
-        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_.*|" + standard_branches + ")$",
-        "candidate_loop": False,
-        "verbose": True
-
+        "cut": "mm_mass > 0",
+        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|L1_DoubleMu3er2p0_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p6|L1_DoubleMu0er1p4_OQ_OS_dEta_Max1p6|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|L1_DoubleMu4p5_SQ_OS_dR_Max1p2|L1_DoubleMu4_SQ_OS_dR_Max1p2|PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock)$",
+        "input": [
+            # "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/HLTPhysics+Run2022F-PromptReco-v1+MINIAOD/b89c0db7-0d8f-420a-9888-87391958106e.root",
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/HLTPhysics+Run2022F-PromptReco-v1+MINIAOD/b8aafd1d-54ca-4c4f-bcc0-d901d0b632a0.root"
+        ]
     }
-
+    
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
 
     # p = SimpleSkimmer(file_name)
-    p = SimpleSkimmer("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/526/trig/Muon+Run2022E-PromptReco-v1+MINIAOD/04011e9bd966e9590d0df1f91f3c5b40.job")
+    p = SimpleSkimmer("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/529/mm/HLTPhysics+Run2022F-PromptReco-v1+MINIAOD/f257b748b8665d04d75551aa22fa7691.job")
     print(p.__dict__)
     p.process()
 

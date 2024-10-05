@@ -14,11 +14,15 @@ import sys
 import shutil
 
 from Bmm5.MVA.mtree import MTree
+import ROOT
 from ROOT import TFile, TTree, RDataFrame
 import numpy as np
 
 class Processor(object):
     """Base class for processors"""
+    
+    lumi_masks = dict()
+
     def __init__(self, job_filename, take_ownership=False):
         """Set up job"""
         self.job_filename = job_filename
@@ -94,6 +98,88 @@ class Processor(object):
         # os.rmdir(self.tmp_dir)
         subprocess.call("rm -v -d %s " % self.tmp_dir, shell=True)
 
+    def _declare_lumi_mask_code(self):
+        """Make sure that lumi mask code is declared"""
+
+        if not hasattr(ROOT, 'LumiMask'):
+            with open('LumiMask.h', 'r') as file:
+                lumi_mask_code = file.read()
+            ROOT.gInterpreter.Declare(lumi_mask_code)
+            ROOT.gInterpreter.Declare(f'''
+            std::string lumi_mask_string;
+
+            bool passed_lumi_mask(unsigned int run, unsigned int lumi) {{
+               static LumiMask lumi_mask = LumiMask::fromCustomString(lumi_mask_string);
+               return lumi_mask.accept(run, lumi);
+            }}
+            ''')
+
+
+    def _load_lumi_mask(self, type):
+        """Check if certification information is loaded and if not do it"""
+        
+        if type not in self.lumi_masks:
+            self.lumi_masks[type] = dict()
+            for f in os.listdir('certification/%s' % type):
+                self.lumi_masks[type].update(json.load(open('certification/%s/%s' % (type, f))))
+            print("Number of runs in the %s certification: %u" % (type, len(self.lumi_masks[type])))
+
+
+    def _get_lumi_mask(self, type):
+        """Get formated lumi mask"""
+
+        # load certification information
+        self._load_lumi_mask(type)
+        
+        parts = []
+        for run in self.lumi_masks[type]:
+            lumi_parts = []
+            for min_lumi, max_lumi in self.lumi_masks[type][run]:
+                lumi_parts.append(f"{min_lumi}-{max_lumi}")
+            if len(lumi_parts) > 0:
+                parts.append(f"{run}:{','.join(lumi_parts)}")
+
+        return ';'.join(parts)
+
+
+    def _is_certified_run(self, run, type):
+        """Check if run is certified"""
+        
+        # load certification information
+        self._load_lumi_mask(type)
+
+        # run number is a string in the lumi mask
+        run = str(run)
+
+        if run in self.lumi_masks[type]:
+            return True
+        else:
+            return False
+
+
+    def _is_certified_run_lumi(self, run, lumi, type):
+        """Check if run,lumi pair is certified"""
+        
+        # load certification information
+        self._load_lumi_mask(type)
+
+        # run number is a string in the lumi mask
+        run = str(run)
+
+        if run not in self.lumi_masks[type]:
+            return False
+        
+        for min_lumi, max_lumi in self.lumi_masks[type][run]:
+            if lumi >= min_lumi and lumi <= max_lumi:
+                return True
+        return False
+
+    def _is_certified_event(self, event, type):
+        """Check if event is certified"""
+
+        return self._is_certified_run_lumi(event.run, event.luminosityBlock, type)
+
+
     def _process(self):
         """Abstract interface to implement specific processing actions in derived classes"""
         pass
@@ -108,8 +194,6 @@ class Processor(object):
 class FlatNtupleBase(Processor):
     """Flat ROOT ntuple producer for Bmm5 analysis"""
 
-    goodruns = dict()
-
     def __init__(self, job_filename, take_ownership=False):
         self.n_gen_all = None
         self.n_gen_passed = None
@@ -118,27 +202,8 @@ class FlatNtupleBase(Processor):
 
     def _validate_inputs(self):
         """Task specific input validation"""
-        raise Exception("Not implemented")
-
-
-    def _is_certified(self, event, type):
-        # load certification information
-        if type not in self.goodruns:
-            self.goodruns[type] = dict()
-            for f in os.listdir('certification/%s' % type):
-                self.goodruns[type].update(json.load(open('certification/%s/%s' % (type, f))))
-            print("Number of runs in the %s certification: %u" % (type, len(self.goodruns[type])))
-
-        # run number is a string for some reason
-        run = str(event.run)
-
-        if run not in self.goodruns[type]:
-            return False
         
-        for min_lumi, max_lumi in self.goodruns[type][run]:
-            if event.luminosityBlock >= min_lumi and event.luminosityBlock <= max_lumi:
-                return True
-        return False
+        raise Exception("Not implemented")
 
 
     def _process(self):

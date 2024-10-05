@@ -3,13 +3,13 @@ from resources_cfg import resources
 
 workdir = "/afs/cern.ch/work/d/dmytro/projects/Run3-Bmm-NanoAODv12/src/Bmm5/NanoAOD/postprocess/"
 # version = 'crab-140x-mm'
-version = '530'
+version = '529'
 
 input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/" + str(version)
 # input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/523/bkmm"
 
-output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing-NEW"
-# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing"
+# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing-NEW"
+output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing"
 
 xrootd_prefix = "root://eoscms.cern.ch:/"
 web_report_path = "/afs/cern.ch/user/d/dmytro/www/public_html/bmm5/postprocessing/"
@@ -25,7 +25,8 @@ active_tasks = {
     "NanoAOD-skims":[
         ## "bkmm", "trig", "ks", "lambda", "phi", "ds"
         # "mm", "ks", "phi", "lambda", "bkmm",
-        # "trig", # "mm"
+        # "trig",
+        # "mm",
         # "mm-vtx"
         # "bmm"
         # "ks", "lambda", "phi"
@@ -46,6 +47,7 @@ active_tasks = {
         # "tau3mu"
         # "mm_vtx"
         # "dzkpimm"
+        "mm"
     ],
 
     # Flat ntuples with task specific content
@@ -66,7 +68,7 @@ active_tasks = {
         # "dzpipi_otherZB"
         # "dstar",
         # "dzkpi"
-        "ksmm",
+        # "ksmm",
         # "kspipi"
         # "bkkmm"
         # "bkmm"
@@ -463,30 +465,47 @@ tasks = [
         "files_per_job":100
     },
     {
-        "input_pattern":"EGamma|DoubleEG|SingleElectron|SinglePhoton",
+        # "input_pattern":"EGamma|DoubleEG|SingleElectron|SinglePhoton",
+        "input_pattern":"ZeroBias|HLTPhysics",
         "processor":"Skimmer",
         "cut":"nmm>0",
         "name":"mm",
         "type":"NanoAOD-skims",
-        "files_per_job":100
+        "files_per_job":50
     },
+    # {
+    #     "input_pattern":"InclusiveDileptonMinBias",
+    #     "processor":"SimpleSkimmer",
+    #     "cut":"mm_mass > 0",
+    #     "name":"mm",
+    #     "type":"Skims",
+    #     "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + common_branches + ")$",
+    #     "files_per_job":100
+    # },
+    # {
+    #     "input_pattern":"ParkingDoubleMuonLowMass",
+    #     "processor":"SimpleSkimmer",
+    #     "cut":"mm_mass > 0",
+    #     "name":"mm",
+    #     "type":"Skims",
+    #     "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + common_branches + ")$",
+    #     "files_per_job":20
+    # },
     {
-        "input_pattern":"InclusiveDileptonMinBias",
+        "input_pattern":"ZeroBias|HLTPhysics|EGamma|ParkingDoubleElectronLowMass",
         "processor":"SimpleSkimmer",
         "cut":"mm_mass > 0",
         "name":"mm",
         "type":"Skims",
-        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + common_branches + ")$",
+        "lumi_mask": "muon",
+        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" +
+        "HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" +
+        "L1_DoubleMu3er2p0_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p6|" +
+        "L1_DoubleMu0er1p4_OQ_OS_dEta_Max1p6|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|" +
+        "L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|" +
+        "L1_DoubleMu4p5_SQ_OS_dR_Max1p2|L1_DoubleMu4_SQ_OS_dR_Max1p2|" +
+        common_branches + ")$",
         "files_per_job":100
-    },
-    {
-        "input_pattern":"ParkingDoubleMuonLowMass",
-        "processor":"SimpleSkimmer",
-        "cut":"mm_mass > 0",
-        "name":"mm",
-        "type":"Skims",
-        "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + common_branches + ")$",
-        "files_per_job":20
     },
     {
         "input_pattern":"ParkingBPH|InclusiveDileptonMinBias",
