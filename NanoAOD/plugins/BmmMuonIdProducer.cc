@@ -132,7 +132,7 @@ const l1t::Muon* BmmMuonIdProducer::getL1Muon( const reco::Candidate& cand ){
   double best_dr = 999.;
   // Loop over L1 candidates from BX 0 only
   for (auto it = l1Handle_->begin(0); it != l1Handle_->end(0); it++){
-    double dr = deltaR(*it, cand);
+    double dr = deltaR(it->etaAtVtx(), it->phiAtVtx(), cand.eta(), cand.phi());
     if (match == nullptr or dr < best_dr){
       best_dr = dr;
       match = &*it;
@@ -266,33 +266,20 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 
       ///// L1
 
-      // We rely on the muon object matching, which takes care of
-      // propogating the muon trajectory to the muon detectors, where
-      // L1 objects are defined.
-
-      const l1t::Muon* l1_muon = nullptr;
-      if (muon.l1Object()){
-	mu_cand.addUserFloat("l1_pt", muon.l1Object()->pt());
-	mu_cand.addUserFloat("l1_eta", muon.l1Object()->eta());
-	mu_cand.addUserFloat("l1_phi", muon.l1Object()->phi());
-	l1_muon= getL1Muon(*muon.l1Object());
-	if (l1_muon){
-	  mu_cand.addUserInt("l1_quality", l1_muon->hwQual());
-	  mu_cand.addUserFloat("l1_mpt",   l1_muon->pt());
-	  mu_cand.addUserFloat("l1_phiAtVtx", l1_muon->phiAtVtx());
-	  mu_cand.addUserFloat("l1_etaAtVtx", l1_muon->etaAtVtx());
-	}
-      }
-      
-      // defaults
-      if (not muon.l1Object()){
+      const l1t::Muon* l1_muon = getL1Muon(muon);
+      if (l1_muon){
+	mu_cand.addUserFloat("l1_pt", l1_muon->pt());
+	mu_cand.addUserFloat("l1_eta", l1_muon->eta());
+	mu_cand.addUserFloat("l1_phi", l1_muon->phi());
+	mu_cand.addUserInt("l1_quality", l1_muon->hwQual());
+	mu_cand.addUserFloat("l1_phiAtVtx", l1_muon->phiAtVtx());
+	mu_cand.addUserFloat("l1_etaAtVtx", l1_muon->etaAtVtx());
+      } else {
+	// defaults
 	mu_cand.addUserFloat("l1_pt", -1);
 	mu_cand.addUserFloat("l1_eta", 0);
 	mu_cand.addUserFloat("l1_phi", 0);
-      }
-      if (not l1_muon){
 	mu_cand.addUserInt("l1_quality", 0);
-	mu_cand.addUserFloat("l1_mpt",  -1);
 	mu_cand.addUserFloat("l1_phiAtVtx", 0);
 	mu_cand.addUserFloat("l1_etaAtVtx", 0);
       }

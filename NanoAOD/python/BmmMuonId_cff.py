@@ -39,6 +39,7 @@ triggers = [
     'HLT_DoubleMu4_LowMass_Displaced'
     'HLT_Mu4_L1DoubleMu',
     'HLT_Mu0_L1DoubleMu',
+    'HLT_DoubleMu2_Jpsi_LowPt'
 ]
 
 xgboost_models = [
@@ -117,7 +118,6 @@ BmmMuonIdVariables = cms.PSet(
     hlt_pt              = Var("userFloat('hlt_pt')",              float, doc = "HLT pt"),
     hlt_dr              = Var("userFloat('hlt_dr')",              float, doc = "HLT dR"),
     l1_pt               = Var("userFloat('l1_pt')",               float, doc = "L1 pt"),
-    l1_mpt              = Var("userFloat('l1_mpt')",              float, doc = "L1 pt (cross-check)"),
     l1_etaAtVtx         = Var("userFloat('l1_etaAtVtx')",         float, doc = "L1 eta at vertex"),
     l1_phiAtVtx         = Var("userFloat('l1_phiAtVtx')",         float, doc = "L1 phi at vertex"),
     l1_eta              = Var("userFloat('l1_eta')",              float, doc = "L1 eta"),
