@@ -195,6 +195,8 @@ private:
 
   const pat::CompositeCandidate*
   buildKsCandidates(pat::CompositeCandidateCollection& hh_collection,
+		    pat::CompositeCandidateCollection& iso_collection,
+		    std::vector<const reco::Track*>& interestingTracks,
 		    const edm::Event& iEvent,
 		    const pat::PackedCandidate& had1,
 		    const pat::PackedCandidate& had2);
@@ -218,6 +220,10 @@ private:
   vertexWithKinematicFitter(std::vector<const reco::Track*> trks,
 			    std::vector<float> masses);
 
+  KinematicFitResult 
+  vertexPionsWithKinematicFitter(const reco::Track* trk1,
+				 const reco::Track* trk2,
+				 const reco::Track* trk3 = nullptr);
   KinematicFitResult 
   vertexLeptonsWithKinematicFitter(const bmm::Candidate& lepton1,
 				   const bmm::Candidate& lepton2);
@@ -415,14 +421,15 @@ private:
 		   const bmm::Candidate& lepton2); 
 
   void
-  fillIsolationInfo(const pat::CompositeCandidate& dileptonCand,
-		    const KinematicFitResult& kinematicLLVertexFit,
+  fillIsolationInfo(const pat::CompositeCandidate& refCand,
+		    const KinematicFitResult& vtxFit,
 		    int mm_index,
-		    pat::CompositeCandidateCollection& mmiso_collection,
+		    int hh_index,
+		    pat::CompositeCandidateCollection& iso_collection,
 		    std::vector<const reco::Track*>& interestingTracks,
 		    const edm::Event& iEvent,
-		    const bmm::Candidate& lepton1,
-		    const bmm::Candidate& lepton2);
+		    const reco::Track* track1,
+		    const reco::Track* track2);
   
   void
   fillTrackInfo(pat::CompositeCandidateCollection& output_collection,
@@ -610,7 +617,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
 {
   produces<pat::CompositeCandidateCollection>("MuMu");
   produces<pat::CompositeCandidateCollection>("InterestingTracks");
-  produces<pat::CompositeCandidateCollection>("MuMuIso");
+  produces<pat::CompositeCandidateCollection>("Iso");
   produces<pat::CompositeCandidateCollection>("MuMuMu");
   produces<pat::CompositeCandidateCollection>("ElEl");
   produces<pat::CompositeCandidateCollection>("ElMu");
@@ -1821,16 +1828,17 @@ DileptonPlusXProducer::fillMvaInfoForLLGamma(pat::CompositeCandidate& llg,
 }
 
 void
-DileptonPlusXProducer::fillIsolationInfo(const pat::CompositeCandidate& dileptonCand,
-					 const KinematicFitResult& llVertexFit,
+DileptonPlusXProducer::fillIsolationInfo(const pat::CompositeCandidate& refCand,
+					 const KinematicFitResult& refVtxFit,
 					 int mm_index,
+					 int hh_index,
 					 pat::CompositeCandidateCollection& iso_collection,
 					 std::vector<const reco::Track*>& tracks,
 					 const edm::Event& iEvent,
-					 const bmm::Candidate& lepton1,
-					 const bmm::Candidate& lepton2)
+					 const reco::Track* refTrack1,
+					 const reco::Track* refTrack2)
 {
-  int pv_index = dileptonCand.userInt("kin_pvIndex");
+  int pv_index = refCand.userInt("kin_pvIndex");
   
   for (const auto& pfCand: *pfCandHandle_.product()) {
 
@@ -1840,11 +1848,14 @@ DileptonPlusXProducer::fillIsolationInfo(const pat::CompositeCandidate& dilepton
     if (not isGoodTrack(pfCand)) continue;
     const reco::Track* track = pfCand.bestTrack();
 
-    // Ignore tracks overlapping with the leptons
-    if (overlap(lepton1, pfCand) || overlap(lepton2, pfCand)) continue;
+    // Ignore tracks overlapping with the reference tracks
+    if (overlap(refTrack1, track) || overlap(refTrack2, track)) continue;
 
-    // Restrict tracks by dR (not strictly necessary - mostly to keep number of tracks reasonable)
-    if (deltaR(*track, dileptonCand) > 1.5) continue;
+    // Compute dR to Restrict tracks for isolation (not strictly
+    // necessary - mostly to keep number of tracks reasonable)
+    // Do not use for production information.
+
+    auto dR = deltaR(*track, refCand);
 
     // Restrict tracks by pt (low pt tracks have poor resolution)
     if (track->pt() < 0.5) continue;
@@ -1862,49 +1873,38 @@ DileptonPlusXProducer::fillIsolationInfo(const pat::CompositeCandidate& dilepton
     if (track->dxyError() > 0)
       track_beamspot_ip_significance = fabs(track->dxy(*beamSpot_))/track->dxyError();
     
-    double mu1_doca = distanceOfClosestApproach(lepton1.track(), track);
-    double mu2_doca = distanceOfClosestApproach(lepton2.track(), track);
+    double d1_doca = distanceOfClosestApproach(refTrack1, track);
+    double d2_doca = distanceOfClosestApproach(refTrack2, track);
 
-    KinematicFitResult mmTrkVertexFit;
+    int track_pv_index = int(pfCand.vertexRef().key());
+    
+    KinematicFitResult ddTrkVertexFit;
     
     ////// Track selection by use case
 
     //// Displaced tracks
-    // 2sigma displacement requirement probably will lead to some inefficiency,
-    // but we have lots of pileup and prompt tracks
     
     if (track_beamspot_ip_significance > 2.0) {
 
-      //// Tracks potentially compatible with muons to form alternative vertices
-      // Soft tracks are no to good for this 
+      // Tracks potentially compatible with reference tracks to form
+      // alternative vertices. Soft tracks are no to good for this.
     
       const double maxDoca = 0.02;
-      if (track->pt() > 1 and
-	  (mu1_doca < maxDoca or mu2_doca < maxDoca)) save_track=true;
+      if (track->pt() > 1 and dR < 1.5 and
+	  (d1_doca < maxDoca or d2_doca < maxDoca)) save_track=true;
 
-      // Keep prompt tracks associated to the primary vertex
+      // Keep displaced tracks associated to the primary vertex to
+      // analyze production environment
       
-      // if (int(pfCand.vertexRef().key()) == dileptonCand.userInt("kin_pvIndex")) {
-      
-      //   // check 3D impact parameter
-      //   const reco::TransientTrack tt = theTTBuilder_->build(track);
-      //   std::pair<bool, Measurement1D> result =
-      // 	IPTools::signedImpactParameter3D(tt,
-      // 					 GlobalVector(track->px(), track->py(), track->pz()),
-      // 					 *pfCand.vertexRef());
-      //   if (fabs(result.second.significance()) < 2.0) {
-      // 	relevant_tracks.push_back(track);
-      // 	continue;
-      //   }
-      // }
-
+      if (track_pv_index == refCand.userInt("kin_pvIndex"))
+	save_track=true; 
     }
 
-    //// mmTrk vertex
+    //// ddTrk vertex
 
-    if (mu1_doca < maxTwoTrackDOCA_ and mu2_doca < maxTwoTrackDOCA_) {
-      mmTrkVertexFit = vertexWithKinematicFitter(lepton1, lepton2, track);
-      if (mmTrkVertexFit.vtxProb() > 0.001) save_track=true;
+    if (dR < 1.5 and d1_doca < maxTwoTrackDOCA_ and d2_doca < maxTwoTrackDOCA_) {
+      ddTrkVertexFit = vertexPionsWithKinematicFitter(refTrack1, refTrack2, track);
+      if (ddTrkVertexFit.vtxProb() > 0.001) save_track=true;
     }
 
     if (not save_track) continue;
@@ -1918,10 +1918,13 @@ DileptonPlusXProducer::fillIsolationInfo(const pat::CompositeCandidate& dilepton
     pat::CompositeCandidate cand;
     
     cand.addUserInt("trk_index", track_index);
+    cand.addUserInt("trk_pv_index", track_pv_index);
+    cand.addUserInt("ref_pv_index", pv_index);
     cand.addUserInt("mm_index", mm_index);
+    cand.addUserInt("hh_index", hh_index);
 
     //// General information
-    cand.addUserFloat("dr", deltaR(*track, dileptonCand) );
+    cand.addUserFloat("dr", dR );
 
     //// Main Vertices
     
@@ -1951,64 +1954,65 @@ DileptonPlusXProducer::fillIsolationInfo(const pat::CompositeCandidate& dilepton
     // - doca of two tracks
     // - vertex probability
     // - vertex location and uncertainty
-    cand.addUserFloat("mu1_doca", mu1_doca);
-    cand.addUserFloat("mu2_doca", mu2_doca);
+    cand.addUserFloat("d1_doca", d1_doca);
+    cand.addUserFloat("d2_doca", d2_doca);
 
-    KinematicFitResult mu1_vtx = vertexWithKinematicFitter(lepton1, track);
-    cand.addUserFloat("mu1_vtx_prob",    mu1_vtx.vtxProb());
-    cand.addUserFloat("mu1_vtx_x",       mu1_vtx.vtx_position().x());
-    cand.addUserFloat("mu1_vtx_y",       mu1_vtx.vtx_position().y());
-    cand.addUserFloat("mu1_vtx_z",       mu1_vtx.vtx_position().z());
-    cand.addUserFloat("mu1_vtx_xErr",    mu1_vtx.vtx_error().cxx() > 0 ? sqrt(mu1_vtx.vtx_error().cxx()):0);
-    cand.addUserFloat("mu1_vtx_yErr",    mu1_vtx.vtx_error().cyy() > 0 ? sqrt(mu1_vtx.vtx_error().cyy()):0);
-    cand.addUserFloat("mu1_vtx_zErr",    mu1_vtx.vtx_error().czz() > 0 ? sqrt(mu1_vtx.vtx_error().czz()):0);
-    cand.addUserFloat("mu1_vtx_alphaBS", mu1_vtx.alphaBS());
+    
+    KinematicFitResult d1_vtx = vertexPionsWithKinematicFitter(refTrack1, track);
+    cand.addUserFloat("d1_vtx_prob",    d1_vtx.vtxProb());
+    cand.addUserFloat("d1_vtx_x",       d1_vtx.vtx_position().x());
+    cand.addUserFloat("d1_vtx_y",       d1_vtx.vtx_position().y());
+    cand.addUserFloat("d1_vtx_z",       d1_vtx.vtx_position().z());
+    cand.addUserFloat("d1_vtx_xErr",    d1_vtx.vtx_error().cxx() > 0 ? sqrt(d1_vtx.vtx_error().cxx()):0);
+    cand.addUserFloat("d1_vtx_yErr",    d1_vtx.vtx_error().cyy() > 0 ? sqrt(d1_vtx.vtx_error().cyy()):0);
+    cand.addUserFloat("d1_vtx_zErr",    d1_vtx.vtx_error().czz() > 0 ? sqrt(d1_vtx.vtx_error().czz()):0);
+    cand.addUserFloat("d1_vtx_alphaBS", d1_vtx.alphaBS());
     
     // check if we have a primary vertex
     if (pv_index >= 0) {
-      bmm::Displacement  mu1_vtx_pv("mu1_vtx_pv", mu1_vtx, pvHandle_->at(pv_index), pv_index);
-      cand.addUserFloat("mu1_vtx_alpha",      mu1_vtx_pv.alpha());
-      cand.addUserFloat("mu1_vtx_pv_l3d",     mu1_vtx_pv.decayLength());
-      cand.addUserFloat("mu1_vtx_pv_sl3d",    mu1_vtx_pv.decayLengthSig());
+      bmm::Displacement  d1_vtx_pv("d1_vtx_pv", d1_vtx, pvHandle_->at(pv_index), pv_index);
+      cand.addUserFloat("d1_vtx_alpha",      d1_vtx_pv.alpha());
+      cand.addUserFloat("d1_vtx_pv_l3d",     d1_vtx_pv.decayLength());
+      cand.addUserFloat("d1_vtx_pv_sl3d",    d1_vtx_pv.decayLengthSig());
     } else {
-      cand.addUserFloat("mu1_vtx_alpha",     9999.);
-      cand.addUserFloat("mu1_vtx_pv_l3d",     -1.0);
-      cand.addUserFloat("mu1_vtx_pv_sl3d",    -1.0);
+      cand.addUserFloat("d1_vtx_alpha",     9999.);
+      cand.addUserFloat("d1_vtx_pv_l3d",     -1.0);
+      cand.addUserFloat("d1_vtx_pv_sl3d",    -1.0);
     }
     
-    bmm::Displacement  mu1_vtx_mm("mu1_vtx_mm", mu1_vtx, llVertexFit.vertex(), -1);
-    cand.addUserFloat("mu1_vtx_mm_l3d",     mu1_vtx_mm.decayLength());
-    cand.addUserFloat("mu1_vtx_mm_sl3d",    mu1_vtx_mm.decayLengthSig());
+    bmm::Displacement  d1_vtx_ref("d1_vtx_ref", d1_vtx, refVtxFit.vertex(), -1);
+    cand.addUserFloat("d1_vtx_ref_l3d",     d1_vtx_ref.decayLength());
+    cand.addUserFloat("d1_vtx_ref_sl3d",    d1_vtx_ref.decayLengthSig());
     
-    KinematicFitResult mu2_vtx = vertexWithKinematicFitter(lepton2, track);
-    cand.addUserFloat("mu2_vtx_prob",    mu2_vtx.vtxProb());
-    cand.addUserFloat("mu2_vtx_x",       mu2_vtx.vtx_position().x());
-    cand.addUserFloat("mu2_vtx_y",       mu2_vtx.vtx_position().y());
-    cand.addUserFloat("mu2_vtx_z",       mu2_vtx.vtx_position().z());
-    cand.addUserFloat("mu2_vtx_xErr",    mu2_vtx.vtx_error().cxx() > 0 ? sqrt(mu2_vtx.vtx_error().cxx()):0);
-    cand.addUserFloat("mu2_vtx_yErr",    mu2_vtx.vtx_error().cyy() > 0 ? sqrt(mu2_vtx.vtx_error().cyy()):0);
-    cand.addUserFloat("mu2_vtx_zErr",    mu2_vtx.vtx_error().czz() > 0 ? sqrt(mu2_vtx.vtx_error().czz()):0);
-    cand.addUserFloat("mu2_vtx_alphaBS", mu2_vtx.alphaBS());
+    KinematicFitResult d2_vtx = vertexPionsWithKinematicFitter(refTrack2, track);
+    cand.addUserFloat("d2_vtx_prob",    d2_vtx.vtxProb());
+    cand.addUserFloat("d2_vtx_x",       d2_vtx.vtx_position().x());
+    cand.addUserFloat("d2_vtx_y",       d2_vtx.vtx_position().y());
+    cand.addUserFloat("d2_vtx_z",       d2_vtx.vtx_position().z());
+    cand.addUserFloat("d2_vtx_xErr",    d2_vtx.vtx_error().cxx() > 0 ? sqrt(d2_vtx.vtx_error().cxx()):0);
+    cand.addUserFloat("d2_vtx_yErr",    d2_vtx.vtx_error().cyy() > 0 ? sqrt(d2_vtx.vtx_error().cyy()):0);
+    cand.addUserFloat("d2_vtx_zErr",    d2_vtx.vtx_error().czz() > 0 ? sqrt(d2_vtx.vtx_error().czz()):0);
+    cand.addUserFloat("d2_vtx_alphaBS", d2_vtx.alphaBS());
     
     // check if we have a primary vertex
     if (pv_index >= 0) {
-      bmm::Displacement  mu2_vtx_pv("mu2_vtx_pv", mu2_vtx, pvHandle_->at(pv_index), pv_index);
-      cand.addUserFloat("mu2_vtx_alpha",      mu2_vtx_pv.alpha());
-      cand.addUserFloat("mu2_vtx_pv_l3d",     mu2_vtx_pv.decayLength());
-      cand.addUserFloat("mu2_vtx_pv_sl3d",    mu2_vtx_pv.decayLengthSig());
+      bmm::Displacement  d2_vtx_pv("d2_vtx_pv", d2_vtx, pvHandle_->at(pv_index), pv_index);
+      cand.addUserFloat("d2_vtx_alpha",      d2_vtx_pv.alpha());
+      cand.addUserFloat("d2_vtx_pv_l3d",     d2_vtx_pv.decayLength());
+      cand.addUserFloat("d2_vtx_pv_sl3d",    d2_vtx_pv.decayLengthSig());
     } else {
-      cand.addUserFloat("mu2_vtx_alpha",      9999.);
-      cand.addUserFloat("mu2_vtx_pv_l3d",     -1.0);
-      cand.addUserFloat("mu2_vtx_pv_sl3d",    -1.0);
+      cand.addUserFloat("d2_vtx_alpha",      9999.);
+      cand.addUserFloat("d2_vtx_pv_l3d",     -1.0);
+      cand.addUserFloat("d2_vtx_pv_sl3d",    -1.0);
     }
     
-    bmm::Displacement  mu2_vtx_mm("mu2_vtx_mm", mu2_vtx, llVertexFit.vertex(), -1);
-    cand.addUserFloat("mu2_vtx_mm_l3d",     mu2_vtx_mm.decayLength());
-    cand.addUserFloat("mu2_vtx_mm_sl3d",    mu2_vtx_mm.decayLengthSig());
+    bmm::Displacement  d2_vtx_ref("d2_vtx_ref", d2_vtx, refVtxFit.vertex(), -1);
+    cand.addUserFloat("d2_vtx_ref_l3d",     d2_vtx_ref.decayLength());
+    cand.addUserFloat("d2_vtx_ref_sl3d",    d2_vtx_ref.decayLengthSig());
 
-    //// mmTrk
+    //// ddTrk
 
-    cand.addUserFloat("mm_vtx_prob",    mmTrkVertexFit.vtxProb());
+    cand.addUserFloat("vtx_prob",    ddTrkVertexFit.vtxProb());
      
     iso_collection.push_back(cand);
   }
@@ -2044,6 +2048,10 @@ DileptonPlusXProducer::fillTrackInfo(pat::CompositeCandidateCollection& output_c
     tk_cand.addUserInt("trkLostLayersOn",     track->hitPattern().trackerLayersWithoutMeasurement(reco::HitPattern::TRACK_HITS));
     tk_cand.addUserInt("trkLostLayersOuter",  track->hitPattern().trackerLayersWithoutMeasurement(reco::HitPattern::MISSING_OUTER_HITS));
 
+    double track_beamspot_ip_significance = 0;
+    if (track->dxyError() > 0)
+      track_beamspot_ip_significance = fabs(track->dxy(*beamSpot_))/track->dxyError();
+    tk_cand.addUserFloat("bs_sip", track_beamspot_ip_significance );
 
     // Gen Information
     if (isMC_) {
@@ -2502,6 +2510,8 @@ DileptonPlusXProducer::buildDstarCandidates(pat::CompositeCandidateCollection& d
 
 const pat::CompositeCandidate*
 DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_collection,
+					 pat::CompositeCandidateCollection& iso_collection,
+					 std::vector<const reco::Track*>& tracks,
 					 const edm::Event& iEvent,
 					 const pat::PackedCandidate& had1,
 					 const pat::PackedCandidate& had2) {
@@ -2525,7 +2535,10 @@ DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_c
 	
     if (preprocess(ksCand, iEvent, pion1, pion2)){
       // Kinematic Fits
-      auto d0VertexFit = fillDileptonInfo(ksCand, iEvent, pion1, pion2);
+      auto vtxFit = fillDileptonInfo(ksCand, iEvent, pion1, pion2);
+      fillIsolationInfo(ksCand, vtxFit, -1, hh_collection.size(),
+			iso_collection, tracks, iEvent, pion1.track(), pion2.track());
+
       hh_collection.push_back(ksCand);
       return &hh_collection.back();
     }
@@ -2598,7 +2611,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   // Output collection
   auto mm_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto trk_collection = std::make_unique<pat::CompositeCandidateCollection>();
-  auto mmiso_collection = std::make_unique<pat::CompositeCandidateCollection>();
+  auto iso_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto ee_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto em_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto hh_collection = std::make_unique<pat::CompositeCandidateCollection>();
@@ -2789,8 +2802,8 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	}
 	
 	// fill isolation information for dimuon candidate
-	fillIsolationInfo(dimuonCand, kinematicLLVertexFit, mm_index,
-			  *mmiso_collection, interestingTracks, iEvent, muon1, muon2);
+	fillIsolationInfo(dimuonCand, kinematicLLVertexFit, mm_index, -1,
+			  *iso_collection, interestingTracks, iEvent, muon1.track(), muon2.track());
 
 	// save dimuon
 	mm_collection->push_back(dimuonCand);
@@ -2871,7 +2884,9 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	  
 	buildDstarCandidates(*dstar_collection, *hh_collection, iEvent, had1, had2);
 
-	const auto* ksCand = buildKsCandidates(*hh_collection, iEvent, had1, had2);
+	const auto* ksCand = buildKsCandidates(*hh_collection, *iso_collection, interestingTracks,
+					       iEvent, had1, had2);
+	
 	// Kstar->Kspi->mmpi
 	if (recoKstar_ && ksCand){
 	  for (unsigned int k = 0; k < nPFCands; ++k) {
@@ -2891,7 +2906,6 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	    }
 	  }
 	}
-	  
 	
 	// // reco Btohh
 	// if (dileptonCand.name() == "hh")
@@ -2907,7 +2921,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   }
 
   iEvent.put(std::move(mm_collection),     "MuMu");
-  iEvent.put(std::move(mmiso_collection),  "MuMuIso");
+  iEvent.put(std::move(iso_collection),    "Iso");
   iEvent.put(std::move(mmm_collection),    "MuMuMu");
   iEvent.put(std::move(ee_collection), "ElEl");
   iEvent.put(std::move(em_collection), "ElMu");
@@ -3014,6 +3028,24 @@ DileptonPlusXProducer::vertexLeptonsWithKinematicFitter(const bmm::Candidate& le
   masses.push_back( lepton1.mass() );
   trks.push_back( lepton2.track() );
   masses.push_back( lepton2.mass() );
+  return vertexWithKinematicFitter(trks, masses);
+}
+
+KinematicFitResult 
+DileptonPlusXProducer::vertexPionsWithKinematicFitter(const reco::Track* trk1,
+						      const reco::Track* trk2,
+						      const reco::Track* trk3)
+{
+  std::vector<const reco::Track*> trks;
+  std::vector<float> masses;
+  trks.push_back(trk1);
+  masses.push_back(PionMass_);
+  trks.push_back(trk2);
+  masses.push_back(PionMass_);
+  if (trk3){
+    trks.push_back(trk3);
+    masses.push_back(PionMass_);
+  }
   return vertexWithKinematicFitter(trks, masses);
 }
 

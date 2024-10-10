@@ -36,10 +36,11 @@ triggers = [
     'HLT_Mu15',
     'HLT_Mu17',
     'HLT_DoubleMu4_3_LowMass',
-    'HLT_DoubleMu4_LowMass_Displaced'
+    'HLT_DoubleMu4_LowMass_Displaced',
     'HLT_Mu4_L1DoubleMu',
     'HLT_Mu0_L1DoubleMu',
-    'HLT_DoubleMu2_Jpsi_LowPt'
+    'HLT_DoubleMu2_Jpsi_LowPt',
+    'HLT_Mu3_PFJet40',
 ]
 
 xgboost_models = [
