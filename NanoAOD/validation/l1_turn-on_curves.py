@@ -49,18 +49,35 @@ data_path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/"
 output_path = "/eos/home-d/dmytro/www/plots/Run3/l1_turn-on_curves/";
 
 samples = {
-    'Bsmm-22EE': {
+    # 'Bsmm-22EE': {
+    #     'samples': [
+    #         data_path + "/BsToMuMu_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22EEMiniAODv4-130X_mcRun3_2022_realistic_postEE_v6-v2+MINIAODSIM/*.root",
+    #     ],
+    #     'triggers': [], 
+    # },
+    # 'ZeroBias-22E': {
+    #     'samples': [
+    #         data_path + "/ZeroBias+Run2022E-PromptReco-v1+MINIAOD/*.root",
+    #     ],
+    #     'triggers': [], 
+    # },
+    'test': {
         'samples': [
-            data_path + "/BsToMuMu_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22EEMiniAODv4-130X_mcRun3_2022_realistic_postEE_v6-v2+MINIAODSIM/*.root",
+            '/tmp/dmytro/test_data.root'
+        ],
+        'triggers': ['HLT_ZeroBias'],
+        # 'eta_step': 1.6
+        'eta_step': 9999
+    },
+    'Bsmm-test': {
+        'samples': [
+            data_path + "/BsToMuMu_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22EEMiniAODv4-130X_mcRun3_2022_realistic_postEE_v6-v2+MINIAODSIM/1*.root",
         ],
         'triggers': [], 
+        # 'eta_step': 1.6
+        'eta_step': 9999
     },
-    'ZeroBias-22E': {
-        'samples': [
-            data_path + "/ZeroBias+Run2022E-PromptReco-v1+MINIAOD/*.root",
-        ],
-        'triggers': [], 
-    },
+        
 }
 
 data = dict()
@@ -74,10 +91,9 @@ def split_range(start, end, step):
     result = []
     current = start
     while current < end:
-        result.append((round(current, 2), round(current + step, 2)))
+        result.append((round(current, 2), min(round(current + step, 2),end)))
         current += step
     return result
-
 
 def get_data(name, tree="Events"):
     if name in data:
@@ -108,7 +124,7 @@ def measure_trigger_object_efficiency(sample, suffix, preselection):
     if not chain: return
     name = sample + suffix
 
-    eta_bins = split_range(-2.4, 2.4, 0.2)
+    eta_bins = split_range(-2.4, 2.4, samples[sample]['eta_step'])
 
     fout = ROOT.TFile.Open("results/l1_turn-on_%s.root" % name, "recreate")
 
@@ -496,7 +512,12 @@ ROOT.gStyle.SetPaintTextFormat(".3f");
     
 for sample in samples:
 
+    measure_trigger_object_efficiency(sample, "_base", "Muon_looseId&&Muon_isTracker&&Muon_isGlobal&&Muon_nStations>=2")
     measure_trigger_object_efficiency(sample, "_loose", "Muon_looseId")
+    measure_trigger_object_efficiency(sample, "_medium", "Muon_mediumId")
+    measure_trigger_object_efficiency(sample, "_tight", "Muon_tightId")
+    # measure_trigger_object_efficiency(sample, "_looseFC", "Muon_looseId&&HLT_ZeroBias_FirstCollisionInTrain")
+    # measure_trigger_object_efficiency(sample, "_looseDoubleMu4_3", "Muon_looseId&&HLT_DoubleMu4_3_LowMass")
 
 # def make_overlay_plot(name, h1_name, name1, h2_name, name2):
 #     legend = ROOT.TLegend(0.70,0.65,0.85,0.77)
