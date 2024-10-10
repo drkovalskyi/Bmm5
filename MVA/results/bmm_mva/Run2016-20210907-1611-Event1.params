@@ -1,1 +1,0 @@
-{"colsample_bytree": 1.0, "silent": 1, "eval_metric": "auc", "nthread": 15, "min_child_weight": 0.01, "subsample": 0.6, "eta": 0.01, "objective": "binary:logistic", "alpha": 8.0, "tree_method": "hist", "max_depth": 5, "gamma": 2.0, "lambda": 1.0}

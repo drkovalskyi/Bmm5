@@ -13,7 +13,7 @@ import fcntl
 import sys
 import shutil
 
-from Bmm5.MVA.mtree import MTree
+from mtree import MTree
 import ROOT
 from ROOT import TFile, TTree, RDataFrame
 import numpy as np
