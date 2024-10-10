@@ -51,7 +51,7 @@ private:
   // const pat::PackedCandidate& track2);
   void fillMatchInfo(pat::CompositeCandidate& cand, const pat::Muon& muon);
   void fillSoftMva(pat::CompositeCandidate& mu_cand);
-  const l1t::Muon* getL1Muon( const reco::Candidate& cand );
+  const l1t::Muon* getL1Muon(const reco::Candidate& cand, float max_dr=0.5);
   
   // ----------member data ---------------------------
     
@@ -127,12 +127,13 @@ void BmmMuonIdProducer::fillSoftMva(pat::CompositeCandidate& mu_cand){
 }
 
 
-const l1t::Muon* BmmMuonIdProducer::getL1Muon( const reco::Candidate& cand ){
+const l1t::Muon* BmmMuonIdProducer::getL1Muon( const reco::Candidate& cand, float max_dr){
   const l1t::Muon* match = nullptr;
-  double best_dr = 999.;
+  float best_dr = 999.;
   // Loop over L1 candidates from BX 0 only
   for (auto it = l1Handle_->begin(0); it != l1Handle_->end(0); it++){
-    double dr = deltaR(it->etaAtVtx(), it->phiAtVtx(), cand.eta(), cand.phi());
+    float dr = deltaR(it->etaAtVtx(), it->phiAtVtx(), cand.eta(), cand.phi());
+    if (dr > max_dr) continue;
     if (match == nullptr or dr < best_dr){
       best_dr = dr;
       match = &*it;
@@ -268,12 +269,14 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 
       const l1t::Muon* l1_muon = getL1Muon(muon);
       if (l1_muon){
+	float dr = deltaR(l1_muon->etaAtVtx(), l1_muon->phiAtVtx(), muon.eta(), muon.phi());
 	mu_cand.addUserFloat("l1_pt", l1_muon->pt());
 	mu_cand.addUserFloat("l1_eta", l1_muon->eta());
 	mu_cand.addUserFloat("l1_phi", l1_muon->phi());
 	mu_cand.addUserInt("l1_quality", l1_muon->hwQual());
 	mu_cand.addUserFloat("l1_phiAtVtx", l1_muon->phiAtVtx());
 	mu_cand.addUserFloat("l1_etaAtVtx", l1_muon->etaAtVtx());
+	mu_cand.addUserFloat("l1_dr", dr);
       } else {
 	// defaults
 	mu_cand.addUserFloat("l1_pt", -1);
@@ -282,6 +285,7 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 	mu_cand.addUserInt("l1_quality", 0);
 	mu_cand.addUserFloat("l1_phiAtVtx", 0);
 	mu_cand.addUserFloat("l1_etaAtVtx", 0);
+	mu_cand.addUserFloat("l1_dr", -1);
       }
       
       muons->push_back(mu_cand);
