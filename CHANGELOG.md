@@ -1,7 +1,12 @@
 # Changelog
 
-## New developments
-
+## [NanoAODv14-V01] - 2024/10/11
+### Changes
+	- add displaced tracks to classify dimuon PV
+	- enabled tracking isolation for Kspipi to use as a control sample for Ksmm
+	- fixed L1 matching
+	- switched to CMSSW_14_0_X
+	
 ## [NanoAODv12-V06] - 2024/05/21
 ### Changes
 	- bug fix for invalid pv index
