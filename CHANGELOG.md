@@ -6,6 +6,7 @@
 	- enabled tracking isolation for Kspipi to use as a control sample for Ksmm
 	- fixed L1 matching
 	- switched to CMSSW_14_0_X
+	- added muon PV association
 	
 ## [NanoAODv12-V06] - 2024/05/21
 ### Changes
