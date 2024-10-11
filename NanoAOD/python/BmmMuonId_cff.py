@@ -63,6 +63,8 @@ BmmMuonId = cms.EDProducer(
     triggers = cms.vstring(triggers),
     triggerCollection = cms.string("hltIterL3MuonCandidates"),
     l1Src = cms.InputTag("gmtStage2Digis:Muon"),
+    PFCandCollection = cms.InputTag("packedPFCandidates"),
+    vertexCollection=cms.InputTag("offlineSlimmedPrimaryVertices"),
 )
 
 for entry in xgboost_models:
@@ -124,6 +126,8 @@ BmmMuonIdVariables = cms.PSet(
     l1_eta              = Var("userFloat('l1_eta')",              float, doc = "L1 eta"),
     l1_phi              = Var("userFloat('l1_phi')",              float, doc = "L1 phi"),
     l1_quality          = Var("userInt('l1_quality')",              int, doc = "L1 quality"),
+    pv_index            = Var("userInt('pv_index')",                int, doc = "Index of associated PV"),
+    pv_z                = Var("userFloat('pv_z')",                float, doc = "z position of associated PV"),
 )
 
 for trigger in triggers:

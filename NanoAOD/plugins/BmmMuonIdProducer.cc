@@ -59,6 +59,8 @@ private:
   edm::EDGetTokenT<vector<pat::PackedGenParticle> >   packedGenToken_;
   edm::EDGetTokenT<vector<pat::TriggerObjectStandAlone> > triggerInfoToken_;
   edm::EDGetTokenT<BXVector<l1t::Muon> > l1Token_;
+  edm::EDGetTokenT<reco::VertexCollection> vertexToken_;
+  edm::EDGetTokenT<edm::View<pat::PackedCandidate>> pfCandToken_;
   
   const vector<pat::PackedGenParticle>* packedGenParticles_;
   bool isMC_;
@@ -76,6 +78,8 @@ muonToken_( consumes<vector<pat::Muon>> ( iConfig.getParameter<edm::InputTag>( "
 packedGenToken_( consumes<vector<pat::PackedGenParticle>> ( iConfig.getParameter<edm::InputTag>( "packedGenParticleCollection" ) ) ),
 triggerInfoToken_( consumes<vector<pat::TriggerObjectStandAlone>>(iConfig.getParameter<edm::InputTag>("trigger") ) ),
 l1Token_(consumes<BXVector<l1t::Muon>>(iConfig.getParameter<edm::InputTag>("l1Src"))),
+vertexToken_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertexCollection"))),
+pfCandToken_(consumes<edm::View<pat::PackedCandidate>>(iConfig.getParameter<edm::InputTag>( "PFCandCollection" ) ) ),
 packedGenParticles_(nullptr),
 isMC_( iConfig.getParameter<bool>( "isMC" ) ),
 triggerCollection_( iConfig.getParameter<string>( "triggerCollection" ) ),
@@ -147,7 +151,11 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 
     edm::Handle<vector<pat::Muon> > muonHandle;
     iEvent.getByToken(muonToken_, muonHandle);
-    
+    edm::Handle<edm::View<pat::PackedCandidate>> pfCandHandle;
+    iEvent.getByToken(pfCandToken_, pfCandHandle);
+    edm::Handle<reco::VertexCollection> pvHandle;
+    iEvent.getByToken(vertexToken_, pvHandle);
+
     edm::Handle<vector<pat::PackedGenParticle> > packedGenParticleHandle;
     if ( isMC_ ) {
       iEvent.getByToken(packedGenToken_,packedGenParticleHandle);
@@ -236,6 +244,27 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
 	mu_cand.addUserFloat("simProdZ", muon.simProdZ());
       }
 
+      // PF info
+      const pat::PackedCandidate* pfmuon = nullptr;
+      if (muon.bestTrack()) {
+	for (const auto &pfcand: *pfCandHandle.product()) {
+	  if (abs(pfcand.pdgId()) != 13) continue;
+	  if (deltaR(*muon.bestTrack(), pfcand) < 0.01) {
+	    pfmuon = &pfcand;
+	    break;
+	  }
+	}
+      }
+
+      if (pfmuon and pfmuon->vertexRef().key() < pvHandle->size()) {
+	int pv_index = int(pfmuon->vertexRef().key());
+	mu_cand.addUserInt("pv_index", pv_index);
+	mu_cand.addUserFloat("pv_z", pvHandle->at(pv_index).z());
+      } else {
+	mu_cand.addUserInt("pv_index", -1);
+	mu_cand.addUserFloat("pv_z", 9999.);
+      }
+      
       /////////////////// Trigger info
 
       ////// HLT
