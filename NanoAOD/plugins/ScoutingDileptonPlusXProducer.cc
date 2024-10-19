@@ -218,6 +218,7 @@ private:
   void
   buildBsToPhiPhiCandidates(pat::CompositeCandidateCollection& bs_collection,
 			    const edm::Event& iEvent,
+			    std::vector<bmm::PolarLorentzVector>& kaon_p4s,
 			    const std::vector<unsigned int>& hads);
 
   bool isGoodMuon(const Run3ScoutingMuon&);
@@ -2270,88 +2271,88 @@ ScoutingDileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollect
 void
 ScoutingDileptonPlusXProducer::buildBsToPhiPhiCandidates(pat::CompositeCandidateCollection& bs_collection,
 							 const edm::Event& iEvent,
-							 const std::vector<unsigned int>& input_track_ids)
+							 std::vector<bmm::PolarLorentzVector>& kaon_p4s,
+							 const std::vector<unsigned int>& track_ids)
 {
-  if (input_track_ids.size() == 4) {
-    std::vector<bmm::PolarLorentzVector> kaon_p4s;
-    std::vector<int> kaon_charges;
-    std::vector<unsigned int> positive_kaons;
-    std::vector<unsigned int> negative_kaons;
-    for (auto id: input_track_ids) {
-      kaon_p4s.emplace_back(makePolarLorentzVector(trackHandle_->at(id), KaonMass_));
-      kaon_charges.push_back(trackHandle_->at(id).tk_charge());
-      if (kaon_charges.back() > 0) {
-	positive_kaons.push_back(kaon_charges.size() - 1);
-      } else {
-	negative_kaons.push_back(kaon_charges.size() - 1);
-      }
-    }
-  
+  if (track_ids.size() == 4) {
+    // std::vector<bmm::PolarLorentzVector> kaon_p4s;
+    // std::vector<int> kaon_charges;
+    // std::vector<unsigned int> positive_kaons;
+    // std::vector<unsigned int> negative_kaons;
+    // for (auto id: input_track_ids) {
+    //   kaon_p4s.emplace_back(makePolarLorentzVector(trackHandle_->at(id), KaonMass_));
+    //   kaon_charges.push_back(trackHandle_->at(id).tk_charge());
+    //   if (kaon_charges.back() > 0) {
+    // 	positive_kaons.push_back(kaon_charges.size() - 1);
+    //   } else {
+    // 	negative_kaons.push_back(kaon_charges.size() - 1);
+    //   }
+    // }
+
     bmm::LorentzVector bs_p4;
-    for (auto& cand: kaon_p4s)
-      bs_p4 += cand;
+    for (auto& id: track_ids)
+      bs_p4 += kaon_p4s[id];
 
-    // preselection
-    if (fabs(bs_p4.mass() - 5.4) < 0.5 and positive_kaons.size() == 2 and negative_kaons.size() == 2) {
-      // look for phi mesons
-      float m11 = (kaon_p4s[positive_kaons[0]] + kaon_p4s[negative_kaons[0]]).mass();
-      float m22 = (kaon_p4s[positive_kaons[1]] + kaon_p4s[negative_kaons[1]]).mass();
-      float m12 = (kaon_p4s[positive_kaons[0]] + kaon_p4s[negative_kaons[1]]).mass();
-      float m21 = (kaon_p4s[positive_kaons[1]] + kaon_p4s[negative_kaons[0]]).mass();
+    // // preselection
+    // if (fabs(bs_p4.mass() - 5.4) < 0.5 and positive_kaons.size() == 2 and negative_kaons.size() == 2) {
+    //   // look for phi mesons
+    //   float m11 = (kaon_p4s[positive_kaons[0]] + kaon_p4s[negative_kaons[0]]).mass();
+    //   float m22 = (kaon_p4s[positive_kaons[1]] + kaon_p4s[negative_kaons[1]]).mass();
+    //   float m12 = (kaon_p4s[positive_kaons[0]] + kaon_p4s[negative_kaons[1]]).mass();
+    //   float m21 = (kaon_p4s[positive_kaons[1]] + kaon_p4s[negative_kaons[0]]).mass();
       
-      std::vector<std::pair<unsigned int, unsigned int>> phis;
-      if (fabs(m11 - 1.02) < 0.02 and fabs(m22 - 1.02) < 0.02) {
-	phis.emplace_back(positive_kaons[0], negative_kaons[0]);
-	phis.emplace_back(positive_kaons[1], negative_kaons[1]);
-      } else {
-	if (fabs(m12 - 1.02) < 0.02 and fabs(m21 - 1.02) < 0.02) {
-	  phis.emplace_back(positive_kaons[0], negative_kaons[1]);
-	  phis.emplace_back(positive_kaons[1], negative_kaons[0]);
-	}
-      }
+    //   std::vector<std::pair<unsigned int, unsigned int>> phis;
+    //   if (fabs(m11 - 1.02) < 0.02 and fabs(m22 - 1.02) < 0.02) {
+    // 	phis.emplace_back(positive_kaons[0], negative_kaons[0]);
+    // 	phis.emplace_back(positive_kaons[1], negative_kaons[1]);
+    //   } else {
+    // 	if (fabs(m12 - 1.02) < 0.02 and fabs(m21 - 1.02) < 0.02) {
+    // 	  phis.emplace_back(positive_kaons[0], negative_kaons[1]);
+    // 	  phis.emplace_back(positive_kaons[1], negative_kaons[0]);
+    // 	}
+    //   }
       
-      if (phis.size() == 2) {
-	// make kaon lists following phi build order
-	std::vector<unsigned int> track_ids = {
-	  input_track_ids[phis[0].first], input_track_ids[phis[0].second],
-	  input_track_ids[phis[1].first], input_track_ids[phis[1].second]
-	};
-	std::vector<reco::Track> kaon_tracks;
-	std::vector<const reco::Track*> trks;
-	std::vector<float> masses;
-	pat::CompositeCandidate bsToPhiPhiCand;
-	for (unsigned int i=0; i < track_ids.size(); ++i) {
-	  kaon_tracks.emplace_back(makeRecoTrack(trackHandle_->at(track_ids[i])));
-	  trks.push_back(&kaon_tracks.back());
-	  std::string name("kaon" + std::to_string(i + 1));
-	  masses.push_back(KaonMass_);
+    //   if (phis.size() == 2) {
+    // 	// make kaon lists following phi build order
+    // 	std::vector<unsigned int> track_ids = {
+    // 	  input_track_ids[phis[0].first], input_track_ids[phis[0].second],
+    // 	  input_track_ids[phis[1].first], input_track_ids[phis[1].second]
+    // 	};
+    
+    std::vector<reco::Track> kaon_tracks;
+    std::vector<const reco::Track*> trks;
+    std::vector<float> masses;
+    pat::CompositeCandidate bsToPhiPhiCand;
+    for (unsigned int i=0; i < track_ids.size(); ++i) {
+      kaon_tracks.emplace_back(makeRecoTrack(trackHandle_->at(track_ids[i])));
+      trks.push_back(&kaon_tracks.back());
+      std::string name("kaon" + std::to_string(i + 1));
+      masses.push_back(KaonMass_);
 	  
-	  bsToPhiPhiCand.addUserFloat(name + "_pt",  kaon_tracks.back().pt());
-	  bsToPhiPhiCand.addUserFloat(name + "_eta", kaon_tracks.back().eta());
-	  bsToPhiPhiCand.addUserFloat(name + "_phi", kaon_tracks.back().phi());
-	}
-	bsToPhiPhiCand.addUserFloat("mass",    bs_p4.mass());
-	bsToPhiPhiCand.addUserFloat("pt",      bs_p4.pt());
-	bsToPhiPhiCand.addUserFloat("eta",     bs_p4.eta());
-	bsToPhiPhiCand.addUserFloat("phi1_mass", (kaon_p4s[phis[0].first] + kaon_p4s[phis[0].second]).mass());
-	bsToPhiPhiCand.addUserFloat("phi2_mass", (kaon_p4s[phis[1].first] + kaon_p4s[phis[1].second]).mass());
+      bsToPhiPhiCand.addUserFloat(name + "_pt",  kaon_tracks.back().pt());
+      bsToPhiPhiCand.addUserFloat(name + "_eta", kaon_tracks.back().eta());
+      bsToPhiPhiCand.addUserFloat(name + "_phi", kaon_tracks.back().phi());
+    }
+    bsToPhiPhiCand.addUserFloat("mass",    bs_p4.mass());
+    bsToPhiPhiCand.addUserFloat("pt",      bs_p4.pt());
+    bsToPhiPhiCand.addUserFloat("eta",     bs_p4.eta());
+    bsToPhiPhiCand.addUserFloat("phi1_mass", (kaon_p4s[0] + kaon_p4s[1]).mass());
+    bsToPhiPhiCand.addUserFloat("phi2_mass", (kaon_p4s[2] + kaon_p4s[3]).mass());
 	
-	double doca12 = distanceOfClosestApproach(trks[0], trks[1]);
-	double doca34 = distanceOfClosestApproach(trks[2], trks[3]);
-	double doca13 = distanceOfClosestApproach(trks[0], trks[2]);
+    double doca12 = distanceOfClosestApproach(trks[0], trks[1]);
+    double doca34 = distanceOfClosestApproach(trks[2], trks[3]);
+    double doca13 = distanceOfClosestApproach(trks[0], trks[2]);
 
-	if (doca12 < 0.05 and doca34 < 0.05 and doca13 < 0.05){
-	  // 4h vertex fit
-	  KinematicFitResult vtx_fit = vertexWithKinematicFitter(trks, masses);
-	  bsToPhiPhiCand.addUserInt(  "vtx_valid",   vtx_fit.valid());
-	  bsToPhiPhiCand.addUserFloat("vtx_prob",    vtx_fit.vtxProb());
-	  bsToPhiPhiCand.addUserFloat("vtx_mass",    vtx_fit.mass());
-	  bsToPhiPhiCand.addUserFloat("vtx_massErr", vtx_fit.massErr());
+    if (doca12 < 0.05 and doca34 < 0.05 and doca13 < 0.05){
+      // 4h vertex fit
+      KinematicFitResult vtx_fit = vertexWithKinematicFitter(trks, masses);
+      bsToPhiPhiCand.addUserInt(  "vtx_valid",   vtx_fit.valid());
+      bsToPhiPhiCand.addUserFloat("vtx_prob",    vtx_fit.vtxProb());
+      bsToPhiPhiCand.addUserFloat("vtx_mass",    vtx_fit.mass());
+      bsToPhiPhiCand.addUserFloat("vtx_massErr", vtx_fit.massErr());
 
-	  if (vtx_fit.valid() and vtx_fit.vtxProb() > 0.01)
-	    bs_collection.push_back(bsToPhiPhiCand);
-	}
-      }
+      if (vtx_fit.valid() and vtx_fit.vtxProb() > 0.01)
+	bs_collection.push_back(bsToPhiPhiCand);
     }
   }
   
@@ -2813,29 +2814,45 @@ void ScoutingDileptonPlusXProducer::produce(edm::Event& iEvent, const edm::Event
   for (const auto& track: *trackHandle_.product()) {
       kaon_p4s.emplace_back(makePolarLorentzVector(track, KaonMass_));
   }
+
   if (nTracks > 3) {
-    for (unsigned int ihad1=0; ihad1 < nTracks - 3; ++ihad1){
+    for (unsigned int ihad1=0; ihad1 < nTracks - 1; ++ihad1){
       const auto& had1 = trackHandle_->at(ihad1);
       if (not isGoodTrack(had1)) continue;
       if (had1.tk_pt() < ptMinKaon_ or abs(had1.tk_eta()) > etaMaxKaon_) continue;
-      for (unsigned int ihad2=ihad1 + 1;  ihad2 < nTracks - 2; ++ihad2){
+      for (unsigned int ihad2=ihad1 + 1;  ihad2 < nTracks; ++ihad2){
 	const auto& had2 = trackHandle_->at(ihad2);
 	if (not isGoodTrack(had2)) continue;
 	if (had2.tk_pt() < ptMinKaon_ or abs(had2.tk_eta()) > etaMaxKaon_) continue;
-	for (unsigned int ihad3=ihad2 + 1;  ihad3 < nTracks - 1; ++ihad3){
-	  const auto& had3 = trackHandle_->at(ihad3);
-	  if (not isGoodTrack(had3)) continue;
-	  if (had3.tk_pt() < ptMinKaon_ or abs(had3.tk_eta()) > etaMaxKaon_) continue;
-	  for (unsigned int ihad4=ihad3 + 1;  ihad4 < nTracks; ++ihad4){
-	    const auto& had4 = trackHandle_->at(ihad4);
-	    if (not isGoodTrack(had4)) continue;
-	    if (had4.tk_pt() < ptMinKaon_ or abs(had4.tk_eta()) > etaMaxKaon_) continue;
 
-	    if (had1.tk_charge() + had2.tk_charge() + had3.tk_charge() + had4.tk_charge() != 0) continue;
+	if (had1.tk_charge() == had2.tk_charge()) continue;
 
-	    if (fabs((kaon_p4s[ihad1] + kaon_p4s[ihad2] + kaon_p4s[ihad3] + kaon_p4s[ihad4]).mass() - 5.4) > 0.5) continue;
-	    
-	    buildBsToPhiPhiCandidates(*phiphi_collection, iEvent, {ihad1, ihad2, ihad3, ihad4});
+	if (fabs((kaon_p4s[ihad1] + kaon_p4s[ihad2]).mass() - 1.02) > 0.02) continue;
+
+	// got first phi->KK
+
+	if (ihad1 < nTracks - 2) {
+	  for (unsigned int ihad3=ihad1 + 1;  ihad3 < nTracks - 1; ++ihad3){
+	    if (ihad3 == ihad1 or ihad3 == ihad2) continue;
+	    const auto& had3 = trackHandle_->at(ihad3);
+	    if (not isGoodTrack(had3)) continue;
+	    if (had3.tk_pt() < ptMinKaon_ or abs(had3.tk_eta()) > etaMaxKaon_) continue;
+	    for (unsigned int ihad4=ihad3 + 1;  ihad4 < nTracks; ++ihad4){
+	      if (ihad4 == ihad1 or ihad4 == ihad2) continue;
+	      const auto& had4 = trackHandle_->at(ihad4);
+	      if (not isGoodTrack(had4)) continue;
+	      if (had4.tk_pt() < ptMinKaon_ or abs(had4.tk_eta()) > etaMaxKaon_) continue;
+
+	      if (had3.tk_charge() == had4.tk_charge()) continue;
+
+	      if (fabs((kaon_p4s[ihad3] + kaon_p4s[ihad4]).mass() - 1.02) > 0.02) continue;
+	      
+	      // got second phi->KK
+
+	      if (fabs((kaon_p4s[ihad1] + kaon_p4s[ihad2] + kaon_p4s[ihad3] + kaon_p4s[ihad4]).mass() - 5.4) > 0.5) continue;
+	      
+	      buildBsToPhiPhiCandidates(*phiphi_collection, iEvent, kaon_p4s, {ihad1, ihad2, ihad3, ihad4});
+	    }
 	  }
 	}
       }
