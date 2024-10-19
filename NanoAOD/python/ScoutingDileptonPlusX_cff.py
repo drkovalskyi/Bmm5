@@ -1097,6 +1097,9 @@ BsToPhiPhiTableVariables = cms.PSet(
     kaon4_phi        = Var("userFloat('kaon4_phi')",         float,   doc = "kaon4 phi"),
     phi1_mass        = Var("userFloat('phi1_mass')",         float,   doc = "phi1 raw mass"),
     phi2_mass        = Var("userFloat('phi2_mass')",         float,   doc = "phi2 raw mass"),
+    mc_prob          = Var("userFloat('mc_prob')",           float,   doc = "mass constrained fit probability"),
+    mc_mass          = Var("userFloat('mc_mass')",           float,   doc = "mass constrained Bs mass"),
+
 )
 
 BsToPhiPhiMcTableVariables = merge_psets(
