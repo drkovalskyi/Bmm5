@@ -120,3 +120,8 @@ reco::Vertex bmm::makeRecoVertex(const Run3ScoutingVertex& sVertex) {
   return reco::Vertex(reco::Vertex::Point(sVertex.x(), sVertex.y(), sVertex.z()),
 		      err, sVertex.chi2(), sVertex.ndof(), sVertex.tracksSize());
 }
+
+bmm::PolarLorentzVector
+bmm::makePolarLorentzVector(const Run3ScoutingTrack& trk, float mass) {
+  return PolarLorentzVector(trk.tk_pt(), trk.tk_eta(), trk.tk_phi(), mass);
+}

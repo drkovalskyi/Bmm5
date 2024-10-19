@@ -9,10 +9,14 @@
 #include "DataFormats/Scouting/interface/Run3ScoutingVertex.h"
 
 namespace bmm {
+  typedef reco::Candidate::LorentzVector LorentzVector;
+  typedef reco::Candidate::PolarLorentzVector PolarLorentzVector;
+  
   // Tracks
   reco::Track makeRecoTrack(const Run3ScoutingTrack&);
   reco::Track makeRecoTrack(const Run3ScoutingMuon&);
   Run3ScoutingTrack makeScoutingTrack(const reco::Track&);
+  PolarLorentzVector makePolarLorentzVector(const Run3ScoutingTrack&, float mass);
 
   // Muons
   pat::Muon makePatMuon(const Run3ScoutingMuon&);

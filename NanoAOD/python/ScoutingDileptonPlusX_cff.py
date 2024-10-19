@@ -97,7 +97,7 @@ Dileptons = cms.EDProducer(
     vertexCollection=cms.InputTag("hltScoutingPrimaryVertexPacker", "primaryVtx"),
     # linkedObjects represent subset of original collections that are
     # kept in NanoAOD. Use them in order to link with NanoAOD objects.
-    muonCollection = cms.InputTag("hltScoutingMuonPacker"),
+    muonCollection = cms.InputTag("hltScoutingMuonPackerVtx"),
     trackCollection = cms.InputTag("hltScoutingTrackPacker"),
     electronCollection = cms.InputTag("linkedObjects","electrons"),
     photonCollection = cms.InputTag("linkedObjects","photons"),
@@ -1068,6 +1068,61 @@ DstarGenTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer",
     singleton=cms.bool(False),
     extension=cms.bool(False),
     variables = DstarGenVars
+)
+
+##################################################################################
+###
+###                              Bs to Phi Phi
+###
+##################################################################################
+
+BsToPhiPhiTableVariables = cms.PSet(
+    mass             = Var("userFloat('mass')",              float,   doc = "raw mass"),
+    pt               = Var("userFloat('pt')",                float,   doc = "raw pt"),
+    eta              = Var("userFloat('eta')",               float,   doc = "raw eta"),
+    vtx_prob         = Var("userFloat('vtx_prob')",          float,   doc = "vertex probability"),
+    vtx_mass         = Var("userFloat('vtx_mass')",          float,   doc = "vertex mass"),
+    vtx_massErr      = Var("userFloat('vtx_massErr')",       float,   doc = "vertex mass uncertainty"),
+    kaon1_pt         = Var("userFloat('kaon1_pt')",          float,   doc = "kaon1 pt"),
+    kaon1_eta        = Var("userFloat('kaon1_eta')",         float,   doc = "kaon1 eta"),
+    kaon1_phi        = Var("userFloat('kaon1_phi')",         float,   doc = "kaon1 phi"),
+    kaon2_pt         = Var("userFloat('kaon2_pt')",          float,   doc = "kaon2 pt"),
+    kaon2_eta        = Var("userFloat('kaon2_eta')",         float,   doc = "kaon2 eta"),
+    kaon2_phi        = Var("userFloat('kaon2_phi')",         float,   doc = "kaon2 phi"),
+    kaon3_pt         = Var("userFloat('kaon3_pt')",          float,   doc = "kaon3 pt"),
+    kaon3_eta        = Var("userFloat('kaon3_eta')",         float,   doc = "kaon3 eta"),
+    kaon3_phi        = Var("userFloat('kaon3_phi')",         float,   doc = "kaon3 phi"),
+    kaon4_pt         = Var("userFloat('kaon4_pt')",          float,   doc = "kaon4 pt"),
+    kaon4_eta        = Var("userFloat('kaon4_eta')",         float,   doc = "kaon4 eta"),
+    kaon4_phi        = Var("userFloat('kaon4_phi')",         float,   doc = "kaon4 phi"),
+    phi1_mass        = Var("userFloat('phi1_mass')",         float,   doc = "phi1 raw mass"),
+    phi2_mass        = Var("userFloat('phi2_mass')",         float,   doc = "phi2 raw mass"),
+)
+
+BsToPhiPhiMcTableVariables = merge_psets(
+    DileptonsMuMuGammaTableVariables,
+    cms.PSet(
+    )
+)
+
+BsToPhiPhiTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","BsToPhiPhi"),
+    cut=cms.string(""),
+    name=cms.string("bs4k"),
+    doc=cms.string("BsToPhiPhi Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = BsToPhiPhiTableVariables
+)
+
+BsToPhiPhiMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","BsToPhiPhi"),
+    cut=cms.string(""),
+    name=cms.string("bs4k"),
+    doc=cms.string("BsToPhiPhi Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = BsToPhiPhiMcTableVariables
 )
 
 ##################################################################################

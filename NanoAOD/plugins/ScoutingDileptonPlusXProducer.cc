@@ -215,6 +215,10 @@ private:
 		    const pat::PackedCandidate& had1,
 		    const pat::PackedCandidate& had2);
   
+  void
+  buildBsToPhiPhiCandidates(pat::CompositeCandidateCollection& bs_collection,
+			    const edm::Event& iEvent,
+			    const std::vector<unsigned int>& hads);
 
   bool isGoodMuon(const Run3ScoutingMuon&);
   bool isGoodTrack(const Run3ScoutingTrack&);
@@ -624,6 +628,7 @@ ScoutingDileptonPlusXProducer::ScoutingDileptonPlusXProducer(const edm::Paramete
   produces<pat::CompositeCandidateCollection>("BToMuMuGamma");
   produces<pat::CompositeCandidateCollection>("Dstar");
   produces<pat::CompositeCandidateCollection>("Kstar");
+  produces<pat::CompositeCandidateCollection>("BsToPhiPhi");
     
   setupTmvaReader(bdtReader0_,(iConfig.getParameter<edm::FileInPath>("bdtEvent0")).fullPath());
   setupTmvaReader(bdtReader1_,(iConfig.getParameter<edm::FileInPath>("bdtEvent1")).fullPath());
@@ -2262,6 +2267,177 @@ ScoutingDileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollect
 //   }
 // }
 
+void
+ScoutingDileptonPlusXProducer::buildBsToPhiPhiCandidates(pat::CompositeCandidateCollection& bs_collection,
+							 const edm::Event& iEvent,
+							 const std::vector<unsigned int>& input_track_ids)
+{
+  if (input_track_ids.size() == 4) {
+    std::vector<bmm::PolarLorentzVector> kaon_p4s;
+    std::vector<int> kaon_charges;
+    std::vector<unsigned int> positive_kaons;
+    std::vector<unsigned int> negative_kaons;
+    for (auto id: input_track_ids) {
+      kaon_p4s.emplace_back(makePolarLorentzVector(trackHandle_->at(id), KaonMass_));
+      kaon_charges.push_back(trackHandle_->at(id).tk_charge());
+      if (kaon_charges.back() > 0) {
+	positive_kaons.push_back(kaon_charges.size() - 1);
+      } else {
+	negative_kaons.push_back(kaon_charges.size() - 1);
+      }
+    }
+  
+    bmm::LorentzVector bs_p4;
+    for (auto& cand: kaon_p4s)
+      bs_p4 += cand;
+
+    // preselection
+    if (fabs(bs_p4.mass() - 5.4) < 0.5 and positive_kaons.size() == 2 and negative_kaons.size() == 2) {
+      // look for phi mesons
+      float m11 = (kaon_p4s[positive_kaons[0]] + kaon_p4s[negative_kaons[0]]).mass();
+      float m22 = (kaon_p4s[positive_kaons[1]] + kaon_p4s[negative_kaons[1]]).mass();
+      float m12 = (kaon_p4s[positive_kaons[0]] + kaon_p4s[negative_kaons[1]]).mass();
+      float m21 = (kaon_p4s[positive_kaons[1]] + kaon_p4s[negative_kaons[0]]).mass();
+      
+      std::vector<std::pair<unsigned int, unsigned int>> phis;
+      if (fabs(m11 - 1.02) < 0.02 and fabs(m22 - 1.02) < 0.02) {
+	phis.emplace_back(positive_kaons[0], negative_kaons[0]);
+	phis.emplace_back(positive_kaons[1], negative_kaons[1]);
+      } else {
+	if (fabs(m12 - 1.02) < 0.02 and fabs(m21 - 1.02) < 0.02) {
+	  phis.emplace_back(positive_kaons[0], negative_kaons[1]);
+	  phis.emplace_back(positive_kaons[1], negative_kaons[0]);
+	}
+      }
+      
+      if (phis.size() == 2) {
+	// make kaon lists following phi build order
+	std::vector<unsigned int> track_ids = {
+	  input_track_ids[phis[0].first], input_track_ids[phis[0].second],
+	  input_track_ids[phis[1].first], input_track_ids[phis[1].second]
+	};
+	std::vector<reco::Track> kaon_tracks;
+	std::vector<const reco::Track*> trks;
+	std::vector<float> masses;
+	pat::CompositeCandidate bsToPhiPhiCand;
+	for (unsigned int i=0; i < track_ids.size(); ++i) {
+	  kaon_tracks.emplace_back(makeRecoTrack(trackHandle_->at(track_ids[i])));
+	  trks.push_back(&kaon_tracks.back());
+	  std::string name("kaon" + std::to_string(i + 1));
+	  masses.push_back(KaonMass_);
+	  
+	  bsToPhiPhiCand.addUserFloat(name + "_pt",  kaon_tracks.back().pt());
+	  bsToPhiPhiCand.addUserFloat(name + "_eta", kaon_tracks.back().eta());
+	  bsToPhiPhiCand.addUserFloat(name + "_phi", kaon_tracks.back().phi());
+	}
+	bsToPhiPhiCand.addUserFloat("mass",    bs_p4.mass());
+	bsToPhiPhiCand.addUserFloat("pt",      bs_p4.pt());
+	bsToPhiPhiCand.addUserFloat("eta",     bs_p4.eta());
+	bsToPhiPhiCand.addUserFloat("phi1_mass", (kaon_p4s[phis[0].first] + kaon_p4s[phis[0].second]).mass());
+	bsToPhiPhiCand.addUserFloat("phi2_mass", (kaon_p4s[phis[1].first] + kaon_p4s[phis[1].second]).mass());
+	
+	double doca12 = distanceOfClosestApproach(trks[0], trks[1]);
+	double doca34 = distanceOfClosestApproach(trks[2], trks[3]);
+	double doca13 = distanceOfClosestApproach(trks[0], trks[2]);
+
+	if (doca12 < 0.05 and doca34 < 0.05 and doca13 < 0.05){
+	  // 4h vertex fit
+	  KinematicFitResult vtx_fit = vertexWithKinematicFitter(trks, masses);
+	  bsToPhiPhiCand.addUserInt(  "vtx_valid",   vtx_fit.valid());
+	  bsToPhiPhiCand.addUserFloat("vtx_prob",    vtx_fit.vtxProb());
+	  bsToPhiPhiCand.addUserFloat("vtx_mass",    vtx_fit.mass());
+	  bsToPhiPhiCand.addUserFloat("vtx_massErr", vtx_fit.massErr());
+
+	  if (vtx_fit.valid() and vtx_fit.vtxProb() > 0.01)
+	    bs_collection.push_back(bsToPhiPhiCand);
+	}
+      }
+    }
+  }
+  
+  // AddFourMomenta addP4;
+//   auto nPFCands = trackHandle_->size();
+//   for (unsigned int k = 0; k < nPFCands; ++k) {
+//     pat::PackedCandidate soft_pion((*trackHandle_)[k]);
+//     if ( not isGoodHadron(soft_pion) ) continue;
+    
+//     if (overlap(had1, soft_pion) || overlap(had2, soft_pion)) continue;
+
+//     soft_pion.setMass(PionMass_);
+
+//     bmm::Candidate pion1(had1);
+//     pion1.setType(PionMass_, "had", 211 * had1.charge());
+//     bmm::Candidate pion2(had2);
+//     pion2.setType(PionMass_, "had", 211 * had2.charge());
+
+//     bmm::Candidate kaon1(had1);
+//     kaon1.setType(KaonMass_, "had", 321 * had1.charge());
+//     bmm::Candidate kaon2(had2);
+//     kaon2.setType(KaonMass_, "had", 321 * had2.charge());
+
+//     // D0->pipi
+//     if (recoD0pipi_){
+//       double d0_mass = (pion1.p4() + pion2.p4()).mass();
+//       double dstar_mass = (pion1.p4() + pion2.p4() + soft_pion.p4()).mass();
+
+//       if (d0_mass > minD0Mass_ && d0_mass < maxD0Mass_ &&
+// 	  (dstar_mass - d0_mass) > min_dm_ && (dstar_mass - d0_mass) < max_dm_){
+	
+// 	pat::CompositeCandidate d0Cand(std::string("hh"));
+// 	d0Cand.addDaughter( pion1 , "pion1");
+// 	d0Cand.addDaughter( pion2 , "pion2");
+// 	addP4.set( d0Cand );
+	
+// 	if (preprocess(d0Cand, iEvent, pion1, pion2)){
+// 	  // Kinematic Fits
+// 	  auto d0VertexFit = fillDileptonInfo(d0Cand, iEvent, pion1, pion2);
+// 	  int hh_index = hh_collection.size();
+// 	  hh_collection.push_back(d0Cand);
+// 	  fillDstarInfo(dstar_collection, iEvent, d0VertexFit, d0Cand, soft_pion,
+// 			-1, hh_index, pion1, pion2);
+// 	}
+//       }
+//     }
+
+//     // D0->Kpi
+//     if (recoD0Kpi_){
+//       const bmm::Candidate *daughter1(nullptr), *daughter2(nullptr);
+      
+//       if (pion2.charge() == soft_pion.charge()){
+// 	// Kpi case
+// 	daughter1 = &kaon1;
+// 	daughter2 = &pion2;
+//       } else {
+// 	// piK case
+// 	daughter1 = &pion1;
+// 	daughter2 = &kaon2;
+//       }
+	
+//       double d0_mass = (daughter1->p4() + daughter2->p4()).mass();
+//       double dstar_mass = (daughter1->p4() + daughter2->p4() + soft_pion.p4()).mass();
+
+//       if (d0_mass > minD0Mass_ && d0_mass < maxD0Mass_ &&
+// 	  (dstar_mass - d0_mass) > min_dm_ && (dstar_mass - d0_mass) < max_dm_){
+	
+// 	pat::CompositeCandidate d0Cand(std::string("hh"));
+// 	d0Cand.addDaughter( *daughter1 , "had1");
+// 	d0Cand.addDaughter( *daughter2 , "had2");
+// 	addP4.set( d0Cand );
+	
+// 	if (preprocess(d0Cand, iEvent, *daughter1, *daughter2)){
+// 	  // Kinematic Fits
+// 	  auto d0VertexFit = fillDileptonInfo(d0Cand, iEvent, *daughter1, *daughter2);
+// 	  int hh_index = hh_collection.size();
+// 	  hh_collection.push_back(d0Cand);
+// 	  fillDstarInfo(dstar_collection, iEvent, d0VertexFit, d0Cand, soft_pion,
+// 			-1, hh_index, *daughter1, *daughter2);
+// 	}
+//       }
+//     }
+
+//   }
+}
+
 const pat::CompositeCandidate*
 ScoutingDileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_collection,
 					 const edm::Event& iEvent,
@@ -2378,7 +2554,7 @@ void ScoutingDileptonPlusXProducer::produce(edm::Event& iEvent, const edm::Event
   // auto nPhotons = photonHandle->size();
   // auto nConversions = conversionHandle->size();
   // auto nPFCands = trackHandle_->size();
-  // auto nTracks = trackHandle_->size();
+  auto nTracks = trackHandle_->size();
     
   // Output collection
   auto mm_collection = std::make_unique<pat::CompositeCandidateCollection>();
@@ -2393,6 +2569,7 @@ void ScoutingDileptonPlusXProducer::produce(edm::Event& iEvent, const edm::Event
   auto dstar_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto kstar_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto mmm_collection = std::make_unique<pat::CompositeCandidateCollection>();
+  auto phiphi_collection = std::make_unique<pat::CompositeCandidateCollection>();
   AddFourMomenta addP4;
 
   // Build input lists
@@ -2631,6 +2808,40 @@ void ScoutingDileptonPlusXProducer::produce(edm::Event& iEvent, const edm::Event
   //   } 
   // }
   
+  // Build BsTo4h  candidates
+  std::vector<bmm::PolarLorentzVector> kaon_p4s;
+  for (const auto& track: *trackHandle_.product()) {
+      kaon_p4s.emplace_back(makePolarLorentzVector(track, KaonMass_));
+  }
+  if (nTracks > 3) {
+    for (unsigned int ihad1=0; ihad1 < nTracks - 3; ++ihad1){
+      const auto& had1 = trackHandle_->at(ihad1);
+      if (not isGoodTrack(had1)) continue;
+      if (had1.tk_pt() < ptMinKaon_ or abs(had1.tk_eta()) > etaMaxKaon_) continue;
+      for (unsigned int ihad2=ihad1 + 1;  ihad2 < nTracks - 2; ++ihad2){
+	const auto& had2 = trackHandle_->at(ihad2);
+	if (not isGoodTrack(had2)) continue;
+	if (had2.tk_pt() < ptMinKaon_ or abs(had2.tk_eta()) > etaMaxKaon_) continue;
+	for (unsigned int ihad3=ihad2 + 1;  ihad3 < nTracks - 1; ++ihad3){
+	  const auto& had3 = trackHandle_->at(ihad3);
+	  if (not isGoodTrack(had3)) continue;
+	  if (had3.tk_pt() < ptMinKaon_ or abs(had3.tk_eta()) > etaMaxKaon_) continue;
+	  for (unsigned int ihad4=ihad3 + 1;  ihad4 < nTracks; ++ihad4){
+	    const auto& had4 = trackHandle_->at(ihad4);
+	    if (not isGoodTrack(had4)) continue;
+	    if (had4.tk_pt() < ptMinKaon_ or abs(had4.tk_eta()) > etaMaxKaon_) continue;
+
+	    if (had1.tk_charge() + had2.tk_charge() + had3.tk_charge() + had4.tk_charge() != 0) continue;
+
+	    if (fabs((kaon_p4s[ihad1] + kaon_p4s[ihad2] + kaon_p4s[ihad3] + kaon_p4s[ihad4]).mass() - 5.4) > 0.5) continue;
+	    
+	    buildBsToPhiPhiCandidates(*phiphi_collection, iEvent, {ihad1, ihad2, ihad3, ihad4});
+	  }
+	}
+      }
+    }
+  }
+
   // // Build hh candidates
   // // - loop over all hh combinations
   // // - let individual studies fill hh_collection
@@ -2681,6 +2892,7 @@ void ScoutingDileptonPlusXProducer::produce(edm::Event& iEvent, const edm::Event
   //     }
   //   }
   // }
+
   
   // // dilepton + X
   // if (dileptonCand.name() == "mm" || dileptonCand.name() == "ee"){
@@ -2862,6 +3074,7 @@ void ScoutingDileptonPlusXProducer::produce(edm::Event& iEvent, const edm::Event
   iEvent.put(std::move(btommg), "BToMuMuGamma");
   iEvent.put(std::move(dstar_collection), "Dstar");
   iEvent.put(std::move(kstar_collection), "Kstar");
+  iEvent.put(std::move(phiphi_collection), "BsToPhiPhi");
 }
 
 KalmanVertexFitResult 
@@ -3607,7 +3820,7 @@ namespace{
 // }
 
 float ScoutingDileptonPlusXProducer::distanceOfClosestApproach( const reco::GenParticle* track1,
-							const reco::GenParticle* track2)
+								const reco::GenParticle* track2)
 {
   TwoTrackMinimumDistance md;
   GlobalPoint trk1_pos(track1->vertex().x(), 
