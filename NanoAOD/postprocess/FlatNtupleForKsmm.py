@@ -137,7 +137,7 @@ class FlatNtupleForKsmm(FlatNtupleBase):
 
         # set branches to be kept if pre-skimmed
         self.job_info["pre-selection-keep"] = "^(" + \
-            "GenPart_.*|nGenPart|mm_.*|nmm|trk_.*|ntrk|mmiso_.*|nmmiso|" + \
+            "GenPart_.*|nGenPart|mm_.*|nmm|trk_.*|ntrk|iso_.*|niso|" + \
             "Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + \
             "HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + \
             "PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock" + \
@@ -441,28 +441,33 @@ class FlatNtupleForKsmm(FlatNtupleBase):
             self.tree['iso_mu_tight_sum_pt'] = 0
             self.tree['iso_mu_loose_ntracks'] = 0
             self.tree['iso_mu_loose_sum_pt'] = 0
-            for i in range(self.event.nmmiso):
-                if self.event.mmiso_mm_index[i] != cand:
+            for i in range(self.event.niso):
+                if self.event.iso_mm_index[i] != cand:
                     continue
                 # Tracks compatible with mm vertex (tight)
-                if self.event.mmiso_mm_vtx_prob[i] > 0.1:
+                if self.event.iso_vtx_prob[i] > 0.1:
                     self.tree['iso_vtx_tight_ntracks'] += 1
-                    self.tree['iso_vtx_tight_sum_pt'] += self.event.trk_pt[self.event.mmiso_trk_index[i]]
+                    self.tree['iso_vtx_tight_sum_pt'] += self.event.trk_pt[self.event.iso_trk_index[i]]
 
                 # Tracks compatible with mm vertex (loose)
-                if self.event.mmiso_mm_vtx_prob[i] > 0.001:
+                if self.event.iso_vtx_prob[i] > 0.001:
                     self.tree['iso_vtx_loose_ntracks'] += 1
-                    self.tree['iso_vtx_loose_sum_pt'] += self.event.trk_pt[self.event.mmiso_trk_index[i]]
+                    self.tree['iso_vtx_loose_sum_pt'] += self.event.trk_pt[self.event.iso_trk_index[i]]
 
-                # Tracks compatible with either muon (tight)
-                if self.event.mmiso_mu1_vtx_prob[i] > 0.1 or self.event.mmiso_mu2_vtx_prob[i] > 0.1:
-                    self.tree['iso_mu_tight_ntracks'] += 1
-                    self.tree['iso_mu_tight_sum_pt'] += self.event.trk_pt[self.event.mmiso_trk_index[i]]
+                if self.event.iso_dr[i] < 1.5 and \
+                   (self.event.iso_d1_doca[i] < 0.02 or self.event.iso_d2_doca[i] < 0.02) and \
+                   self.event.trk_sip[self.event.iso_trk_index[i]] > 2.0 and \
+                   self.event.trk_pt[self.event.iso_trk_index[i]] > 1.0:
 
-                # Tracks compatible with either muon (loose)
-                if self.event.mmiso_mu1_vtx_prob[i] > 0.001 or self.event.mmiso_mu2_vtx_prob[i] > 0.001:
-                    self.tree['iso_mu_loose_ntracks'] += 1
-                    self.tree['iso_mu_loose_sum_pt'] += self.event.trk_pt[self.event.mmiso_trk_index[i]]
+                    # Tracks compatible with either muon (tight)
+                    if self.event.iso_d1_vtx_prob[i] > 0.1 or self.event.iso_d2_vtx_prob[i] > 0.1:
+                        self.tree['iso_mu_tight_ntracks'] += 1
+                        self.tree['iso_mu_tight_sum_pt'] += self.event.trk_pt[self.event.iso_trk_index[i]]
+
+                    # Tracks compatible with either muon (loose)
+                    if self.event.iso_d1_vtx_prob[i] > 0.001 or self.event.iso_d2_vtx_prob[i] > 0.001:
+                        self.tree['iso_mu_loose_ntracks'] += 1
+                        self.tree['iso_mu_loose_sum_pt'] += self.event.trk_pt[self.event.iso_trk_index[i]]
 
             # Production information
             self.tree['prod_alpha'] = self.event.mm_kin_alpha[cand]
@@ -539,7 +544,7 @@ if __name__ == "__main__":
     
     job = {
         "input": [
-            # "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/530/K0sToMuMu_K0sFilter_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv4-130X_mcRun3_2022_realistic_v5-v1+MINIAODSIM/28491152-7072-4c6d-ac38-6e20c57ae346.root",
+            "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/531/K0sToMuMu_K0sFilter_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v4+MINIAODSIM/affd8ce1-091d-41cb-af18-2f1d2e9c7e3d.root"
             # input_path + "01340b25-f1c3-40bd-8c09-225da18b30e3.root",
             # input_path + "2fa3ea36-eb49-41aa-8496-71de4ed04620.root",
             # input_path + "632b1e27-5f2b-49f3-acb9-c47e545e7547.root",
@@ -556,7 +561,7 @@ if __name__ == "__main__":
             # input_path + "9bd3f34b-fa42-447b-b6fc-b046060bf6ec.root",
             # input_path + "c9ddcac3-5d7c-43bc-91e1-a0b23b46462c.root"
             
-            input_path2 + "a066bd55dfc8b89df455746c28853bf6.root",
+            # input_path2 + "a066bd55dfc8b89df455746c28853bf6.root",
             # input_path2 + "a11192928591ecc63d2c983ad3bafd46.root",
             # input_path2 + "a1493042e87f67fb1c77ba66dd66bfbc.root",
             # input_path2 + "a24546b594e05f1109d204eaf8960b88.root",
@@ -595,8 +600,8 @@ if __name__ == "__main__":
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
 
-    # p = FlatNtupleForKsmm("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/FlatNtuples/526/ksmm/K0sToMuMu_K0sFilter_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22MiniAODv3-124X_mcRun3_2022_realistic_v12-v1+MINIAODSIM/73c7e720b2098d39f840aaabb26a4d6b.job")
-    p = FlatNtupleForKsmm(file_name)
+    p = FlatNtupleForKsmm("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/FlatNtuples/531/ksmm/ParkingDoubleMuonLowMass6+Run2024F-PromptReco-v1+MINIAOD/7d7d0aeac7a4f0c892f453f1d71c72b9.job")
+    # p = FlatNtupleForKsmm(file_name)
 
     print(p.__dict__)
         
