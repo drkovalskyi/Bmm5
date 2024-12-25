@@ -136,12 +136,13 @@ class FlatNtupleForKsmm(FlatNtupleBase):
                 raise Exception("Unsupported final state: %s" % self.job_info['final_state'])
 
         # set branches to be kept if pre-skimmed
-        self.job_info["pre-selection-keep"] = "^(" + \
-            "GenPart_.*|nGenPart|mm_.*|nmm|trk_.*|ntrk|iso_.*|niso|" + \
-            "Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + \
-            "HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + \
-            "PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock" + \
-            ")$"
+        if "pre-selection-keep" not in self.job_info:
+            self.job_info["pre-selection-keep"] = "^(" + \
+                "GenPart_.*|nGenPart|mm_.*|nmm|hh_.*|nhh|trk_.*|ntrk|iso_.*|niso|" + \
+                "Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + \
+                "HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|HLT_ZeroBias|" + \
+                "PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock" + \
+                ")$"
 
     def __select_candidates(self, candidates):
         """Select candidates to be stored"""
@@ -320,23 +321,20 @@ class FlatNtupleForKsmm(FlatNtupleBase):
     def _fill_tree(self, cand, ncands):
         self.tree.reset()
 
-        try:
-            ## event info
-            self.tree['run'] = self.event.run
-            self.tree['ls']  = self.event.luminosityBlock
-            self.tree['evt'] = self.event.event
-            self.tree['npv'] = ord(self.event.PV_npvsGood) if isinstance(self.event.PV_npvsGood, str) else self.event.PV_npvsGood
+        ## event info
+        self.tree['run'] = self.event.run
+        self.tree['ls']  = self.event.luminosityBlock
+        self.tree['evt'] = self.event.event
+        self.tree['npv'] = ord(self.event.PV_npvsGood) if isinstance(self.event.PV_npvsGood, str) else self.event.PV_npvsGood
 
-            self.tree['certified_muon']   = self._is_certified(self.event, "muon")
-            self.tree['certified_golden'] = self._is_certified(self.event, "golden")
-            self.tree['n']   = ncands
+        self.tree['certified_muon']   = self._is_certified_event(self.event, "muon")
+        self.tree['certified_golden'] = self._is_certified_event(self.event, "golden")
+        self.tree['n']   = ncands
 
-            ## MC info
-            if hasattr(self.event, 'Pileup_nTrueInt'):
-                self.tree['npu']      = self.event.Pileup_nPU
-                self.tree['npu_mean'] = self.event.Pileup_nTrueInt
-        except:
-            pass
+        ## MC info
+        if hasattr(self.event, 'Pileup_nTrueInt'):
+            self.tree['npu']      = self.event.Pileup_nPU
+            self.tree['npu_mean'] = self.event.Pileup_nTrueInt
 
         if self.job_info['final_state'] == 'mm':
             self.tree['bdt']    = self.event.mm_mva[cand]
@@ -539,68 +537,89 @@ if __name__ == "__main__":
 
     common_branches = "PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock"
 
-    input_path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/530/ParkingDoubleMuonLowMass0+Run2022D-PromptReco-v1+MINIAOD/"
+    input_path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/531/ParkingDoubleMuonLowMass0+Run2022D-PromptReco-v1+MINIAOD/"
     input_path2 = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/530/ksmm/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv4-validDigi_130X_mcRun3_2022_realistic_v5-v4+MINIAODSIM/"
     
+    # job = {
+    #     "input": [
+    #         # "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/531/K0sToMuMu_K0sFilter_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v4+MINIAODSIM/affd8ce1-091d-41cb-af18-2f1d2e9c7e3d.root"
+    #         input_path + "01340b25-f1c3-40bd-8c09-225da18b30e3.root",
+    #         # input_path + "2fa3ea36-eb49-41aa-8496-71de4ed04620.root",
+    #         # input_path + "632b1e27-5f2b-49f3-acb9-c47e545e7547.root",
+    #         # input_path + "99f4a5dc-cb1b-41a7-92a8-959acb241375.root",
+    #         # input_path + "c84cc13c-3994-4b22-a606-64ff50e167da.root",
+    #         # input_path + "02773df7-b597-49bb-9512-3b34f4fde72c.root",
+    #         # input_path + "2fbdab90-acb6-4b55-83a9-631ad71a1611.root",
+    #         # input_path + "659b27a1-4b2e-4aa9-9746-8ac41530e413.root",
+    #         # input_path + "9a54368e-e153-4ec9-861a-5c1238306cf9.root",
+    #         # input_path + "c868ac55-5c22-4b75-9fae-cbd3592d18b3.root",
+    #         # input_path + "0434f813-58bf-4939-a1de-7a9316938df7.root",
+    #         # input_path + "30aa4ecc-ba74-4241-8cc1-f04e95294670.root",
+    #         # input_path + "66783f3e-8d0d-43ec-97fe-c10dfa92e095.root",
+    #         # input_path + "9bd3f34b-fa42-447b-b6fc-b046060bf6ec.root",
+    #         # input_path + "c9ddcac3-5d7c-43bc-91e1-a0b23b46462c.root"
+            
+    #         # input_path2 + "a066bd55dfc8b89df455746c28853bf6.root",
+    #         # input_path2 + "a11192928591ecc63d2c983ad3bafd46.root",
+    #         # input_path2 + "a1493042e87f67fb1c77ba66dd66bfbc.root",
+    #         # input_path2 + "a24546b594e05f1109d204eaf8960b88.root",
+    #         # input_path2 + "a362633465f127f5465f3a16789f64af.root",
+    #         # input_path2 + "a3765ef6de92d86864f1d4f0dc739a15.root",
+    #         # input_path2 + "a4d22291b7b95cdcab895eefd1d29395.root",
+    #         # input_path2 + "a944734ffccf72a9572ba5698052608c.root",
+    #         # input_path2 + "a99a7511d9a696dd11ea0c6545ffdb07.root",
+    #         # input_path2 + "a9e0c20dd3d627a296cef163ad57f2ea.root",
+    #         # input_path2 + "aa4624f2d3640df442dc87c48ba25728.root",
+    #         # input_path2 + "ab13185a8760930af5fe25a052dc9144.root",
+    #         # input_path2 + "ad357ad845d1324792d177631feca87f.root",
+    #         # input_path2 + "ad6fd14f5247ad19e83b220b223f07e7.root",
+    #         # input_path2 + "adc8d7b00a80f92c9376513ccc85b737.root",
+    #         # input_path2 + "ae93fb1b17d79d80f3f4aa2faf3b4fa0.root",
+    #         # input_path2 + "aecebfc80dc8c2dfddc0f42c7ea4fa9c.root",
+    #         # input_path2 + "af1d28e789e75504c38b9f9fa865829a.root"
+    #     ],
+    #     "signal_only" : False,
+    #     "tree_name" : "ksmm",
+    #     "blind" : False,
+    #     "cut" :
+    #         "mm_mu1_index>=0 and mm_mu2_index>=0 and "
+    #         "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] < 0 and "
+    #         "abs(mm_kin_mass-0.45)<0.2 and "
+    #         "mm_kin_slxy>10 and mm_kin_lxy>1 and mm_kin_alpha<0.1 and "
+    #         "mm_kin_vtx_prob>0.01 and "
+    #         "HLT_DoubleMu4_3_LowMass",
+    #     "final_state" : "mm",
+    #     "best_candidate": "",
+    #     "mm_extra_info": True,
+    #     "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
+    #   }
+
     job = {
         "input": [
-            "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/531/K0sToMuMu_K0sFilter_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer23MiniAODv4-130X_mcRun3_2023_realistic_v14-v4+MINIAODSIM/affd8ce1-091d-41cb-af18-2f1d2e9c7e3d.root"
-            # input_path + "01340b25-f1c3-40bd-8c09-225da18b30e3.root",
-            # input_path + "2fa3ea36-eb49-41aa-8496-71de4ed04620.root",
-            # input_path + "632b1e27-5f2b-49f3-acb9-c47e545e7547.root",
-            # input_path + "99f4a5dc-cb1b-41a7-92a8-959acb241375.root",
-            # input_path + "c84cc13c-3994-4b22-a606-64ff50e167da.root",
-            # input_path + "02773df7-b597-49bb-9512-3b34f4fde72c.root",
-            # input_path + "2fbdab90-acb6-4b55-83a9-631ad71a1611.root",
-            # input_path + "659b27a1-4b2e-4aa9-9746-8ac41530e413.root",
-            # input_path + "9a54368e-e153-4ec9-861a-5c1238306cf9.root",
-            # input_path + "c868ac55-5c22-4b75-9fae-cbd3592d18b3.root",
-            # input_path + "0434f813-58bf-4939-a1de-7a9316938df7.root",
-            # input_path + "30aa4ecc-ba74-4241-8cc1-f04e95294670.root",
-            # input_path + "66783f3e-8d0d-43ec-97fe-c10dfa92e095.root",
-            # input_path + "9bd3f34b-fa42-447b-b6fc-b046060bf6ec.root",
-            # input_path + "c9ddcac3-5d7c-43bc-91e1-a0b23b46462c.root"
-            
-            # input_path2 + "a066bd55dfc8b89df455746c28853bf6.root",
-            # input_path2 + "a11192928591ecc63d2c983ad3bafd46.root",
-            # input_path2 + "a1493042e87f67fb1c77ba66dd66bfbc.root",
-            # input_path2 + "a24546b594e05f1109d204eaf8960b88.root",
-            # input_path2 + "a362633465f127f5465f3a16789f64af.root",
-            # input_path2 + "a3765ef6de92d86864f1d4f0dc739a15.root",
-            # input_path2 + "a4d22291b7b95cdcab895eefd1d29395.root",
-            # input_path2 + "a944734ffccf72a9572ba5698052608c.root",
-            # input_path2 + "a99a7511d9a696dd11ea0c6545ffdb07.root",
-            # input_path2 + "a9e0c20dd3d627a296cef163ad57f2ea.root",
-            # input_path2 + "aa4624f2d3640df442dc87c48ba25728.root",
-            # input_path2 + "ab13185a8760930af5fe25a052dc9144.root",
-            # input_path2 + "ad357ad845d1324792d177631feca87f.root",
-            # input_path2 + "ad6fd14f5247ad19e83b220b223f07e7.root",
-            # input_path2 + "adc8d7b00a80f92c9376513ccc85b737.root",
-            # input_path2 + "ae93fb1b17d79d80f3f4aa2faf3b4fa0.root",
-            # input_path2 + "aecebfc80dc8c2dfddc0f42c7ea4fa9c.root",
-            # input_path2 + "af1d28e789e75504c38b9f9fa865829a.root"
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/531/ZeroBias+Run2024C-PromptReco-v1+MINIAOD/e4d100e2-3a51-4097-a3d4-4ec637e57e76.root",
         ],
         "signal_only" : False,
-        "tree_name" : "ksmm",
+        "tree_name" : "kspipiData",
         "blind" : False,
         "cut" :
-            "mm_mu1_index>=0 and mm_mu2_index>=0 and "
-            "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] < 0 and "
-            "abs(mm_kin_mass-0.45)<0.2 and "
-            "mm_kin_slxy>10 and mm_kin_lxy>1 and mm_kin_alpha<0.1 and "
-            "mm_kin_vtx_prob>0.01 and "
-            "HLT_DoubleMu4_3_LowMass",
-        "final_state" : "mm",
+           "hh_had1_pdgId * hh_had2_pdgId == -211*211 and hh_had1_pt>4 and "
+           "hh_had2_pt>3 and abs(hh_kin_mass-0.50)<0.15 and hh_kin_slxy>3 and "
+           "hh_kin_alpha<0.1 and hh_kin_vtx_prob>0.01 and HLT_ZeroBias",
+        "final_state" : "hh",
         "best_candidate": "",
-        "mm_extra_info": True,
-        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
+        # "triggers": ["HLT_ZeroBias"],
+        "mm_extra_info": False,
+        "pre-selection":"abs(hh_kin_mass-0.50)<0.15 && hh_kin_slxy>3 && hh_kin_alpha<0.1",
       }
-
+    
 
     file_name = "/tmp/dmytro/test.job"
     json.dump(job, open(file_name, "w"))
 
-    p = FlatNtupleForKsmm("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/FlatNtuples/531/ksmm/ParkingDoubleMuonLowMass6+Run2024F-PromptReco-v1+MINIAOD/7d7d0aeac7a4f0c892f453f1d71c72b9.job")
+    # p = FlatNtupleForKsmm("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/FlatNtuples/531/ksmm/ParkingDoubleMuonLowMass6+Run2024F-PromptReco-v1+MINIAOD/7d7d0aeac7a4f0c892f453f1d71c72b9.job")
+    # p = FlatNtupleForKsmm("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing-NEW/FlatNtuples/531/ksmm/ParkingDoubleMuonLowMass7+Run2022F-PromptReco-v1+MINIAOD/792208be3d8481d404f870f8f7058f2e.job")
+    p = FlatNtupleForKsmm("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/FlatNtuples/531/kspipi/ZeroBias+Run2024C-PromptReco-v1+MINIAOD/f95441959fea119e92b59b9258f646e4.job")
+    
     # p = FlatNtupleForKsmm(file_name)
 
     print(p.__dict__)
