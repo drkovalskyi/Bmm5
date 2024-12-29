@@ -14,6 +14,7 @@ Dataset: BsToMuMu_BMuonFilter
 #### Time per event for the event loop
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv14-V02 |                    |                   |       0.385 sec/event    |
 | NanoAODv14-V01 |     531            |                   |       0.380 sec/event    |
 | NanoAODv12-V05 |     530            |                   |       0.319 sec/event    |
 | NanoAODv12-V01 |     526            |  0.096 sec/event  |       0.247 sec/event    |
@@ -29,6 +30,7 @@ Dataset: BsToMuMu_BMuonFilter
 #### File size per event 
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ | 
+| NanoAODv14-V02 |                    |                   |         6.8 kB/event     |
 | NanoAODv14-V01 |     531            |                   |         6.7 kB/event     |
 | NanoAODv12-V05 |     530            |                   |         5.6 kB/event     |
 | NanoAODv12-V01 |     526            |   1.5 kB/event    |         3.6 kB/event     | 
@@ -43,6 +45,7 @@ Dataset: BsToMuMu_BMuonFilter
 #### Memory Usage (RSS)
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv14-V02 |                    |                   |         2244 kB          |
 | NanoAODv14-V01 |     531            |                   |         2237 kB          |
 | NanoAODv12-V05 |     530            |                   |         1600 kB          |
 | NanoAODv12-V01 |     526            |      1359 kB      |         1589 kB          |

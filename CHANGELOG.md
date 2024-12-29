@@ -1,5 +1,11 @@
 # Changelog
 
+## [NanoAODv14-V02] - 2024/12/29
+### Changes
+	- save tracking information for dileptons and hh final states
+	- relaxed Ks mass preselection and applied main selection on refitted mass
+	- added BsToPhiPhi
+
 ## [NanoAODv14-V01] - 2024/10/11
 ### Changes
 	- add displaced tracks to classify dimuon PV

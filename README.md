@@ -12,7 +12,7 @@ Central Production infrastructure.
 * scram p CMSSW CMSSW_14_0_16
 * cd CMSSW_14_0_16/src/
 * cmsenv
-* git clone git@github.com:drkovalskyi/Bmm5.git --branch NanoAODv14-V01
+* git clone git@github.com:drkovalskyi/Bmm5.git --branch NanoAODv14-V02
 * scram b -j 8
 
 ## cmsDriver Options
