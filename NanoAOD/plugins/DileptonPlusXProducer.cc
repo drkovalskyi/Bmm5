@@ -2515,6 +2515,10 @@ DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_c
 					 const edm::Event& iEvent,
 					 const pat::PackedCandidate& had1,
 					 const pat::PackedCandidate& had2) {
+  // This part of the code needs to be efficient. We cannot rely on
+  // the raw mass since, Ks can fly far enough that track momentum at
+  // the beamline is different enough from the decay vertex to smear
+  // the mass distribution.
   if (not recoKspipi_) return nullptr;
   if (had1.pt() < minKsTrkPt_ || fabs(had1.eta()) > maxKsTrkEta_) return nullptr;
   if (had2.pt() < minKsTrkPt_ || fabs(had2.eta()) > maxKsTrkEta_) return nullptr;
@@ -2526,7 +2530,11 @@ DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_c
 
   double ks_mass = (pion1.p4() + pion2.p4()).mass();
   
-  if (ks_mass > minKsMass_ && ks_mass < maxKsMass_){
+  // Let's just increase mass window and apply cuts on vertexed
+  // mass. A better option would be to recompute raw mass at the rough
+  // vertex location estimated during doca calculation, but this
+  // requires more development and it's not clear if it's needed.
+  if (ks_mass < 1.0){
 	
     pat::CompositeCandidate ksCand(std::string("hh"));
     ksCand.addDaughter( pion1 , "pion1");
@@ -2536,11 +2544,13 @@ DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_c
     if (preprocess(ksCand, iEvent, pion1, pion2)){
       // Kinematic Fits
       auto vtxFit = fillDileptonInfo(ksCand, iEvent, pion1, pion2);
-      fillIsolationInfo(ksCand, vtxFit, -1, hh_collection.size(),
-			iso_collection, tracks, iEvent, pion1.track(), pion2.track());
+      if (vtxFit.mass() > minKsMass_ && vtxFit.mass() < maxKsMass_){
+	fillIsolationInfo(ksCand, vtxFit, -1, hh_collection.size(),
+			  iso_collection, tracks, iEvent, pion1.track(), pion2.track());
 
-      hh_collection.push_back(ksCand);
-      return &hh_collection.back();
+	hh_collection.push_back(ksCand);
+	return &hh_collection.back();
+      }
     }
   }
   return nullptr;
