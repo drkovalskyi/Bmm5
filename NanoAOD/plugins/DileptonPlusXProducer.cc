@@ -2311,6 +2311,10 @@ bool DileptonPlusXProducer::preprocess(pat::CompositeCandidate& candidate,
   candidate.addUserFloat( cand2.name() + "2_phi",   cand2.phi());
   candidate.addUserFloat( "doca",                     ll_doca);
 
+  // Add tracking information
+  bmm::fill_track_info(candidate, cand1.track(), cand1.name() + "1_");
+  bmm::fill_track_info(candidate, cand2.track(), cand2.name() + "2_");
+  
   return true;
 }
 

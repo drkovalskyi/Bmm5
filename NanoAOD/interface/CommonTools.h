@@ -53,5 +53,7 @@ namespace bmm
 			 unsigned int max_depth=10);
 
   int get_pixel_pattern(const reco::HitPattern& hit_pattern);
+  void fill_track_info(pat::CompositeCandidate& cand, const reco::Track* track, std::string prefix="");
+  
 }
 #endif

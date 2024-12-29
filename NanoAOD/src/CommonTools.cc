@@ -175,3 +175,45 @@ int bmm::get_pixel_pattern(const reco::HitPattern& hit_pattern) {
   }
   return pattern;
 }
+
+void bmm::fill_track_info(pat::CompositeCandidate& cand, const reco::Track* track, std::string prefix)
+{
+  if (track) {
+    cand.addUserFloat(prefix + "trkValidFrac",  track->validFraction());
+    cand.addUserFloat(prefix + "trkNormChi2",   track->normalizedChi2());
+	
+    cand.addUserInt(prefix + "pixelPattern",    bmm::get_pixel_pattern(track->hitPattern()));
+    cand.addUserInt(prefix + "nPixels",         track->hitPattern().numberOfValidPixelHits());
+    cand.addUserInt(prefix + "nValidHits",      track->hitPattern().numberOfValidTrackerHits());
+    cand.addUserInt(prefix + "nLostHitsInner",  track->hitPattern().numberOfLostTrackerHits(reco::HitPattern::MISSING_INNER_HITS));
+    cand.addUserInt(prefix + "nLostHitsOn",     track->hitPattern().numberOfLostTrackerHits(reco::HitPattern::TRACK_HITS));
+    cand.addUserInt(prefix + "nLostHitsOuter",  track->hitPattern().numberOfLostTrackerHits(reco::HitPattern::MISSING_OUTER_HITS));
+	
+    cand.addUserInt(prefix + "trkLayers",           track->hitPattern().trackerLayersWithMeasurement());
+    cand.addUserInt(prefix + "trkLostLayersInner",  track->hitPattern().trackerLayersWithoutMeasurement(reco::HitPattern::MISSING_INNER_HITS));
+    cand.addUserInt(prefix + "trkLostLayersOn",     track->hitPattern().trackerLayersWithoutMeasurement(reco::HitPattern::TRACK_HITS));
+    cand.addUserInt(prefix + "trkLostLayersOuter",  track->hitPattern().trackerLayersWithoutMeasurement(reco::HitPattern::MISSING_OUTER_HITS));
+
+    cand.addUserInt(prefix + "highPurity",   track->quality(reco::Track::highPurity));
+
+  } else {
+    cand.addUserFloat(prefix + "trkValidFrac",  0);
+    cand.addUserFloat(prefix + "trkNormChi2",   9999.);
+    
+    cand.addUserInt(prefix + "pixelPattern",    0);
+    cand.addUserInt(prefix + "nPixels",         0);
+    cand.addUserInt(prefix + "nValidHits",      0);
+    cand.addUserInt(prefix + "nLostHitsInner",  0);
+    cand.addUserInt(prefix + "nLostHitsOn",     0);
+    cand.addUserInt(prefix + "nLostHitsOuter",  0);
+    
+    cand.addUserInt(prefix + "trkLayers",           0);
+    cand.addUserInt(prefix + "trkLostLayersInner",  0);
+    cand.addUserInt(prefix + "trkLostLayersOn",     0);
+    cand.addUserInt(prefix + "trkLostLayersOuter",  0);
+    
+    cand.addUserInt(prefix + "highPurity",   0);
+  }
+
+}
+

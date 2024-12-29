@@ -245,6 +245,36 @@ isolation_pset = cms.PSet(
     otherVtxMaxProb2 = Var("userFloat('otherVtxMaxProb2')", float, doc = "Max vertexing probability of one of the muons with a random track with minPt=2.0GeV"),
 )
 
+def make_track_info_pset(prefix):
+    return cms.PSet(
+        **{
+            f"{prefix}trkValidFrac":       Var(f"userFloat('{prefix}trkValidFrac')", float,
+                                               doc = "Fraction of valid hits for inner track"),
+            f"{prefix}trkNormChi2":        Var(f"userFloat('{prefix}trkNormChi2')", float,
+                                               doc = "Normalized chi2 of the inner fit"),
+            f"{prefix}pixelPattern":       Var(f"userInt('{prefix}pixelPattern')", int,
+                                               doc = "Masks: barrel 0b1111, endcap 0b1110000"),
+            f"{prefix}nPixels":            Var(f"userInt('{prefix}nPixels')", int,
+                                               doc = "Number of valid pixel hits"),
+            f"{prefix}nValidHits":         Var(f"userInt('{prefix}nValidHits')", int,
+                                               doc = "Number of valid hits"),
+            f"{prefix}nLostHitsInner":     Var(f"userInt('{prefix}nLostHitsInner')", int,
+                                               doc = "Number of lost hits before tracker track"),
+            f"{prefix}nLostHitsOn":        Var(f"userInt('{prefix}nLostHitsOn')", int,
+                                               doc = "Number of lost hits on tracker track"),
+            f"{prefix}nLostHitsOuter":     Var(f"userInt('{prefix}nLostHitsOuter')", int,
+                                               doc = "Number of lost hits after tracker track"),
+            f"{prefix}trkLayers":          Var(f"userInt('{prefix}trkLayers')", int,
+                                               doc = "Number of layers with measurements in tracker track"),
+            f"{prefix}trkLostLayersInner": Var(f"userInt('{prefix}trkLostLayersInner')", int,
+                                               doc = "Number of lost layers befor tracker track"),
+            f"{prefix}trkLostLayersOn":    Var(f"userInt('{prefix}trkLostLayersOn')", int,
+                                               doc = "Number of lost layers on tracker track"),
+            f"{prefix}trkLostLayersOuter": Var(f"userInt('{prefix}trkLostLayersOuter')", int,
+                                               doc = "Number of lost layers after tracker track"),
+            }
+    )
+
 ##################################################################################
 ###
 ###                              Dilepton Info
@@ -277,7 +307,9 @@ DileptonsDiMuonTableVariables = merge_psets(
         ),
     kinematic_pset,
     copy_pset(kinematic_common_pset, {"kin_":"kinpc_"}),
-    isolation_pset    
+    isolation_pset,
+    make_track_info_pset("mu1_"),
+    make_track_info_pset("mu2_"),
 )
 
 DileptonsDiMuonMcTableVariables = merge_psets(
