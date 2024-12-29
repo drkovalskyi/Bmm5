@@ -332,6 +332,16 @@ private:
   compute3dDisplacement(const KinematicFitResult& fit,
 			bool closestIn3D = true);
 
+  void
+  addMuonTagInfo(pat::CompositeCandidate& cand,
+		 const bmm::Displacements& displacements,
+		 const vector<const bmm::Candidate*>& ignore_muons);
+  void
+  addMuonTagInfo(pat::CompositeCandidate& cand,
+		 const reco::Vertex* vertex,
+		 const vector<unsigned int>& ignore_muons);
+
+
   // CloseTrackInfo 
   // findTracksCompatibleWithTheVertex(const bmm::Candidate& lepton1,
   // 				    const bmm::Candidate& lepton2,
@@ -458,6 +468,7 @@ private:
   // edm::Handle<std::vector<Run3ScoutingParticle>> pfCandHandle_;
   
   edm::EDGetTokenT<std::vector<Run3ScoutingTrack>>  trackToken_;
+  edm::Handle<std::vector<Run3ScoutingMuon>> muonHandle_;
   edm::Handle<std::vector<Run3ScoutingTrack>> trackHandle_;
   std::vector<reco::Track> tracks_;
   bool tracks_initialized_ = false;
@@ -761,6 +772,7 @@ namespace {
       cand.addUserFloat( name+"_kaon2_phi",    fit.dau_p3(secondKaonDaughterIndex).phi() );
     }
   }
+  
 }
 
 // CloseTrackInfo 
@@ -949,6 +961,60 @@ namespace {
     auto prod_vtx = getProductionVertex(info.match);
     if (prod_vtx.r() < 1e-12) return -2.0;
     return (prod_vtx - info.ll_vtx).r()/TMath::Ccgs() * info.match->mass() / info.match->p();
+  }
+}
+
+void
+ScoutingDileptonPlusXProducer::addMuonTagInfo(pat::CompositeCandidate& cand,
+					      const bmm::Displacements& displacements,
+					      const vector<const bmm::Candidate*>& ignore_muons) {
+  const reco::Vertex* pv(nullptr);
+  for (const auto& displacement: displacements) {
+    if (displacement.name() != "pv") continue;
+    pv = &displacement.prodVertex();
+    break;
+  }
+  std::vector<unsigned int> ignore_muon_indices;
+  for (const auto& cand: ignore_muons) {
+    if (abs(cand->pdgId()) == 13)
+      if (cand->index() >= 0)
+	ignore_muon_indices.push_back(static_cast<unsigned int>(cand->index()));
+  }
+  addMuonTagInfo(cand, pv, ignore_muon_indices);
+}
+
+void
+ScoutingDileptonPlusXProducer::addMuonTagInfo(pat::CompositeCandidate& cand, const reco::Vertex* vertex,
+					      const vector<unsigned int>& ignore_muons) {
+  float min_ip = 9999.;
+  const Run3ScoutingMuon* best_muon(nullptr);
+  if (vertex) {
+    for (unsigned int i = 0; i < muonHandle_->size(); ++i) {
+      const auto & muon = muonHandle_->at(i);
+      bool good_muon = isGoodMuon(muon);
+      for (auto ignore_muon_index: ignore_muons) {
+	if (i == ignore_muon_index) {
+	  good_muon = false;
+	  break;
+	}
+      }
+      if (not good_muon) continue;
+      auto tt = theTTBuilder_->build(makeRecoTrack(muon));
+      auto ip = IPTools::absoluteImpactParameter3D(tt, *vertex);
+      if (ip.first and ip.second.value() < min_ip) {
+	min_ip = ip.second.value();
+	best_muon = &muon;
+      }
+    }
+  }
+  if (best_muon) {
+    cand.addUserInt("tag_mu_charge", best_muon->charge());
+    cand.addUserFloat("tag_mu_pt", best_muon->pt() );
+    cand.addUserFloat("tag_mu_ip", min_ip);
+  } else {
+    cand.addUserInt("tag_mu_charge",   0 );
+    cand.addUserFloat("tag_mu_pt", 0 );
+    cand.addUserFloat("tag_mu_ip", min_ip);
   }
 }
 
@@ -1218,6 +1284,7 @@ void ScoutingDileptonPlusXProducer::fillBtoKllInfo(pat::CompositeCandidate& btok
   }
   auto bToKJPsiLL_MassConstraint_displacement = compute3dDisplacement(bToKJPsiLL_MassConstraint);
   addFitInfo(btokllCand, bToKJPsiLL_MassConstraint, "jpsimc", bToKJPsiLL_MassConstraint_displacement,-1,-1,1);
+  addMuonTagInfo(btokllCand, bToKJPsiLL_MassConstraint_displacement, {&lepton1, &lepton2});
 
   // Psi(2S)K
   KinematicFitResult bToKPsi2SLL_MassConstraint;
@@ -1522,6 +1589,7 @@ void ScoutingDileptonPlusXProducer::fillBtoKKllInfo(pat::CompositeCandidate& bCa
   auto bToKKll_displacement = compute3dDisplacement(bToKKll);
   addFitInfo(bCand, bToKKll, "kin", bToKKll_displacement,-1,-1,1,2);
   bCand.addUserFloat("kin_kk_mass",    bToKKll.refit_mass(1,2));
+  addMuonTagInfo(bCand, bToKKll_displacement, {&lepton1, &lepton2});
 
   // Jpsi KK
   
@@ -1533,6 +1601,7 @@ void ScoutingDileptonPlusXProducer::fillBtoKKllInfo(pat::CompositeCandidate& bCa
   auto bToJpsiKK_displacement = compute3dDisplacement(bToJpsiKK);
   addFitInfo(bCand, bToJpsiKK, "jpsikk", bToJpsiKK_displacement, -1, -1, 1, 2);
   bCand.addUserFloat("jpsikk_kk_mass",    bToJpsiKK.refit_mass(1,2));
+  
 
   // Phi ll
   
@@ -2306,12 +2375,15 @@ ScoutingDileptonPlusXProducer::buildBsToPhiPhiCandidates(pat::CompositeCandidate
     if (doca12 < 0.05 and doca34 < 0.05 and doca13 < 0.05){
       // 4h vertex fit
       KinematicFitResult vtx_fit = vertexWithKinematicFitter(trks, masses);
-      bsToPhiPhiCand.addUserInt(  "vtx_valid",   vtx_fit.valid());
-      bsToPhiPhiCand.addUserFloat("vtx_prob",    vtx_fit.vtxProb());
-      bsToPhiPhiCand.addUserFloat("vtx_mass",    vtx_fit.mass());
-      bsToPhiPhiCand.addUserFloat("vtx_massErr", vtx_fit.massErr());
-
       if (vtx_fit.valid() and vtx_fit.vtxProb() > 0.01) {
+	vtx_fit.postprocess(*beamSpot_);
+	auto displacements = compute3dDisplacement(vtx_fit);
+	addFitInfo(bsToPhiPhiCand, vtx_fit, "vtx", displacements);
+
+	// // add muon tag info
+
+	//     IPTools::absoluteImpactParameter3D(candTransientTrack, vertex);
+	
 	KinematicFitResult bs_fit_result;
 
 	// // Doesn't work
@@ -2516,12 +2588,11 @@ void ScoutingDileptonPlusXProducer::produce(edm::Event& iEvent, const edm::Event
   iEvent.getByToken(vertexToken_, pvHandle_);
   vertices_initialized_ = false;
   
-  edm::Handle<std::vector<Run3ScoutingMuon>> muonHandle;
   edm::Handle<std::vector<Run3ScoutingElectron>> electronHandle;
   edm::Handle<std::vector<Run3ScoutingPhoton>> photonHandle;
   // edm::Handle<pat::CompositeCandidateCollection> conversionHandle;
     
-  iEvent.getByToken(muonToken_, muonHandle);
+  iEvent.getByToken(muonToken_, muonHandle_);
   // iEvent.getByToken(electronToken_, electronHandle);
   // iEvent.getByToken(photonToken_, photonHandle);
   // iEvent.getByToken(conversionToken_, conversionHandle);
@@ -2553,7 +2624,7 @@ void ScoutingDileptonPlusXProducer::produce(edm::Event& iEvent, const edm::Event
   //   packedGenParticles_ = nullptr;
   // }
 
-  auto nMuons   = muonHandle->size();
+  auto nMuons   = muonHandle_->size();
   // auto nPhotons = photonHandle->size();
   // auto nConversions = conversionHandle->size();
   // auto nPFCands = trackHandle_->size();
@@ -2580,7 +2651,7 @@ void ScoutingDileptonPlusXProducer::produce(edm::Event& iEvent, const edm::Event
   // Good muons
   std::vector<bmm::Candidate> good_muon_candidates;
   for (unsigned int i = 0; i < nMuons; ++i) {
-    const auto & muon = muonHandle->at(i);
+    const auto & muon = muonHandle_->at(i);
     if (not isGoodMuon(muon)) continue;
     good_muon_candidates.push_back(bmm::Candidate(muon, i));
   }
