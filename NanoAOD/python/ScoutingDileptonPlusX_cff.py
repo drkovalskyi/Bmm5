@@ -454,6 +454,9 @@ DileptonsKmumuTableVariables =  merge_psets(
         jpsimc_kaon_pt    = Var("userFloat('jpsimc_kaon1_pt')",       float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 pt"),
         jpsimc_kaon_eta   = Var("userFloat('jpsimc_kaon1_eta')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 eta"),
         jpsimc_kaon_phi   = Var("userFloat('jpsimc_kaon1_phi')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 phi"),
+        tag_mu_pt       = Var("userFloat('tag_mu_pt')",           float, doc = "Production muon tagging: pt"),
+        tag_mu_charge   = Var("userInt('tag_mu_charge')",           int, doc = "Production muon tagging: charge"),
+        tag_mu_ip       = Var("userFloat('tag_mu_ip')",           float, doc = "Production muon tagging: impact parameter wrt PV"),
     )
 )
 
@@ -715,6 +718,9 @@ DileptonsKKmumuTableVariables =  merge_psets(
         jpsikk_kaon2_eta   = Var("userFloat('jpsikk_kaon2_eta')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 2 eta"),
         jpsikk_kaon2_phi   = Var("userFloat('jpsikk_kaon2_phi')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 2 phi"),
 
+        tag_mu_pt       = Var("userFloat('tag_mu_pt')",           float, doc = "Production muon tagging: pt"),
+        tag_mu_charge   = Var("userInt('tag_mu_charge')",           int, doc = "Production muon tagging: charge"),
+        tag_mu_ip       = Var("userFloat('tag_mu_ip')",           float, doc = "Production muon tagging: impact parameter wrt PV"),
         # kaon2_mu1_doca  = Var("userFloat('kaon2_mu1_doca')",   float, doc = "Kaon2 distance of closest approach to muon1"),
         # kaon2_mu2_doca  = Var("userFloat('kaon2_mu2_doca')",   float, doc = "Kaon2 distance of closest approach to muon2"),
     #     bmm_nTrks      = Var("userInt('bmm_nTrks')",         int,   doc = "Number of tracks compatible with the vertex by vertex probability (BtoJpsiK as Bmm)"),
@@ -1076,30 +1082,32 @@ DstarGenTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer",
 ###
 ##################################################################################
 
-BsToPhiPhiTableVariables = cms.PSet(
-    mass             = Var("userFloat('mass')",              float,   doc = "raw mass"),
-    pt               = Var("userFloat('pt')",                float,   doc = "raw pt"),
-    eta              = Var("userFloat('eta')",               float,   doc = "raw eta"),
-    vtx_prob         = Var("userFloat('vtx_prob')",          float,   doc = "vertex probability"),
-    vtx_mass         = Var("userFloat('vtx_mass')",          float,   doc = "vertex mass"),
-    vtx_massErr      = Var("userFloat('vtx_massErr')",       float,   doc = "vertex mass uncertainty"),
-    kaon1_pt         = Var("userFloat('kaon1_pt')",          float,   doc = "kaon1 pt"),
-    kaon1_eta        = Var("userFloat('kaon1_eta')",         float,   doc = "kaon1 eta"),
-    kaon1_phi        = Var("userFloat('kaon1_phi')",         float,   doc = "kaon1 phi"),
-    kaon2_pt         = Var("userFloat('kaon2_pt')",          float,   doc = "kaon2 pt"),
-    kaon2_eta        = Var("userFloat('kaon2_eta')",         float,   doc = "kaon2 eta"),
-    kaon2_phi        = Var("userFloat('kaon2_phi')",         float,   doc = "kaon2 phi"),
-    kaon3_pt         = Var("userFloat('kaon3_pt')",          float,   doc = "kaon3 pt"),
-    kaon3_eta        = Var("userFloat('kaon3_eta')",         float,   doc = "kaon3 eta"),
-    kaon3_phi        = Var("userFloat('kaon3_phi')",         float,   doc = "kaon3 phi"),
-    kaon4_pt         = Var("userFloat('kaon4_pt')",          float,   doc = "kaon4 pt"),
-    kaon4_eta        = Var("userFloat('kaon4_eta')",         float,   doc = "kaon4 eta"),
-    kaon4_phi        = Var("userFloat('kaon4_phi')",         float,   doc = "kaon4 phi"),
-    phi1_mass        = Var("userFloat('phi1_mass')",         float,   doc = "phi1 raw mass"),
-    phi2_mass        = Var("userFloat('phi2_mass')",         float,   doc = "phi2 raw mass"),
-    mc_prob          = Var("userFloat('mc_prob')",           float,   doc = "mass constrained fit probability"),
-    mc_mass          = Var("userFloat('mc_mass')",           float,   doc = "mass constrained Bs mass"),
-
+BsToPhiPhiTableVariables = merge_psets(
+    copy_pset(kinematic_pset,{"kin_":"vtx_"}),
+    cms.PSet(
+        mass             = Var("userFloat('mass')",              float,   doc = "raw mass"),
+        pt               = Var("userFloat('pt')",                float,   doc = "raw pt"),
+        eta              = Var("userFloat('eta')",               float,   doc = "raw eta"),
+        # vtx_prob         = Var("userFloat('vtx_prob')",          float,   doc = "vertex probability"),
+        # vtx_mass         = Var("userFloat('vtx_mass')",          float,   doc = "vertex mass"),
+        # vtx_massErr      = Var("userFloat('vtx_massErr')",       float,   doc = "vertex mass uncertainty"),
+        kaon1_pt         = Var("userFloat('kaon1_pt')",          float,   doc = "kaon1 pt"),
+        kaon1_eta        = Var("userFloat('kaon1_eta')",         float,   doc = "kaon1 eta"),
+        kaon1_phi        = Var("userFloat('kaon1_phi')",         float,   doc = "kaon1 phi"),
+        kaon2_pt         = Var("userFloat('kaon2_pt')",          float,   doc = "kaon2 pt"),
+        kaon2_eta        = Var("userFloat('kaon2_eta')",         float,   doc = "kaon2 eta"),
+        kaon2_phi        = Var("userFloat('kaon2_phi')",         float,   doc = "kaon2 phi"),
+        kaon3_pt         = Var("userFloat('kaon3_pt')",          float,   doc = "kaon3 pt"),
+        kaon3_eta        = Var("userFloat('kaon3_eta')",         float,   doc = "kaon3 eta"),
+        kaon3_phi        = Var("userFloat('kaon3_phi')",         float,   doc = "kaon3 phi"),
+        kaon4_pt         = Var("userFloat('kaon4_pt')",          float,   doc = "kaon4 pt"),
+        kaon4_eta        = Var("userFloat('kaon4_eta')",         float,   doc = "kaon4 eta"),
+        kaon4_phi        = Var("userFloat('kaon4_phi')",         float,   doc = "kaon4 phi"),
+        phi1_mass        = Var("userFloat('phi1_mass')",         float,   doc = "phi1 raw mass"),
+        phi2_mass        = Var("userFloat('phi2_mass')",         float,   doc = "phi2 raw mass"),
+        mc_prob          = Var("userFloat('mc_prob')",           float,   doc = "mass constrained fit probability"),
+        mc_mass          = Var("userFloat('mc_mass')",           float,   doc = "mass constrained Bs mass"),
+    )
 )
 
 BsToPhiPhiMcTableVariables = merge_psets(
