@@ -9,6 +9,8 @@ getAlpha(const GlobalPoint& vtx_position, const GlobalError& vtx_error,
 			     const GlobalVector &momentum,
 	 bool transverse = true);
 
+typedef reco::Candidate::LorentzVector LorentzVector;
+
 class KinematicFitResult{
  public:
   KinematicFitResult() : lxy_(-1.0), lxyErr_(-1.0), sigLxy_(-1.0),
@@ -26,6 +28,7 @@ class KinematicFitResult{
   float mass() const;
   float refit_mass(unsigned int i, unsigned int j) const;
   GlobalVector p3() const;
+  LorentzVector p4() const;
   unsigned int number_of_daughters() const
   {
     return refitDaughters.size();

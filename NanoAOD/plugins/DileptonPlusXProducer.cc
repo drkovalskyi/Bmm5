@@ -304,6 +304,8 @@ private:
   
   const reco::Candidate* getGenParticle(const bmm::Candidate& cand);
 
+  const reco::GenParticle* genCandidateMatch(int pdgId, const LorentzVector& p4, bool loose=false);
+  
   // Get index of PackedGenParticle in the list of pruned GenParticle
   // that is stored in NanoAOD. If not found - return (-1)
   int nanoGenParticle(const pat::PackedGenParticle& p);
@@ -1026,7 +1028,27 @@ DileptonPlusXProducer::fillDileptonInfo(pat::CompositeCandidate& dileptonCand,
       ll_doca = distanceOfClosestApproach(gen_ll.gen_l1(), gen_ll.gen_l2());
     dileptonCand.addUserFloat("gen_doca",        ll_doca);
     
+    // candidate match
     
+    // K_S case
+    //
+    // It is easier to match K_S gen particle to a composite refitted
+    // candidate since one does not need to take into account momentum
+    // direction change for charged tracks originating away from the
+    // primary vertex
+    
+    const reco::GenParticle* gen_ks_match = genCandidateMatch(310, kinematicLLVertexFit.p4());
+    if (gen_ks_match) {
+      dileptonCand.addUserInt("gen_ks_pdgId", gen_ks_match->pdgId());
+    } else {
+      dileptonCand.addUserInt("gen_ks_pdgId", 0);
+    }
+    const reco::GenParticle* gen_ks_match_loose = genCandidateMatch(310, kinematicLLVertexFit.p4(), true);
+    if (gen_ks_match_loose) {
+      dileptonCand.addUserInt("gen_ks_loose_pdgId", gen_ks_match_loose->pdgId());
+    } else {
+      dileptonCand.addUserInt("gen_ks_loose_pdgId", 0);
+    }
   }
 
   int pvIndex = displacements.get("pv").pvIndex();
@@ -3742,6 +3764,19 @@ GenMatchInfo DileptonPlusXProducer::getGenMatchInfo( const bmm::Candidate& lepto
 
   return result;
 }
+
+const reco::GenParticle*
+DileptonPlusXProducer::genCandidateMatch(int pdgId, const LorentzVector& p4, bool loose)
+{
+  for (auto const & genParticle: *prunedGenParticles_){
+    if (abs(genParticle.pdgId()) != pdgId) continue;
+    if (dr_match(p4, genParticle.p4(), loose))
+      return &genParticle;
+  }
+  return nullptr;
+}
+
+
 
 float DileptonPlusXProducer::distanceOfClosestApproach( const reco::GenParticle* track1,
 							const reco::GenParticle* track2)

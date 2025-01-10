@@ -1,4 +1,5 @@
 #include "Bmm5/NanoAOD/interface/KinematicFitResult.h"
+#include "Bmm5/NanoAOD/interface/KinFitUtils.h"
 #include <TVector.h>
 #include <TMatrix.h>
 #include <TMath.h>
@@ -120,6 +121,13 @@ GlobalVector KinematicFitResult::p3() const
   if ( not valid() ) return GlobalVector();
   return refitMother->currentState().globalMomentum();
 }
+
+LorentzVector KinematicFitResult::p4() const
+{
+  if ( not valid() ) return LorentzVector();
+  return bmm::makeLorentzVectorFromP3M(p3(), mass());
+}
+
 
 GlobalVector KinematicFitResult::dau_p3(unsigned int i) const
 {

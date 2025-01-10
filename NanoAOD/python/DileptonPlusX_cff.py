@@ -324,6 +324,8 @@ DileptonsDiMuonMcTableVariables = merge_psets(
         gen_mu2_mpdgId     = Var("userInt(  'gen_mu2_mpdgId')",       int,   doc = "Gen match: second daughter mother pdg Id"),
         gen_mu2_pt         = Var("userFloat('gen_mu2_pt')",         float,   doc = "Gen match: second daughter pt"),
         gen_pdgId         = Var("userInt(  'gen_pdgId')",           int,   doc = "Gen match: dilepton pdg Id"),
+        gen_ks_pdgId      = Var("userInt(  'gen_ks_pdgId')",        int,   doc = "Gen match: dilepton candidate to K_S gen particle"),
+        gen_ks_loose_pdgId = Var("userInt(  'gen_ks_loose_pdgId')", int,   doc = "Gen match(loose): dilepton candidate to K_S gen particle"),
         gen_index         = Var("userInt(  'gen_index')",           int,   doc = "Gen match: dilepton index in GenPart"),
         gen_cpdgId        = Var("userInt(  'gen_cpdgId')",          int,   doc = "Gen match: common mother pdg Id"),
         gen_cindex        = Var("userInt(  'gen_cindex')",          int,   doc = "Gen match: common mother index in GenPart"),

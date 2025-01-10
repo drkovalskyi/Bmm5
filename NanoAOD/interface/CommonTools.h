@@ -34,8 +34,10 @@ namespace bmm
   };
 
 
-  template <typename T1, typename T2> bool dr_match(const T1& reco , const T2& gen){
+  template <typename T1, typename T2> bool dr_match(const T1& reco , const T2& gen, bool loose=false){
     if (fabs(reco.pt()-gen.pt())/gen.pt()<0.1 and deltaR(reco,gen)<0.02)
+      return true;
+    if (loose and fabs(reco.pt()-gen.pt())/gen.pt()<0.2 and deltaR(reco,gen)<0.1)
       return true;
     return false;
   }

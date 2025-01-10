@@ -117,3 +117,8 @@ LorentzVector
 bmm::makeLorentzVectorFromP3M(const math::XYZVector& p, double m){
   return LorentzVector(p.x(), p.y(), p.z(), sqrt(p.Mag2() + m * m));
 }
+
+LorentzVector
+bmm::makeLorentzVectorFromP3M(const GlobalVector& p, double m){
+  return LorentzVector(p.x(), p.y(), p.z(), sqrt(p.mag2() + m * m));
+}
