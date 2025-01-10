@@ -1,5 +1,9 @@
 # Changelog
 
+## [NanoAODv14-V03] - 2025/01/10
+### Changes
+	- added composite candidate gen matching for K_S
+
 ## [NanoAODv14-V02] - 2024/12/29
 ### Changes
 	- save tracking information for dileptons and hh final states
