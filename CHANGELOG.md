@@ -1,5 +1,9 @@
 # Changelog
 
+## [NanoAODv14-V04] - 2025/04/24
+### Changes
+	- Lowered minimum muon pt to 2 GeV for the muon collection
+
 ## [NanoAODv14-V03] - 2025/01/10
 ### Changes
 	- added composite candidate gen matching for K_S
