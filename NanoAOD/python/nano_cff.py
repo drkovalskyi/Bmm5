@@ -2,7 +2,17 @@ from __future__ import print_function
 import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.nano_cff import *
 
+def nanoAOD_keepLowPtMuons(process):
+    process.muonTable.doc = cms.string("slimmedMuons after basic selection (pt > 2 || (pt > 2 && (passed(\'CutBasedIdLoose\') || passed(\'SoftCutBasedId\') || passed(\'SoftMvaId\') || passed(\'CutBasedIdGlobalHighPt\') || passed(\'CutBasedIdTrkHighPt\'))))")
+
+    process.finalMuons.cut = cms.string("pt > 2 || (pt > 2 && (passed(\'CutBasedIdLoose\') || passed(\'SoftCutBasedId\') || passed(\'SoftMvaId\') || passed(\'CutBasedIdGlobalHighPt\') || passed(\'CutBasedIdTrkHighPt\')))")
+
+    return process
+
 def nanoAOD_customizeDileptonPlusX(process):
+
+    nanoAOD_keepLowPtMuons(process)
+    
     process.load('Bmm5.NanoAOD.DileptonPlusX_cff')
     process.load('Bmm5.NanoAOD.UpdateSlimmedMuons_cff')
     process.load('PhysicsTools.NanoAOD.muons_cff')
@@ -50,9 +60,3 @@ def nanoAOD_customizeBmmMuonId(process):
     # process.muonTable.variables.mvaMuID = Var("mvaIDValue()",float,doc="MVA-based ID score ",precision=6)
     return process
 
-def nanoAOD_keepLowPtMuons(process):
-    process.muonTable.doc = cms.string("slimmedMuons after basic selection (pt > 2 || (pt > 2 && (passed(\'CutBasedIdLoose\') || passed(\'SoftCutBasedId\') || passed(\'SoftMvaId\') || passed(\'CutBasedIdGlobalHighPt\') || passed(\'CutBasedIdTrkHighPt\'))))")
-
-    process.finalMuons.cut = cms.string("pt > 2 || (pt > 2 && (passed(\'CutBasedIdLoose\') || passed(\'SoftCutBasedId\') || passed(\'SoftMvaId\') || passed(\'CutBasedIdGlobalHighPt\') || passed(\'CutBasedIdTrkHighPt\')))")
-
-    return process
