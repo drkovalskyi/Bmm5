@@ -1,5 +1,9 @@
 # Changelog
 
+## [NanoAODv14-V05] - 2025/09/02
+### Changes
+	- Added loose Ks to two charged pf candidates with lxy>1.
+
 ## [NanoAODv14-V04] - 2025/04/24
 ### Changes
 	- Lowered minimum muon pt to 2 GeV for the muon collection
