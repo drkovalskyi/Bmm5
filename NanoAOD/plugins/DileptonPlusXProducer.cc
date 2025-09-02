@@ -204,6 +204,7 @@ private:
 
   bool isGoodMuon(const pat::Muon& muon);
   bool isGoodTrack(const pat::PackedCandidate& cand);
+  bool isGoodMuonCandidate(const pat::PackedCandidate& cand);
   bool isGoodMuonCandidateFromTrack(const pat::PackedCandidate& cand);
   bool isGoodHadron(const pat::PackedCandidate& cand);
   bool isGoodElectron(const pat::Electron& el);
@@ -672,6 +673,14 @@ bool DileptonPlusXProducer::isGoodHadron(const pat::PackedCandidate& cand)
   if (abs(cand.pdgId()) != 211) return false;
   return true;
 }  
+
+bool DileptonPlusXProducer::isGoodMuonCandidate(const pat::PackedCandidate& cand)
+{
+  if (not isGoodTrack(cand)) return false;
+  if (abs(cand.pdgId()) != 13) return false;
+  return true;
+}  
+
 
 bool DileptonPlusXProducer::isGoodMuonCandidateFromTrack(const pat::PackedCandidate& cand)
 {
@@ -2550,9 +2559,9 @@ DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_c
   if (had2.pt() < minKsTrkPt_ || fabs(had2.eta()) > maxKsTrkEta_) return nullptr;
   AddFourMomenta addP4;
   bmm::Candidate pion1(had1);
-  pion1.setType(PionMass_, "had", 211 * had1.charge());
+  pion1.setType(PionMass_, "had", had1.pdgId());
   bmm::Candidate pion2(had2);
-  pion2.setType(PionMass_, "had", 211 * had2.charge());
+  pion2.setType(PionMass_, "had", had2.pdgId());
 
   double ks_mass = (pion1.p4() + pion2.p4()).mass();
   
@@ -2573,7 +2582,6 @@ DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_c
       if (vtxFit.mass() > minKsMass_ && vtxFit.mass() < maxKsMass_){
 	fillIsolationInfo(ksCand, vtxFit, -1, hh_collection.size(),
 			  iso_collection, tracks, iEvent, pion1.track(), pion2.track());
-
 	hh_collection.push_back(ksCand);
 	return &hh_collection.back();
       }
@@ -2908,20 +2916,22 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   // - loop over all hh combinations
   // - let individual studies fill hh_collection
   // - no check for duplicate entries
+  // - allows PF muons (used for Ks decays)
   if (nPFCands > 1){
     for (unsigned int i=0; i < nPFCands - 1; ++i){
-      const auto& had1 = pfCandHandle_->at(i);
-      if (not isGoodHadron(had1)) continue;
+      const auto& cand1 = pfCandHandle_->at(i);
+      if (not isGoodHadron(cand1) and not isGoodMuonCandidate(cand1)) continue;
       for (unsigned int j=i + 1; j < nPFCands; ++j){
-	const auto& had2 = pfCandHandle_->at(j);
-	if (not isGoodHadron(had2)) continue;
+	const auto& cand2 = pfCandHandle_->at(j);
+	if (not isGoodHadron(cand2) and not isGoodMuonCandidate(cand2)) continue;
 	  
-	if (had1.charge() * had2.charge() > 0) continue;
+	if (cand1.charge() * cand2.charge() < 0 &&
+	    isGoodHadron(cand1) && isGoodHadron(cand2) ) {
+	  buildDstarCandidates(*dstar_collection, *hh_collection, iEvent, cand1, cand2);
+	}
 	  
-	buildDstarCandidates(*dstar_collection, *hh_collection, iEvent, had1, had2);
-
 	const auto* ksCand = buildKsCandidates(*hh_collection, *iso_collection, interestingTracks,
-					       iEvent, had1, had2);
+					       iEvent, cand1, cand2);
 	
 	// Kstar->Kspi->mmpi
 	if (recoKstar_ && ksCand){
@@ -2929,15 +2939,15 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	    pat::PackedCandidate pion((*pfCandHandle_)[k]);
 	    if ( not isGoodHadron(pion) ) continue;
     
-	    if (overlap(had1, pion) || overlap(had2, pion)) continue;
+	    if (overlap(cand1, pion) || overlap(cand2, pion)) continue;
 
 	    pion.setMass(PionMass_);
 
-	    double kstar_mass = (had1.p4() + had2.p4() + pion.p4()).mass();
+	    double kstar_mass = (cand1.p4() + cand2.p4() + pion.p4()).mass();
 
 	    if (kstar_mass > minKstarMass_ && kstar_mass < maxKstarMass_) {
 	      fillKstarInfo(*kstar_collection, iEvent, *ksCand, 
-			    pion, -1, hh_collection->size() - 1, had1, had2);
+			    pion, -1, hh_collection->size() - 1, cand1, cand2);
 	      kstar_collection->back().addUserFloat("mass", kstar_mass);
 	    }
 	  }
