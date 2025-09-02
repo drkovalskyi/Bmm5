@@ -528,6 +528,8 @@ private:
   double maxD0Mass_;
   double minKsMass_;
   double maxKsMass_;
+  double minKsMassLoose_;
+  double maxKsMassLoose_;
   double minKstarMass_;
   double maxKstarMass_;
   double minDmmMass_;
@@ -608,6 +610,8 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   maxD0Mass_(      iConfig.getParameter<double>( "maxD0Mass" ) ),
   minKsMass_(      iConfig.getParameter<double>( "minKsMass" ) ),
   maxKsMass_(      iConfig.getParameter<double>( "maxKsMass" ) ),
+  minKsMassLoose_( iConfig.getParameter<double>( "minKsMassLoose" ) ),
+  maxKsMassLoose_( iConfig.getParameter<double>( "maxKsMassLoose" ) ),
   minKstarMass_(   iConfig.getParameter<double>( "minKstarMass" ) ),
   maxKstarMass_(   iConfig.getParameter<double>( "maxKstarMass" ) ),
   minDmmMass_(      iConfig.getParameter<double>( "minDmmMass" ) ),
@@ -2579,7 +2583,11 @@ DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_c
     if (preprocess(ksCand, iEvent, pion1, pion2)){
       // Kinematic Fits
       auto vtxFit = fillDileptonInfo(ksCand, iEvent, pion1, pion2);
-      if (vtxFit.mass() > minKsMass_ && vtxFit.mass() < maxKsMass_){
+      bool good_ks = abs(had1.pdgId()) == 211 && had1.pdgId() == -had2.pdgId() &&
+	vtxFit.mass() > minKsMass_ && vtxFit.mass() < maxKsMass_;
+      bool loose_ks = fabs(vtxFit.lxy()) > 1.0 && vtxFit.mass() > minKsMassLoose_ &&
+	vtxFit.mass() < maxKsMassLoose_;
+      if (good_ks || loose_ks){
 	fillIsolationInfo(ksCand, vtxFit, -1, hh_collection.size(),
 			  iso_collection, tracks, iEvent, pion1.track(), pion2.track());
 	hh_collection.push_back(ksCand);
