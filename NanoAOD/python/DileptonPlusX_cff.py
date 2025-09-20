@@ -164,7 +164,7 @@ Dileptons = cms.EDProducer(
     maxD0Mass = cms.double(1.95),
     minDmmMass = cms.double(1.25),
     maxDmmMass = cms.double(2.45),
-    minKsMassLoose = cms.double(0.30),
+    minKsMassLoose = cms.double(0.00),
     maxKsMassLoose = cms.double(0.70),
     minKsMass = cms.double(0.45),
     maxKsMass = cms.double(0.55),
@@ -1051,6 +1051,48 @@ Dileptons3MuMcTableVariables = merge_psets(
     )
 )
 
+##################################################################################
+###
+###                              TnP
+###
+##################################################################################
+
+DileptonsTnPTableVariables =  merge_psets(
+    cms.PSet(
+        mu1_index        = Var(  "userInt('mu1_index')",          int, doc = "Index of corresponding leading muon"),
+        mu1_pdgId        = Var(  "userInt('mu1_pdgId')",          int, doc = "Leading muon candidate pdgId. Used in hadron fake studies"),
+        mu1_pt           = Var("userFloat('mu1_pt')",           float, doc = "Leading muon pt"),
+        mu1_sta_pt       = Var("userFloat('mu1_sta_pt')",       float, doc = "Leading muon STA pt"),
+        mu1_eta          = Var("userFloat('mu1_eta')",          float, doc = "Leading muon eta"),
+        mu1_phi          = Var("userFloat('mu1_phi')",          float, doc = "Leading muon phi"),
+        mu2_index        = Var(  "userInt('mu2_index')",          int, doc = "Index of corresponding subleading muon"),
+        mu2_pdgId        = Var(  "userInt('mu2_pdgId')",          int, doc = "Trailing muon candidate pdgId. Used in hadron fake studies"),
+        mu2_pt           = Var("userFloat('mu2_pt')",           float, doc = "Trailing muon pt"),
+        mu2_sta_pt       = Var("userFloat('mu2_sta_pt')",       float, doc = "Trailing muon STA pt"),
+        mu2_eta          = Var("userFloat('mu2_eta')",          float, doc = "Trailing muon eta"),
+        mu2_phi          = Var("userFloat('mu2_phi')",          float, doc = "Trailing muon phi"),
+        mass             = Var("mass",                          float, doc = "Unfit invariant mass"),
+        probe1_tag2      = Var(  "userInt('probe1_tag2')",        int, doc = "First muon passed probe and second passed tag requirements"),
+        probe2_tag1      = Var(  "userInt('probe2_tag1')",        int, doc = "First muon passed tag and second passed probe requirements"),
+        mu1_tag          = Var(  "userInt('mu1_tag')",            int, doc = "First muon passed tag requirements"),
+        mu2_tag          = Var(  "userInt('mu2_tag')",            int, doc = "Second muon passed tag requirements"),
+        mu1_test         = Var(  "userInt('mu1_test')",           int, doc = "Tracker seeded tag muon"),
+        mu2_test         = Var(  "userInt('mu2_test')",           int, doc = "Tracker seeded tag muon"),
+        mu1_trackerSeeded = Var(  "userInt('mu1_trackerSeeded')",  int, doc = "Tracker seeded inner track"),
+        mu2_trackerSeeded = Var(  "userInt('mu2_trackerSeeded')",  int, doc = "Tracker seeded inner track"),
+        probe1_tag2_mass = Var("userFloat('probe1_tag2_mass')", float, doc = "Distance of closest approach of muons"),
+        probe2_tag1_mass = Var("userFloat('probe2_tag1_mass')", float, doc = "Distance of closest approach of muons"),
+    )
+)
+
+DileptonsTnPMcTableVariables = merge_psets(
+    DileptonsTnPTableVariables,
+    cms.PSet(
+    )
+)
+
+
+
 Dileptons3MuTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
     src=cms.InputTag("Dileptons","MuMuMu"),
     cut=cms.string(""),
@@ -1069,6 +1111,26 @@ Dileptons3MuMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer"
     singleton=cms.bool(False),
     extension=cms.bool(False),
     variables = Dileptons3MuMcTableVariables
+)
+
+DileptonsTnPTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("Dileptons","TnP"),
+    cut=cms.string(""),
+    name=cms.string("tnp"),
+    doc=cms.string("TnP muon pairs for efficiency measurements"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsTnPTableVariables
+)
+
+DileptonsTnPMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
+    src=cms.InputTag("DileptonsMc","TnP"),
+    cut=cms.string(""),
+    name=cms.string("tnp"),
+    doc=cms.string("TnP muon pairs for efficiency measurements"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = DileptonsTnPMcTableVariables
 )
 
 ##################################################################################
@@ -1251,7 +1313,7 @@ DileptonPlusXTables     = cms.Sequence(DileptonsDiMuonTable   * DileptonsHHTable
                                        DileptonsElMuTable     * DileptonsKmumuTable * DileptonsKeeTable      *
                                        DileptonsKKmumuTable   * DileptonsKKeeTable  * DileptonsDstarTable    *
                                        Dileptons3MuTable      * DileptonsKstarTable * DileptonTrackTable     *
-                                       DileptonIsoTable       * 
+                                       DileptonIsoTable       * DileptonsTnPTable   *
                                        DileptonsMuMuGammaTable * PrimaryVertexInfoTable * prescaleTable)
 
 DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTable     * DileptonsElElMcTable *
@@ -1259,5 +1321,5 @@ DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTab
                                        DileptonsKKmumuMcTable * DileptonsKKeeMcTable   * DileptonsDstarMcTable *
                                        PrimaryVertexInfoMcTable * DileptonsMuMuGammaMcTable * BxToMuMuGenTable *
                                        Dileptons3MuMcTable    * DileptonsKstarMcTable  * DileptonTrackMcTable *
-                                       DileptonIsoMcTable     *
+                                       DileptonIsoMcTable     * DileptonsTnPMcTable    *
                                        BxToMuMuGenSummaryTable * DstarGenTable * prescaleTable)

@@ -128,7 +128,21 @@ namespace {
     float fls3d, alpha, pvips, iso, chi2dof, docatrk, closetrk, m1iso, m2iso, eta, m;
   };
 
-  
+  struct TnPCandidate {
+    bool mu1_probe  = false;
+    bool mu1_test   = false;
+    bool mu1_trackerSeeded = false;
+    bool mu1_tag    = false;
+    bool mu2_probe  = false;
+    bool mu2_test   = false;
+    bool mu2_trackerSeeded = false;
+    bool mu2_tag    = false;
+    bool jpsi_probe1 = false;
+    bool jpsi_probe2 = false;
+    double jpsi_mass1 = 0.0;
+    double jpsi_mass2 = 0.0;
+  };
+
 }
 
 
@@ -151,6 +165,11 @@ private:
     
   virtual void produce(edm::Event&, const edm::EventSetup&);
 
+  void fill_basic_information(pat::CompositeCandidate& candidate,
+			      const edm::Event& iEvent,
+			      const bmm::Candidate& cand1,
+			      const bmm::Candidate& cand2);
+  
   bool preprocess(pat::CompositeCandidate& candidate,
 		  const edm::Event& iEvent,
 		  const bmm::Candidate& lepton1,
@@ -203,6 +222,7 @@ private:
   
 
   bool isGoodMuon(const pat::Muon& muon);
+  bool isTrackerSeeded(const reco::Track& track);
   bool isGoodTrack(const pat::PackedCandidate& cand);
   bool isGoodMuonCandidate(const pat::PackedCandidate& cand);
   bool isGoodMuonCandidateFromTrack(const pat::PackedCandidate& cand);
@@ -452,6 +472,9 @@ private:
   
   void setupTmvaReader(TMVA::Reader& reader, std::string file);
 
+  TnPCandidate buildTnPCandidate(const pat::Muon& muon1,
+				 const pat::Muon& muon2);
+  
 
   // ----------member data ---------------------------
     
@@ -636,6 +659,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   produces<pat::CompositeCandidateCollection>("BToMuMuGamma");
   produces<pat::CompositeCandidateCollection>("Dstar");
   produces<pat::CompositeCandidateCollection>("Kstar");
+  produces<pat::CompositeCandidateCollection>("TnP");
     
   setupTmvaReader(bdtReader0_,(iConfig.getParameter<edm::FileInPath>("bdtEvent0")).fullPath());
   setupTmvaReader(bdtReader1_,(iConfig.getParameter<edm::FileInPath>("bdtEvent1")).fullPath());
@@ -655,12 +679,61 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
 
 }
 
+TnPCandidate
+DileptonPlusXProducer::buildTnPCandidate(const pat::Muon& muon1,
+					 const pat::Muon& muon2) {
+  TnPCandidate cand;
+  cand.mu1_probe = muon1.isStandAloneMuon() && muon1.standAloneMuon().isAvailable();
+  cand.mu2_probe = muon2.isStandAloneMuon() && muon2.standAloneMuon().isAvailable();
+  cand.mu1_tag = isGoodMuon(muon1);
+  cand.mu2_tag = isGoodMuon(muon2);
+  if (muon1.isTrackerMuon()) {
+    cand.mu1_trackerSeeded = isTrackerSeeded(*muon1.innerTrack());
+    cand.mu1_test = cand.mu1_trackerSeeded && cand.mu1_tag;
+  }
+  if (muon2.isTrackerMuon()) {
+    cand.mu2_trackerSeeded = isTrackerSeeded(*muon2.innerTrack());
+    cand.mu2_test = cand.mu2_trackerSeeded && cand.mu2_tag;
+  }
+  if (cand.mu1_probe && cand.mu2_tag) {
+    auto probe(muon1.standAloneMuon());
+    auto probe_p4(makeLorentzVectorFromPxPyPzM(probe->px(),
+					       probe->py(),
+					       probe->pz(),
+					       MuonMass_));
+    cand.jpsi_mass1 = (probe_p4 + muon2.p4()).mass();
+    if (cand.jpsi_mass1 > 2.0 && cand.jpsi_mass1 < 4.0 && probe->charge() != muon2.charge())
+     cand. jpsi_probe1 = true;
+  }
+  if (cand.mu2_probe && cand.mu1_tag) {
+    auto probe(muon2.standAloneMuon());
+    auto probe_p4(makeLorentzVectorFromPxPyPzM(probe->px(),
+					       probe->py(),
+					       probe->pz(),
+					       MuonMass_));
+    cand.jpsi_mass2 = (probe_p4 + muon1.p4()).mass();
+    if (cand.jpsi_mass2 > 2.0 && cand.jpsi_mass2 < 4.0 && probe->charge() != muon1.charge())
+      cand.jpsi_probe2 = true;
+  }
+  return cand;
+}
+
 bool DileptonPlusXProducer::isGoodMuon(const pat::Muon& muon){
   if ( not muon.isLooseMuon() ) return false;
   if ( not muon.isTrackerMuon() ) return false;
   if ( not muon.innerTrack()->quality(reco::Track::highPurity) ) return false; 
   if ( muon.pt() < ptMinMu_ || fabs(muon.eta()) > etaMaxMu_ ) return false;
   return true;
+}
+
+bool DileptonPlusXProducer::isTrackerSeeded(const reco::Track& trk){
+  // https://github.com/cms-sw/cmssw/blob/master/DataFormats/TrackReco/interface/TrackBase.h
+  return trk.isAlgoInMask(trk.initialStep) || trk.isAlgoInMask(trk.lowPtTripletStep) ||
+    trk.isAlgoInMask(trk.pixelPairStep) || trk.isAlgoInMask(trk.detachedTripletStep) ||
+    trk.isAlgoInMask(trk.mixedTripletStep) || trk.isAlgoInMask(trk.pixelLessStep) ||
+    trk.isAlgoInMask(trk.tobTecStep) || trk.isAlgoInMask(trk.jetCoreRegionalStep) ||
+    trk.isAlgoInMask(trk.lowPtQuadStep) || trk.isAlgoInMask(trk.highPtTripletStep) ||
+    trk.isAlgoInMask(trk.detachedQuadStep);
 }
 
 bool DileptonPlusXProducer::isGoodTrack(const pat::PackedCandidate& cand){
@@ -1567,7 +1640,7 @@ void DileptonPlusXProducer::fillBtoKKllInfo(pat::CompositeCandidate& bCand,
   }
   auto bToJpsiKK_displacement = compute3dDisplacement(bToJpsiKK);
   addFitInfo(bCand, bToJpsiKK, "jpsikk", bToJpsiKK_displacement, -1, -1, 1, 2);
-  bCand.addUserFloat("jpsikk_kk_mass",    bToJpsiKK.refit_mass(1,2));
+  bCand.addUserFloat("jpsikk_kk_mass",    bToJpsiKK.dau_mass(1));
 
   // Phi ll
   
@@ -2323,6 +2396,23 @@ DileptonPlusXProducer::injectJpsiTracks(std::vector<bmm::Candidate>& good_lepton
 
 
 
+void DileptonPlusXProducer::fill_basic_information(pat::CompositeCandidate& candidate,
+						   const edm::Event& iEvent,
+						   const bmm::Candidate& cand1,
+						   const bmm::Candidate& cand2)
+{
+  candidate.addUserInt(   cand1.name() + "1_index", cand1.index());
+  candidate.addUserInt(   cand1.name() + "1_pdgId", cand1.pdgId());
+  candidate.addUserFloat( cand1.name() + "1_pt",    cand1.pt());
+  candidate.addUserFloat( cand1.name() + "1_eta",   cand1.eta());
+  candidate.addUserFloat( cand1.name() + "1_phi",   cand1.phi());
+  candidate.addUserInt(   cand2.name() + "2_index", cand2.index());
+  candidate.addUserInt(   cand2.name() + "2_pdgId", cand2.pdgId());
+  candidate.addUserFloat( cand2.name() + "2_pt",    cand2.pt());
+  candidate.addUserFloat( cand2.name() + "2_eta",   cand2.eta());
+  candidate.addUserFloat( cand2.name() + "2_phi",   cand2.phi());
+}
+  
 bool DileptonPlusXProducer::preprocess(pat::CompositeCandidate& candidate,
 				       const edm::Event& iEvent,
 				       const bmm::Candidate& cand1,
@@ -2334,16 +2424,7 @@ bool DileptonPlusXProducer::preprocess(pat::CompositeCandidate& candidate,
   if (diLeptonCharge_ && cand1.charge() * cand2.charge() > 0) return false;
 
   // We have a decent candidate. Let's fill some information
-  candidate.addUserInt(   cand1.name() + "1_index", cand1.index());
-  candidate.addUserInt(   cand1.name() + "1_pdgId", cand1.pdgId());
-  candidate.addUserFloat( cand1.name() + "1_pt",    cand1.pt());
-  candidate.addUserFloat( cand1.name() + "1_eta",   cand1.eta());
-  candidate.addUserFloat( cand1.name() + "1_phi",   cand1.phi());
-  candidate.addUserInt(   cand2.name() + "2_index", cand2.index());
-  candidate.addUserInt(   cand2.name() + "2_pdgId", cand2.pdgId());
-  candidate.addUserFloat( cand2.name() + "2_pt",    cand2.pt());
-  candidate.addUserFloat( cand2.name() + "2_eta",   cand2.eta());
-  candidate.addUserFloat( cand2.name() + "2_phi",   cand2.phi());
+  fill_basic_information(candidate, iEvent, cand1, cand2);
   candidate.addUserFloat( "doca",                     ll_doca);
 
   // Add tracking information
@@ -2662,6 +2743,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
     
   // Output collection
   auto mm_collection = std::make_unique<pat::CompositeCandidateCollection>();
+  auto tnp_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto trk_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto iso_collection = std::make_unique<pat::CompositeCandidateCollection>();
   auto ee_collection = std::make_unique<pat::CompositeCandidateCollection>();
@@ -2679,12 +2761,17 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 
   // Build input lists
 
-  // Good muons
+  // Muons
+  std::vector<std::pair<bmm::Candidate, bool>> loose_muon_candidates;
   std::vector<bmm::Candidate> good_muon_candidates;
   for (unsigned int i = 0; i < nMuons; ++i) {
-    const pat::Muon & muon = muonHandle->at(i);
-    if (not isGoodMuon(muon)) continue;
-    good_muon_candidates.push_back(bmm::Candidate(muon, i));
+    const pat::Muon& muon = muonHandle->at(i);
+    bool good_muon = isGoodMuon(muon);
+    auto cand = bmm::Candidate(muon, i);
+    if (good_muon || muon.isStandAloneMuon())
+      loose_muon_candidates.emplace_back(cand, good_muon);
+    if (good_muon)
+      good_muon_candidates.push_back(cand);
   }
     
   // Good electrons
@@ -2863,6 +2950,50 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
     } 
   }
 
+  // Build TnP candidates
+  unsigned int n_loose_muon_candidates = loose_muon_candidates.size();
+  if (n_loose_muon_candidates > 1) {
+    for (unsigned int i = 0; i < n_loose_muon_candidates; ++i) {
+      const bmm::Candidate & muon1 = loose_muon_candidates.at(i).first;
+      for (unsigned int j = 0; j < n_loose_muon_candidates; ++j) {
+	const bmm::Candidate & muon2 = loose_muon_candidates.at(j).first;
+	if (i==j) continue;
+
+	// Enforce momentum ordering
+	if (muon2.pt() > muon1.pt()) continue;
+	
+	auto tnp_cand = buildTnPCandidate(muonHandle->at(muon1.index()), muonHandle->at(muon2.index()));
+	if (not tnp_cand.jpsi_probe1 && not tnp_cand.jpsi_probe2) continue;
+	
+	pat::CompositeCandidate dimuonCand(std::string("tnp"));
+	dimuonCand.addDaughter( muon1 , "muon1");
+	dimuonCand.addDaughter( muon2 , "muon2");
+	addP4.set( dimuonCand );
+	
+	fill_basic_information(dimuonCand, iEvent, muon1, muon2);
+	
+	dimuonCand.addUserInt("probe1_tag2", tnp_cand.jpsi_probe1);
+	dimuonCand.addUserInt("probe2_tag1", tnp_cand.jpsi_probe2);
+	dimuonCand.addUserFloat("probe1_tag2_mass", tnp_cand.jpsi_mass1);
+	dimuonCand.addUserFloat("probe2_tag1_mass", tnp_cand.jpsi_mass2);
+	dimuonCand.addUserInt("mu1_tag",   tnp_cand.mu1_tag);
+	dimuonCand.addUserInt("mu2_tag",   tnp_cand.mu2_tag);
+	dimuonCand.addUserInt("mu1_test",  tnp_cand.mu1_test);
+	dimuonCand.addUserInt("mu2_test",  tnp_cand.mu2_test);
+	dimuonCand.addUserInt("mu1_trackerSeeded",  tnp_cand.mu1_trackerSeeded);
+	dimuonCand.addUserInt("mu2_trackerSeeded",  tnp_cand.mu2_trackerSeeded);
+
+
+	dimuonCand.addUserFloat("mu1_sta_pt", tnp_cand.mu1_probe ? muonHandle->at(muon1.index()).standAloneMuon()->pt() : 0);
+	dimuonCand.addUserFloat("mu2_sta_pt", tnp_cand.mu2_probe ? muonHandle->at(muon2.index()).standAloneMuon()->pt() : 0);
+
+	// Sort out trigger matching
+
+	tnp_collection->push_back(dimuonCand);
+      }
+    }
+  }
+
   // Build dielectron candidates
   if ( recoElElX_ && good_electron_candidates.size() > 1 ){
     for (unsigned int i = 0; i < good_electron_candidates.size(); ++i) {
@@ -2987,6 +3118,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   iEvent.put(std::move(btommg), "BToMuMuGamma");
   iEvent.put(std::move(dstar_collection), "Dstar");
   iEvent.put(std::move(kstar_collection), "Kstar");
+  iEvent.put(std::move(tnp_collection),     "TnP");
 
   fillTrackInfo(*trk_collection, interestingTracks, iEvent);
   iEvent.put(std::move(trk_collection),    "InterestingTracks");
