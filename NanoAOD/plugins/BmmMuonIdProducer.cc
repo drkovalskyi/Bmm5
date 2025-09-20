@@ -184,14 +184,20 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
       
       if (muon.isGlobalMuon()){
 	mu_cand.addUserFloat("glbNormChi2", muon.globalTrack()->normalizedChi2());
-	mu_cand.addUserFloat("staNormChi2", muon.outerTrack()->normalizedChi2());
-	mu_cand.addUserInt( "staValidHits", muon.outerTrack()->hitPattern().muonStationsWithValidHits());
 	mu_cand.addUserInt("chargeProduct", muon.outerTrack()->charge() * muon.innerTrack()->charge());
       } else {
 	mu_cand.addUserFloat("glbNormChi2", 9999.);
-	mu_cand.addUserFloat("staNormChi2", 9999.);
-	mu_cand.addUserInt( "staValidHits", 0);
 	mu_cand.addUserInt("chargeProduct", 0);
+      }
+      
+      if (muon.isStandAloneMuon()) {
+	mu_cand.addUserFloat("staNormChi2", muon.outerTrack()->normalizedChi2());
+	mu_cand.addUserFloat("staNdof", muon.outerTrack()->ndof());
+	mu_cand.addUserInt(  "staValidHits", muon.outerTrack()->hitPattern().muonStationsWithValidHits());
+      } else {
+	mu_cand.addUserFloat("staNormChi2", 9999.);
+	mu_cand.addUserFloat("staNdof", 0);
+	mu_cand.addUserInt(  "staValidHits", 0);
       }
       
       if (muon.isTrackerMuon() or muon.isGlobalMuon()){
