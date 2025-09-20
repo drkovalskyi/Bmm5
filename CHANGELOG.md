@@ -1,5 +1,11 @@
 # Changelog
 
+## [NanoAODv14-V06] - 2025/09/20
+### Changes
+	- Implemented track reco efficiency measurement with stand alone muons
+	- Added STA muons to the selection and store extra information for them
+	- Added inner track algorithm mask
+
 ## [NanoAODv14-V05] - 2025/09/02
 ### Changes
 	- Added loose Ks to two charged pf candidates with lxy>1.
