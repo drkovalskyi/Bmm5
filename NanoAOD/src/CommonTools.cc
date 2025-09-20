@@ -195,6 +195,7 @@ void bmm::fill_track_info(pat::CompositeCandidate& cand, const reco::Track* trac
     cand.addUserInt(prefix + "trkLostLayersOuter",  track->hitPattern().trackerLayersWithoutMeasurement(reco::HitPattern::MISSING_OUTER_HITS));
 
     cand.addUserInt(prefix + "highPurity",   track->quality(reco::Track::highPurity));
+    cand.addUserInt(prefix + "algoMask",     track->algoMaskUL() & 0x7FFFFFFF);
 
   } else {
     cand.addUserFloat(prefix + "trkValidFrac",  0);
@@ -213,6 +214,7 @@ void bmm::fill_track_info(pat::CompositeCandidate& cand, const reco::Track* trac
     cand.addUserInt(prefix + "trkLostLayersOuter",  0);
     
     cand.addUserInt(prefix + "highPurity",   0);
+    cand.addUserInt(prefix + "algoMask",     0);
   }
 
 }
