@@ -87,6 +87,7 @@ BmmMuonIdVariables = cms.PSet(
     staRelChi2          = Var("userFloat('staRelChi2')",          float, doc = "chi2 value for the outer track stub with respect to the global track"),
     glbNormChi2         = Var("userFloat('glbNormChi2')",         float, doc = "Normalized chi2 of the global fit"),
     staNormChi2         = Var("userFloat('staNormChi2')",         float, doc = "Normalized chi2 of the outter fit"),
+    staNdof             = Var("userFloat('staNdof')",             float, doc = "Number of degrees of freedom of the outter fit"),
     trkNormChi2         = Var("userFloat('trkNormChi2')",         float, doc = "Normalized chi2 of the inner fit"),
     trkValidFrac        = Var("userFloat('trkValidFrac')",        float, doc = "Fraction of valid hits for inner track"),
     ewkMvaId               = Var("userFloat('mvaId')",               float, doc = "EWK POG MVA id for muons with pt>10GeV"),
@@ -118,6 +119,7 @@ BmmMuonIdVariables = cms.PSet(
     trkLostLayersOuter  = Var("userInt('trkLostLayersOuter')",      int, doc = "Number of lost layers after tracker track"),
 
     highPurity          = Var("userInt('highPurity')",              int, doc = "High purity inner track"),
+    algoMask            = Var("userInt('algoMask')",                int, doc = "Inner track algorithm mask (first 31 bits)"),
     hlt_pt              = Var("userFloat('hlt_pt')",              float, doc = "HLT pt"),
     hlt_dr              = Var("userFloat('hlt_dr')",              float, doc = "HLT dR"),
     l1_pt               = Var("userFloat('l1_pt')",               float, doc = "L1 pt"),
