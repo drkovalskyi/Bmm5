@@ -135,6 +135,12 @@ GlobalVector KinematicFitResult::dau_p3(unsigned int i) const
   return refitDaughters.at(i)->currentState().globalMomentum();
 }
 
+float KinematicFitResult::dau_mass(unsigned int i) const
+{
+  if ( not valid() or i>=refitDaughters.size() ) return -1.0;
+  return refitDaughters.at(i)->currentState().mass();
+}
+
 float KinematicFitResult::massErr() const
 {
   if ( not valid() ) return -1.0;

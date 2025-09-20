@@ -34,6 +34,7 @@ class KinematicFitResult{
     return refitDaughters.size();
   }
   GlobalVector dau_p3(unsigned int i) const;
+  float dau_mass(unsigned int i) const;
   float massErr() const;
   float chi2() const;
   float ndof() const;
