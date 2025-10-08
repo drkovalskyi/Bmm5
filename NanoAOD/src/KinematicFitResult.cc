@@ -45,7 +45,7 @@ getAlpha(const GlobalPoint& vtx_position, const GlobalError& vtx_error,
 
   float err_alpha = fabs(cosAlpha) <= 1 and err2_cosAlpha >=0 ? sqrt(err2_cosAlpha) / sqrt(1-pow(cosAlpha, 2)) : 999;
   float alpha = acos(cosAlpha);
-  if (isnan(alpha) or isnan(err_alpha))
+  if (std::isnan(alpha) or std::isnan(err_alpha))
     return std::pair<float, float>(999., 999.);
   else
     return std::pair<float, float>(alpha, err_alpha);

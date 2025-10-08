@@ -91,7 +91,7 @@ void bmm::Displacement::compute_displacement()
     longitudinalImpactParameterErr_ = impactParameterZ.second.error();
   }
 
-  if (impactParameter3D.first and not isnan(impactParameter3D.second.error())) {
+  if (impactParameter3D.first and not std::isnan(impactParameter3D.second.error())) {
     distaceOfClosestApproach_       = impactParameter3D.second.value();
     distaceOfClosestApproachSig_    = impactParameter3D.second.significance();
     distaceOfClosestApproachErr_    = impactParameter3D.second.error();
