@@ -113,12 +113,11 @@ Dileptons = cms.EDProducer(
     nanoGenParticleCollection = cms.InputTag("finalGenParticles"),
     MuonMinPt = cms.double(1.),
     MuonMaxEta = cms.double(2.4),
-    KaonMinPt = cms.double(1.0),
-    # KaonMinPt=cms.double(-1),
-    KaonMaxEta = cms.double(2.4),
+    HadronMinPt = cms.double(1.0),
+    HadronMaxEta = cms.double(2.4),
     ElectronMinPt = cms.double(2.),
     ElectronMaxEta = cms.double(2.4),
-    KaonMinDCASig=cms.double(-1.),
+    HadronMinDCASig=cms.double(-1.),
     DiLeptonChargeCheck=cms.bool(False),
     minBKllMass = cms.double(4.0),
     maxBKllMass = cms.double(6.0),
@@ -840,7 +839,7 @@ DileptonsKstarMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProduce
 
 ##################################################################################
 ###
-###                              Bs to l l K K
+###                              Bs to l l h h
 ###
 ##################################################################################
 
@@ -866,6 +865,17 @@ DileptonsKKmumuTableVariables =  merge_psets(
         kaon2_sdxy_bs   = Var("userFloat('kaon2_sdxy_bs')",    float, doc = "Kaon2 impact parameter significance wrt the beam spot"),
         kk_mass         = Var("userFloat('kk_mass')",          float, doc = "Mass of two kaons"),
         jpsikk_kk_mass = Var("userFloat('jpsikk_kk_mass')",    float, doc = "Mass of two kaons refitted"),
+
+        kpi_mass         = Var("userFloat('kpi_mass')",        float, doc = "Mass of kaon and pion"),
+        jpsikpi_hh_mass  = Var("userFloat('jpsikpi_hh_mass')", float, doc = "Mass of kaon and pion refitted"),
+        jpsikpi_mass     = Var("userFloat('jpsikpi_mass')",    float, doc = "Fitted mass of B to JpsiKPi with Jpsi mass constraint"),
+        pik_mass         = Var("userFloat('pik_mass')",        float, doc = "Mass of pion and kaon"),
+        jpsipik_hh_mass  = Var("userFloat('jpsipik_hh_mass')", float, doc = "Mass of pion and kaon refitted"),
+        jpsipik_mass     = Var("userFloat('jpsipik_mass')",    float, doc = "Fitted mass of B to JpsiPiK with Jpsi mass constraint"),
+        pipi_mass         = Var("userFloat('pipi_mass')",        float, doc = "Mass of pion and pion"),
+        jpsipipi_hh_mass  = Var("userFloat('jpsipipi_hh_mass')", float, doc = "Mass of pion and pion refitted"),
+        jpsipipi_mass     = Var("userFloat('jpsipipi_mass')",    float, doc = "Fitted mass of B to JpsiPiPi with Jpsi mass constraint"),
+        
         # Kinematic Fit daugter info
         jpsikk_kaon1_pt    = Var("userFloat('jpsikk_kaon1_pt')",       float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 pt"),
         jpsikk_kaon1_eta   = Var("userFloat('jpsikk_kaon1_eta')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 1 eta"),
@@ -1082,6 +1092,19 @@ DileptonsTnPTableVariables =  merge_psets(
         mu2_trackerSeeded = Var(  "userInt('mu2_trackerSeeded')",  int, doc = "Tracker seeded inner track"),
         probe1_tag2_mass = Var("userFloat('probe1_tag2_mass')", float, doc = "Distance of closest approach of muons"),
         probe2_tag1_mass = Var("userFloat('probe2_tag1_mass')", float, doc = "Distance of closest approach of muons"),
+        tag1_tag2_kin_valid   = Var( "userInt('tag1_tag2_kin_valid')",       int, doc = "tag-tag kinematic fit: status"),
+        tag1_tag2_kin_prob    = Var( "userFloat('tag1_tag2_kin_prob')",    float, doc = "tag-tag kinematic fit: vertex probability"),
+        tag1_tag2_kin_mass    = Var( "userFloat('tag1_tag2_kin_mass')",    float, doc = "tag-tag kinematic fit: refitted mass"),
+        tag1_tag2_kin_massErr = Var( "userFloat('tag1_tag2_kin_massErr')", float, doc = "tag-tag kinematic fit: refitted mass uncertainty"),
+        probe1_tag2_kin_valid   = Var( "userInt('probe1_tag2_kin_valid')",       int, doc = "probe-tag kinematic fit: status"),
+        probe1_tag2_kin_prob    = Var( "userFloat('probe1_tag2_kin_prob')",    float, doc = "probe-tag kinematic fit: vertex probability"),
+        probe1_tag2_kin_mass    = Var( "userFloat('probe1_tag2_kin_mass')",    float, doc = "probe-tag kinematic fit: refitted mass"),
+        probe1_tag2_kin_massErr = Var( "userFloat('probe1_tag2_kin_massErr')", float, doc = "probe-tag kinematic fit: refitted mass uncertainty"),
+        probe2_tag1_kin_valid   = Var( "userInt('probe2_tag1_kin_valid')",       int, doc = "tag-probe kinematic fit: status"),
+        probe2_tag1_kin_prob    = Var( "userFloat('probe2_tag1_kin_prob')",    float, doc = "tag-probe kinematic fit: vertex probability"),
+        probe2_tag1_kin_mass    = Var( "userFloat('probe2_tag1_kin_mass')",    float, doc = "tag-probe kinematic fit: refitted mass"),
+        probe2_tag1_kin_massErr = Var( "userFloat('probe2_tag1_kin_massErr')", float, doc = "tag-probe kinematic fit: refitted mass uncertainty"),
+        
     )
 )
 
