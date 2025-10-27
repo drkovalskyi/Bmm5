@@ -36,6 +36,12 @@ def nanoAOD_customizeDileptonPlusX(process):
         vy = Var("vy", "float", doc="y coordinate of vertex position"),
         vz = Var("vz", "float", doc="z coordinate of vertex position")
     )
+
+    process.load('FWCore.MessageService.MessageLogger_cfi')
+    # Kill all messages from that category on 'cerr'
+    process.MessageLogger.cerr.TwoTrackMinimumDistance = cms.untracked.PSet(
+        limit = cms.untracked.int32(0)
+    )
     
     return process
 
