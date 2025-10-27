@@ -36,6 +36,7 @@
 #include "TrackingTools/PatternTools/interface/TwoTrackMinimumDistance.h"
 #include "TrackingTools/IPTools/interface/IPTools.h"
 #include "TrackingTools/GeomPropagators/interface/AnalyticalImpactPointExtrapolator.h"
+#include "DataFormats/Provenance/interface/LuminosityBlockRange.h"
 #include "TMVA/Reader.h"
 
 #include "CommonTools/CandUtils/interface/AddFourMomenta.h"
@@ -506,7 +507,8 @@ private:
   edm::Handle<reco::VertexCollection> pvHandle_;
 
   const AnalyticalImpactPointExtrapolator* impactPointExtrapolator_;
-
+  std::vector<edm::LuminosityBlockRange> goodLumis_;
+  
   bool isMC_;
 
   double ptMinMu_;
@@ -591,6 +593,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   bField_(nullptr),
   bFieldToken_(esConsumes()),
   impactPointExtrapolator_(0),
+  goodLumis_(       iConfig.getUntrackedParameter<std::vector<edm::LuminosityBlockRange>>("goodLumis", {})),
   isMC_(            iConfig.getParameter<bool>( "isMC" ) ),
   ptMinMu_(         iConfig.getParameter<double>( "MuonMinPt" ) ),
   etaMaxMu_(        iConfig.getParameter<double>( "MuonMaxEta" ) ),
@@ -662,6 +665,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   produces<pat::CompositeCandidateCollection>("Dstar");
   produces<pat::CompositeCandidateCollection>("Kstar");
   produces<pat::CompositeCandidateCollection>("TnP");
+  produces<int>("Certified");
     
   setupTmvaReader(bdtReader0_,(iConfig.getParameter<edm::FileInPath>("bdtEvent0")).fullPath());
   setupTmvaReader(bdtReader1_,(iConfig.getParameter<edm::FileInPath>("bdtEvent1")).fullPath());
@@ -3217,6 +3221,18 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   iEvent.put(std::move(tnp_collection),     "TnP");
 
   fillTrackInfo(*trk_collection, interestingTracks, iEvent);
+
+  // Meta data
+  bool certified_event = false;
+  const auto run  = iEvent.id().run();
+  const auto lumi = iEvent.id().luminosityBlock();
+    for (auto const& r : goodLumis_) {
+      if (r.startRun() == run && r.startLumi() <= lumi && lumi <= r.endLumi()) {
+        certified_event = true;
+	break;
+      }
+    }
+  iEvent.put(std::make_unique<int>(certified_event),    "Certified");
   iEvent.put(std::move(trk_collection),    "InterestingTracks");
 }
 

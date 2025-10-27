@@ -98,6 +98,33 @@ PrimaryVertexInfoMcTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProduc
 
 ###########################################################################################
 
+# load data certification information
+from FWCore.PythonUtilities.LumiList import LumiList
+from   os import environ
+from   os.path import exists
+
+def fip(path):
+    p = f"{environ['CMSSW_BASE']}/src/{path}"
+    if not exists(p):
+        raise RuntimeError("File not found via CMSSW_BASE: " + path)
+    return p
+
+json_files = [
+    "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2022_355100_362760_Muon.json",
+    "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2023_366442_370790_Muon.json",
+    "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2024_378981_386951_Muon.json"
+]
+
+json_files_fullpath = [fip(t) for t in json_files]
+
+certified_ranges = []
+for path in json_files_fullpath:
+    certified_ranges.extend(LumiList(filename=path).getCMSSWString().split(","))
+
+certified_ranges = sorted(set(s.strip() for s in certified_ranges if s.strip()))
+
+# print(certified_ranges)
+
 Dileptons = cms.EDProducer(
     "DileptonPlusXProducer",
     beamSpot=cms.InputTag("offlineBeamSpot"),
@@ -171,6 +198,7 @@ Dileptons = cms.EDProducer(
     maxKstarMass  = cms.double(1.1),
     minDm = cms.double(0.135),
     maxDm = cms.double(0.160),
+    goodLumis=cms.untracked.VLuminosityBlockRange(*certified_ranges),
 )
 
 DileptonsMc = Dileptons.clone( isMC = cms.bool(True) ) 
@@ -348,6 +376,22 @@ DileptonsDiMuonMcTableVariables = merge_psets(
         gen_alpha_ip      = Var("userFloat('gen_alpha_ip')",      float,   doc = "Pointing angle due to reco IP for gen vertex and momentum"),
         gen_alpha_vtx     = Var("userFloat('gen_alpha_vtx')",     float,   doc = "Pointing angle due to reco vtx for gen IP and momentum"),
     ),
+)
+
+DileptonsMetaTable = cms.EDProducer(
+    "GlobalVariablesTableProducer",
+    name = cms.string("evt"),
+    variables = cms.PSet(
+        certified = ExtVar(cms.InputTag("Dileptons:Certified"), int,  doc="Event passed data certification"),
+    )
+)
+
+DileptonsMetaMcTable = cms.EDProducer(
+    "GlobalVariablesTableProducer",
+    name = cms.string("evt"),
+    variables = cms.PSet(
+        certified = ExtVar(cms.InputTag("DileptonsMc:Certified"), int,  doc="Event passed data certification"),
+    )
 )
 
 DileptonsDiMuonTable=cms.EDProducer("SimpleCompositeCandidateFlatTableProducer", 
@@ -1336,7 +1380,7 @@ DileptonPlusXTables     = cms.Sequence(DileptonsDiMuonTable   * DileptonsHHTable
                                        DileptonsElMuTable     * DileptonsKmumuTable * DileptonsKeeTable      *
                                        DileptonsKKmumuTable   * DileptonsKKeeTable  * DileptonsDstarTable    *
                                        Dileptons3MuTable      * DileptonsKstarTable * DileptonTrackTable     *
-                                       DileptonIsoTable       * DileptonsTnPTable   *
+                                       DileptonIsoTable       * DileptonsTnPTable   * DileptonsMetaTable     *
                                        DileptonsMuMuGammaTable * PrimaryVertexInfoTable * prescaleTable)
 
 DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTable     * DileptonsElElMcTable *
@@ -1344,5 +1388,5 @@ DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTab
                                        DileptonsKKmumuMcTable * DileptonsKKeeMcTable   * DileptonsDstarMcTable *
                                        PrimaryVertexInfoMcTable * DileptonsMuMuGammaMcTable * BxToMuMuGenTable *
                                        Dileptons3MuMcTable    * DileptonsKstarMcTable  * DileptonTrackMcTable *
-                                       DileptonIsoMcTable     * DileptonsTnPMcTable    *
+                                       DileptonIsoMcTable     * DileptonsTnPMcTable    * DileptonsMetaMcTable *
                                        BxToMuMuGenSummaryTable * DstarGenTable * prescaleTable)
