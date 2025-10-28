@@ -106,13 +106,14 @@ from   os.path import exists
 def fip(path):
     p = f"{environ['CMSSW_BASE']}/src/{path}"
     if not exists(p):
-        raise RuntimeError("File not found via CMSSW_BASE: " + path)
+        raise RuntimeError(f"File not found via CMSSW_BASE: {path}\n{p}")
     return p
 
 json_files = [
     "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2022_355100_362760_Muon.json",
     "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2023_366442_370790_Muon.json",
-    "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2024_378981_386951_Muon.json"
+    "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2024_378981_386951_Muon.json",
+    "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2025_391658_398082_Muon.json"
 ]
 
 json_files_fullpath = [fip(t) for t in json_files]
