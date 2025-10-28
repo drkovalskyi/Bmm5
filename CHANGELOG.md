@@ -1,5 +1,12 @@
 # Changelog
 
+## [NanoAODv15-V01] - 2025/10/28
+### Changes
+	- added data certification (muon quality)
+	- disabled warning from TwoTrackMinimumDistance
+	- added support for BtoLLhh instead of just BtoLLkk
+	- added kinematic fits for TnP
+
 ## [NanoAODv14-V06] - 2025/09/20
 ### Changes
 	- Implemented track reco efficiency measurement with stand alone muons
