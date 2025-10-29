@@ -14,6 +14,7 @@ Dataset: BsToMuMu_BMuonFilter
 #### Time per event for the event loop
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv15-V01 |     535            |                   |       0.573 sec/event    |
 | NanoAODv14-V05 |     534            |                   |       0.385 sec/event    |
 | NanoAODv14-V03 |     532            |                   |       0.385 sec/event    |
 | NanoAODv14-V01 |     531            |                   |       0.380 sec/event    |
@@ -31,6 +32,7 @@ Dataset: BsToMuMu_BMuonFilter
 #### File size per event 
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ | 
+| NanoAODv15-V01 |     535            |                   |         7.7 kB/event     |
 | NanoAODv14-V05 |     534            |                   |         7.2 kB/event     |
 | NanoAODv14-V03 |     532            |                   |         6.8 kB/event     |
 | NanoAODv14-V01 |     531            |                   |         6.7 kB/event     |
@@ -47,6 +49,7 @@ Dataset: BsToMuMu_BMuonFilter
 #### Memory Usage (RSS)
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv15-V01 |     535            |                   |         2784 kB          |
 | NanoAODv14-V02 |     532            |                   |         2244 kB          |
 | NanoAODv14-V01 |     531            |                   |         2237 kB          |
 | NanoAODv12-V05 |     530            |                   |         1600 kB          |
@@ -62,31 +65,34 @@ Dataset: BsToMuMu_BMuonFilter
 
 ### Data: Charmonium Run2018D
 #### Time per event for the event loop
-| Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
-| ------------- | ------------------ | ----------------- | ------------------------ |
-| NanoAODv9-V03 |      519           |  0.067 sec/event  |       0.161 sec/event    |
-| NanoAODv6-V18 |      515           |  0.076 sec/event  |       0.179 sec/event    |
-| NanoAODv8-V01 |      514           |  0.100 sec/event  |       0.201 sec/event    |
-| NanoAODv6-V17 |      513           |  0.076 sec/event  |       0.182 sec/event    |
-| NanoAODv6-V14 |      511           |  0.073 sec/event  |       0.160 sec/event    |
+| Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
+| -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv15-V01 |      535           |                   |       0.503 sec/event    |
+| NanoAODv9-V03  |      519           |  0.067 sec/event  |       0.161 sec/event    |
+| NanoAODv6-V18  |      515           |  0.076 sec/event  |       0.179 sec/event    |
+| NanoAODv8-V01  |      514           |  0.100 sec/event  |       0.201 sec/event    |
+| NanoAODv6-V17  |      513           |  0.076 sec/event  |       0.182 sec/event    |
+| NanoAODv6-V14  |      511           |  0.073 sec/event  |       0.160 sec/event    |
 
 #### File size per event
-| Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
-| ------------- | ------------------ | ----------------- | ------------------------ |
-| NanoAODv9-V03 |      519           |   1.2 kB/event    |       3.7 kB/event       | 
-| NanoAODv6-V18 |      515           |                   |       2.5 kB/event       |
-| NanoAODv8-V01 |      514           |                   |       2.6 kB/event       |
-| NanoAODv6-V17 |      513           |                   |       2.5 kB/event       |
-| NanoAODv6-V14 |      511           |   1.0 kB/event    |       2.1 kB/event       |
+| Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
+| -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv15-V01 |      535           |                   |      11.5 kB/event       |
+| NanoAODv9-V03  |      519           |   1.2 kB/event    |       3.7 kB/event       | 
+| NanoAODv6-V18  |      515           |                   |       2.5 kB/event       |
+| NanoAODv8-V01  |      514           |                   |       2.6 kB/event       |
+| NanoAODv6-V17  |      513           |                   |       2.5 kB/event       |
+| NanoAODv6-V14  |      511           |   1.0 kB/event    |       2.1 kB/event       |
 
 #### Memory Usage (RSS)
-| Tag           | Production Version | Reference NanoAOD | NanoAOD + Customizations |
-| ------------- | ------------------ | ----------------- | ------------------------ |
-| NanoAODv9-V03 |      519           |      1466 kB      |         1645 kB          |
-| NanoAODv6-V18 |      515           |                   |         1785 kB          |
-| NanoAODv8-V01 |      514           |                   |         1790 kB          |
-| NanoAODv6-V17 |      513           |                   |         1794 kB          |
-| NanoAODv6-V14 |      511           |      1665 kB      |         1799 kB          |
+| Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
+| -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv15-V01 |      535           |                   |         3100 kB          |
+| NanoAODv9-V03  |      519           |      1466 kB      |         1645 kB          |
+| NanoAODv6-V18  |      515           |                   |         1785 kB          |
+| NanoAODv8-V01  |      514           |                   |         1790 kB          |
+| NanoAODv6-V17  |      513           |                   |         1794 kB          |
+| NanoAODv6-V14  |      511           |      1665 kB      |         1799 kB          |
 
 
 ## Testing procedure
@@ -94,12 +100,12 @@ cmsDriver and processing commands
 * Monte Carlo
    * BsToMuMu_BMuonFilter
       * Standard NanoAOD + all Bmm customization using Run3Summer22EEMiniAODv3 as input
-         * ```cmsDriver.py RECO --conditions auto:phase1_2022_realistic_postEE --customise Configuration/DataProcessing/Utils.addMonitoring --datatier NANOAOD --era Run3,run3_nanoAOD_124 --eventcontent NANOAODSIM --filein /store/user/dmytro/tmp/store+mc+Run3Summer22EEMiniAODv3+BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+MINIAODSIM+124X_mcRun3_2022_realistic_postEE_v1-v2+2820000+0096d5dd-88d3-46a0-a8cc-255a3090c71e.root --fileout file:BsToMuMu_BMuonFilter_NanoAOD.root --nThreads 1 -n 10000 --no_exec --python_filename BsToMuMu_BMuonFilter_NanoAOD.py --scenario pp --step NANO --mc --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))" --customise Validation/Performance/TimeMemoryInfo.py --customise_commands="process.Timing.summaryOnly = cms.untracked.bool(True)"```
+         * ```cmsDriver.py RECO --conditions auto:phase1_2022_realistic_postEE --customise Configuration/DataProcessing/Utils.addMonitoring --datatier NANOAOD --era Run3,run3_nanoAOD_pre142X --eventcontent NANOAODSIM --filein /store/user/dmytro/tmp/store+mc+Run3Summer22EEMiniAODv3+BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13p6TeV_pythia8-evtgen+MINIAODSIM+124X_mcRun3_2022_realistic_postEE_v1-v2+2820000+0096d5dd-88d3-46a0-a8cc-255a3090c71e.root --fileout file:BsToMuMu_BMuonFilter_NanoAOD.root --nThreads 1 -n 10000 --no_exec --python_filename BsToMuMu_BMuonFilter_NanoAOD.py --scenario pp --step NANO --mc --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))" --customise Validation/Performance/TimeMemoryInfo.py --customise_commands="process.Timing.summaryOnly = cms.untracked.bool(True)" --customise=Bmm5/NanoAOD/nano_cff.run3_nanoAOD_124```
          * ```cmsRun BsToMuMu_BMuonFilter_NanoAOD.py > & BsToMuMu_BMuonFilter_NanoAOD.log```
          * ```python3 Bmm5/NanoAOD/performance/make_report.py BsToMuMu_BMuonFilter_NanoAOD.log```
 * Data:
    * Charmonium Run2018D
-      * Standard NanoAODv9 + all Bmm customization
-         * ```cmsDriver.py step1 --filein /store/user/dmytro/tmp/store+data+Run2018D+Charmonium+MINIAOD+UL2018_MiniAODv2-v1+240000+D9C795D0-EAC3-2A47-A631-E314B7AA9883.root --fileout file:Run2018D_NanoAOD_bmm.root --data --eventcontent NANOAOD --datatier NANOAOD --conditions 106X_dataRun2_v35 --step NANO --nThreads 1 --era Run2_2018,run2_nanoAOD_106Xv2 --python_filename Run2018D_NanoAOD_bmm.py --no_exec -n 10000 --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))" --customise Validation/Performance/TimeMemoryInfo.py --customise_commands="process.Timing.summaryOnly = cms.untracked.bool(True)"```
+      * Standard NanoAOD + all Bmm customization
+         * ```cmsDriver.py step1 --filein /store/user/dmytro/tmp/store+data+Run2018D+Charmonium+MINIAOD+UL2018_MiniAODv2-v1+240000+D9C795D0-EAC3-2A47-A631-E314B7AA9883.root --fileout file:Run2018D_NanoAOD_bmm.root --data --eventcontent NANOAOD --datatier NANOAOD --conditions auto:run2_data --step NANO --nThreads 1 --era Run2_2018,run2_nanoAOD_106Xv2 --python_filename Run2018D_NanoAOD_bmm.py --no_exec -n 10000 --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))" --customise Validation/Performance/TimeMemoryInfo.py --customise_commands="process.Timing.summaryOnly = cms.untracked.bool(True)"```
          * ```cmsRun Run2018D_NanoAOD_bmm.py >& Run2018D_NanoAOD_bmm.log &```
          * ```python3 Bmm5/NanoAOD/performance/make_report.py Run2018D_NanoAOD_bmm.log```
