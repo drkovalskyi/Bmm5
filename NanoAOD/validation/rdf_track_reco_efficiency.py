@@ -13,7 +13,7 @@ file. This file is then reused as input for further processing and for
 reruns, unless the script is instructed to recreate it.
 """
 
-force_recreate = False
+force_recreate = True
 aggregate_eras = False
 force_data_fits = True
 do_eta_fits = False
@@ -21,8 +21,8 @@ do_pt_fits = False
 compute_corrections = True
 debug = False
 # process_only = "Run2024C|RunIII2024Summer24"
-process_only = "Run2022|Run3Summer22EE"
-# process_only = None
+# process_only = "Run2022|Run3Summer22EE"
+process_only = None
 # max_files = 10
 max_files = 999999
 path   = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/535/trig/"
@@ -306,21 +306,21 @@ class DataProcessor:
             rdf = rdf.DefaultValueFor(trigger, False)
 
         ### Extract information from other branches
-        # tnp_probe1_tag2&&MuonId_HLT_Mu4_L1DoubleMu[tnp_mu2_index]
         
-        # mm
-        rdf = rdf.Define("tnp_probe1_tag2_trig", "Take(MuonId_HLT_Mu4_L1DoubleMu,  tnp_mu2_index)")
-        rdf = rdf.Define("tnp_probe2_tag1_trig", "Take(MuonId_HLT_Mu4_L1DoubleMu,  tnp_mu1_index)")
+        rdf = rdf.Define("tnp_probe1_tag2_trig",   "Take(MuonId_HLT_Mu4_L1DoubleMu,  tnp_mu2_index)")
+        rdf = rdf.Define("tnp_probe2_tag1_trig",   "Take(MuonId_HLT_Mu4_L1DoubleMu,  tnp_mu1_index)")
+        rdf = rdf.Define("tnp_probe1_staNormChi2", "Take(MuonId_staNormChi2,  tnp_mu1_index)")
+        rdf = rdf.Define("tnp_probe2_staNormChi2", "Take(MuonId_staNormChi2,  tnp_mu2_index)")
+        rdf = rdf.Define("tnp_probe1_staNdof",     "Take(MuonId_staNdof,      tnp_mu1_index)")
+        rdf = rdf.Define("tnp_probe2_staNdof",     "Take(MuonId_staNdof,      tnp_mu2_index)")
 
         # Offline selection
-        rdf = rdf.Define("probes_1",        "tnp_probe1_tag2 && tnp_probe1_tag2_trig")
-        rdf = rdf.Define("probes_1_failed", "tnp_probe1_tag2 && tnp_probe1_tag2_trig && !tnp_mu1_test")
-        rdf = rdf.Define("probes_1_sig",
-                         "tnp_probe1_tag2 && tnp_probe1_tag2_trig && tnp_mu1_tag && abs(tnp_mass-3.09)<0.05")
-        rdf = rdf.Define("probes_2",        "tnp_probe2_tag1 && tnp_probe2_tag1_trig")
-        rdf = rdf.Define("probes_2_failed", "tnp_probe2_tag1 && tnp_probe2_tag1_trig && !tnp_mu2_test")
-        rdf = rdf.Define("probes_2_sig",
-                         "tnp_probe2_tag1 && tnp_probe2_tag1_trig && tnp_mu2_tag && abs(tnp_mass-3.09)<0.05")
+        rdf = rdf.Define("probes_1",        "tnp_probe1_tag2 && tnp_probe1_tag2_trig && tnp_probe1_staNormChi2<1 && tnp_probe1_staNdof>11")
+        rdf = rdf.Define("probes_1_failed", "probes_1 && !tnp_mu1_test")
+        rdf = rdf.Define("probes_1_sig",    "probes_1 && tnp_mu1_tag && abs(tnp_mass-3.09)<0.05")
+        rdf = rdf.Define("probes_2",        "tnp_probe2_tag1 && tnp_probe2_tag1_trig && tnp_probe2_staNormChi2<1 && tnp_probe2_staNdof>11")
+        rdf = rdf.Define("probes_2_failed", "probes_2 && !tnp_mu2_test")
+        rdf = rdf.Define("probes_2_sig",    "probes_2 && tnp_mu2_tag && abs(tnp_mass-3.09)<0.05")
         rdf = rdf.Define("tag_tag",         "tnp_mu1_tag && tnp_mu2_tag")
 
         rdf1 = rdf.Filter("Sum(probes_1)>0")
@@ -990,8 +990,8 @@ if __name__ == "__main__":
                     fit_results[sample][era] = dict()
                 fix_shape_to_ref_all_probes = False
                 fix_shape_to_ref_failed_probes = True
-                # if re.search("Summer", era):
-                #     fix_shape_to_ref_failed_probes = False
+                if re.search("Summer", era):
+                    fix_shape_to_ref_failed_probes = False
                 fit_results[sample][era]["average"] = fit_data(ws, era, "fits",
                                                                hist_probe, hist_failed, hist_ref, hist_tag_tag,
                                                                fix_shape_to_ref_all_probes,
