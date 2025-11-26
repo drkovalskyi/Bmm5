@@ -21,7 +21,8 @@ do_pt_fits = False
 compute_corrections = True
 debug = False
 # process_only = "Run2024C|RunIII2024Summer24"
-process_only = None
+process_only = "Run2022|Run3Summer22EE"
+# process_only = None
 # max_files = 10
 max_files = 999999
 path   = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/535/trig/"
@@ -443,7 +444,7 @@ def build_model(mass_var):
     search_width = 0.1
     
     jpsi_mean   = ROOT.RooRealVar("jpsi_mean", "mu", peak, peak - search_width, peak + search_width)
-    jpsi_lambda = ROOT.RooRealVar("jpsi_lambda", "lambda", 0.1, 0.01, 0.2) # sigma
+    jpsi_lambda = ROOT.RooRealVar("jpsi_lambda", "lambda", 0.1, 0.01, 0.3) # sigma
     jpsi_gamma  = ROOT.RooRealVar("jpsi_gamma", "gamma", 1, -5, 5) # skewness
     jpsi_delta  = ROOT.RooRealVar("jpsi_delta", "delta", 1, 0.1, 3) # larger value smaller tails
     # jpsi_john = ROOT.RooJohnson("jpsi_john", "signal", mass_var, jpsi_mean, jpsi_lambda, jpsi_gamma, jpsi_delta)
@@ -501,8 +502,9 @@ def build_model(mass_var):
 
     return ws
 
-def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed,
-             hist_ref=None, hist_tag_tag=None, fix_shape_to_ref=True):
+def fit_data(ws, filename_prefix, subdirectory,
+             hist_probe, hist_failed, hist_ref=None, hist_tag_tag=None,
+             fix_shape_to_ref_all_probes=True, fix_shape_to_ref_failed_probes=True):
     results = dict()
     mass_var = ws.var("m")
     
@@ -517,7 +519,7 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed,
     if hist_tag_tag != None:
         data_tag_tag = make_dataset("data_tag_tag", mass_var, hist_tag_tag)
         ws.var("jpsi_lambda").setConstant(False)
-        ws.var("jpsi_lambda").setRange(0.05,0.2)
+        ws.var("jpsi_lambda").setRange(0.05, 0.2)
         ws.var("jpsi_lambda").setVal(0.01)
         ws.var("jpsi_gamma").setConstant(False)
         ws.var("jpsi_delta").setConstant(False) 
@@ -535,7 +537,7 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed,
         psi2S_frac = ws.var("psi2S_frac").getVal()
         latex_list.append("f_{\psi(2S)} = %0.3f \pm %0.3f" % (ws.var("psi2S_frac").getVal(), ws.var("psi2S_frac").getError()))
         # reset
-        ws.var("jpsi_lambda").setRange(0.01,0.2)
+        ws.var("jpsi_lambda").setRange(0.01, 0.3)
     
     ## prefit
     if hist_ref != None:
@@ -587,7 +589,7 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed,
         ws.var("Nbkg").setVal(hist_probe.Integral() * 0.3)
         fit_result = model.fitTo(data_probe, ROOT.RooFit.Extended(ROOT.kTRUE), ROOT.RooFit.Save())
         
-    if not fix_shape_to_ref:
+    if not fix_shape_to_ref_all_probes:
         ws.var("jpsi_lambda").setConstant(False)
         ws.var("jpsi_gamma").setConstant(False)
         ws.var("jpsi_delta").setConstant(False)
@@ -623,24 +625,42 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed,
     }
 
     ## failed probe fit
-    
+    latex_list.clear()
     frame = mass_var.frame()
     ws.var("Nsig").setVal(ws.var("Nsig").getVal() * 0.05)
-    # ws.var("sig_G1_mean").setConstant(True)
-    # ws.var("sig_G1_sigma").setConstant(True)
-    # ws.var("sig_G2_frac").setConstant(True)
-    # ws.var("sig_G2_scale").setConstant(True)
-    # ws.var("sig_G3_frac").setConstant(True)
-    # ws.var("sig_G3_scale").setConstant(True)
     
     ws.var("jpsi_lambda").setConstant(True)
     ws.var("jpsi_gamma").setConstant(True)
     ws.var("jpsi_delta").setConstant(True)
-    # ws.var("jpsi_G2_sigma").setConstant(True)
-    # ws.var("jpsi_G2_frac").setConstant(True)
     ws.var("psi2S_frac").setConstant(True)
     fit_result = model.fitTo(data_failed, ROOT.RooFit.Extended(ROOT.kTRUE), ROOT.RooFit.Save())
     fit_result.Print()
+    latex_list.append("N^{fix}_{sig} = %0.0f \pm %0.0f" % (ws.var("Nsig").getVal(), ws.var("Nsig").getError()))
+    latex_list.append("N^{fix}_{bkg} = %0.0f \pm %0.0f" % (ws.var("Nbkg").getVal(), ws.var("Nbkg").getError()))
+    latex_list.append("#chi_{fix}^2/nDOF = %0.1f" % (chi2ndof))
+    
+    if not fix_shape_to_ref_failed_probes:
+        ws.var("jpsi_lambda").setConstant(False)
+        ws.var("jpsi_gamma").setConstant(False)
+        ws.var("jpsi_delta").setConstant(False)
+        ws.var("c0").setConstant(True)
+        ws.var("c1").setConstant(True)
+        ws.var("c2").setConstant(True)
+
+        fit_result = model.fitTo(data_failed, ROOT.RooFit.Extended(ROOT.kTRUE), ROOT.RooFit.Save())
+        fit_result.Print()
+        ws.var("c0").setConstant(False)
+        ws.var("c1").setConstant(False)
+        ws.var("c2").setConstant(False)
+        
+        fit_result = model.fitTo(data_failed, ROOT.RooFit.Extended(ROOT.kTRUE), ROOT.RooFit.Save())
+        fit_result.Print()
+        nDOF = get_number_of_free_parameters(model, mass_var)
+        chi2ndof = frame.chiSquare(nDOF)
+        print(f"chiSquare: {chi2ndof:0.2f} nDOF: {nDOF}")
+        latex_list.append("N^_{sig} = %0.0f \pm %0.0f" % (ws.var("Nsig").getVal(), ws.var("Nsig").getError()))
+        latex_list.append("N_{bkg} = %0.0f \pm %0.0f" % (ws.var("Nbkg").getVal(), ws.var("Nbkg").getError()))
+        latex_list.append("#chi^{2}/nDOF = %0.1f" % (chi2ndof))
     
     data_failed.plotOn(frame)
     model.plotOn(frame, ROOT.RooFit.Components("bkg"),  ROOT.RooFit.LineColor(ROOT.kRed))
@@ -649,11 +669,9 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed,
     chi2ndof = frame.chiSquare(nDOF)
     print(f"chiSquare: {chi2ndof:0.2f} nDOF: {nDOF}")
     frame.Draw()
-    latex = ROOT.TLatex()
-    latex.SetTextSize(0.02)
-    latex.DrawLatexNDC(0.20, 0.80, "N_{sig} = %0.0f \pm %0.0f" % (ws.var("Nsig").getVal(), ws.var("Nsig").getError()))
-    latex.DrawLatexNDC(0.20, 0.75, "N_{bkg} = %0.0f \pm %0.0f" % (ws.var("Nbkg").getVal(), ws.var("Nbkg").getError()))
-    latex.DrawLatexNDC(0.20, 0.20, "#chi^2/nDOF = %0.1f" % (chi2ndof))
+    for i, entry in enumerate(latex_list):
+        latex.DrawLatexNDC(0.65, 0.85 - i * 0.05, entry) 
+    
     print_canvas(f"{filename_prefix}_failed", f"{output_path}/{subdirectory}")
     results["failed_probe_fit"] = {
         "Nsig": ws.var("Nsig").getVal(),
@@ -663,8 +681,6 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed,
     ws.var("jpsi_lambda").setConstant(False)
     ws.var("jpsi_gamma").setConstant(False)
     ws.var("jpsi_delta").setConstant(False)
-    # ws.var("jpsi_G2_sigma").setConstant(False)
-    # ws.var("jpsi_G2_frac").setConstant(False)
     ws.var("psi2S_frac").setConstant(False)
 
     return results
@@ -972,9 +988,14 @@ if __name__ == "__main__":
                     fit_results[sample] = dict()
                 if era not in fit_results[sample]:
                     fit_results[sample][era] = dict()
-                fit_results[sample][era]["average"] = fit_data(ws, era, "fits", hist_probe, hist_failed,
-                                                               hist_ref, hist_tag_tag, False)
-
+                fix_shape_to_ref_all_probes = False
+                fix_shape_to_ref_failed_probes = True
+                # if re.search("Summer", era):
+                #     fix_shape_to_ref_failed_probes = False
+                fit_results[sample][era]["average"] = fit_data(ws, era, "fits",
+                                                               hist_probe, hist_failed, hist_ref, hist_tag_tag,
+                                                               fix_shape_to_ref_all_probes,
+                                                               fix_shape_to_ref_failed_probes)
                 # Eta Fit
                 if do_eta_fits:
                     h_ineff_eta = ROOT.TH1F("h_ineff_eta", "", len(eta_bins) - 1, array("d", eta_bins))
