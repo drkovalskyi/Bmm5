@@ -15,22 +15,30 @@ reruns, unless the script is instructed to recreate it.
 
 force_recreate = False
 aggregate_eras = False
-force_data_fits = False
+force_data_fits = True
+do_eta_fits = False
+do_pt_fits = False
 compute_corrections = True
-debug = True
+debug = False
+# process_only = "Run2024C|RunIII2024Summer24"
+process_only = None
 # max_files = 10
 max_files = 999999
-path   = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/crab_NanoAODv14-V06_TnP/"
+path   = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/535/trig/"
+path2  = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/535/"
 # output_path = "/eos/home-d/dmytro/www/plots/2025/fsfu-track_reco_efficiency/"
-output_path = "/eos/home-d/dmytro/www/plots/tmp/fsfu-track_reco_efficiency/"
+output_path = "/eos/home-d/dmytro/www/plots/tmp/2025/track_reco_efficiency/"
 file_fit_results = f"{output_path}/fit_results.json"
 
 eta_bins = [-2.4, -2.0, -1.6, -1.2, -0.8, -0.4, 0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4]
 pt_bins  = [3.0, 4.0, 5.0, 6.0, 7.0, 9.0, 12.0, 20.0]
 min_mass = 2.0
-max_mass = 4.0
+max_mass = 5.0
+min_mass_tag_tag = 2.5
+max_mass_tag_tag = 4.0
 nbins = 100
 mass_bins = [min_mass + i * (max_mass - min_mass) / nbins for i in range(nbins + 1)]
+fine_mass_bins = [min_mass + i * (max_mass - min_mass) / nbins / 2 for i in range(2 * nbins + 1)]
 
 import sys
 import ROOT
@@ -113,7 +121,7 @@ class DataProcessor:
     def define_samples(self):
 
         # Data
-        data_files = glob.glob(f"{path}/ParkingDoubleMuonLowMass*202[234]*/*.root")
+        data_files = glob.glob(f"{path}/ParkingDoubleMuonLowMass*202[2345]*/*.root")
         pattern = re.compile(r"(Run202\d\w)")
         for file in data_files:
             match = pattern.search(file)
@@ -128,7 +136,8 @@ class DataProcessor:
                 self.samples["ParkingDoubleMuonLowMass"]["files"][era].append(file)
 
         # MC
-        data_files = glob.glob(f"{path}/BuToJpsiK*/*.root")
+        # data_files = glob.glob(f"{path2}/BuToJpsiK*/*.root")
+        data_files = glob.glob(f"{path2}/BuToJpsiPi*/*.root")
         pattern = re.compile(r"(Run3Summer22EE|Run3Summer22|Run3Summer23BPix|Run3Summer23|RunIII2024Summer24)")
         for file in data_files:
             match = pattern.search(file)
@@ -161,7 +170,14 @@ class DataProcessor:
                 "Run2024G": 1,
                 "Run2024H": 1,
                 "Run2024I": 2,
-            }    
+            },
+            "Run2025": {
+                "Run2025C": 2,
+                "Run2025D": 1,
+                "Run2025E": 1,
+                "Run2025F": 2,
+                "Run2025G": 1,
+            }
         }
 
         self.campaigns = {
@@ -176,6 +192,10 @@ class DataProcessor:
             "Run2024": {
                 "RunIII2024Summer24": ["Run2024C", "Run2024D", "Run2024E",
                                        "Run2024F", "Run2024G", "Run2024H", "Run2024I"]
+            },
+            "Run2025": {
+                "RunIII2024Summer24": ["Run2025C", "Run2025D", "Run2025E",
+                                       "Run2025F", "Run2025G"]
             }
         }
         self.era2campaign = dict()
@@ -347,7 +367,7 @@ class DataProcessor:
         self.book_histo_3D(rdf_histos, rdf2, sample_name, era, "probe2")
         self.book_histo_3D(rdf_histos, rdf2_failed, sample_name, era, "probe2_failed")
         self.book_histo_3D(rdf_histos, rdf2_sig, sample_name, era, "probe2_sig")
-        self.book_histo(rdf_histos, rdf3, sample_name, era, "tag_tag", [mass_bins], ["mass"])
+        self.book_histo(rdf_histos, rdf3, sample_name, era, "tag_tag", [fine_mass_bins], ["mass"])
         
         if sample_name not in self.histos:
             self.histos[sample_name] = dict()
@@ -390,6 +410,8 @@ class DataProcessor:
             if not force_recreate and sample_name in self.histos:
                 continue
             for era in self.samples[sample_name]["files"]:
+                if process_only and not re.search(process_only, era):
+                    continue
                 print(f"Processing {sample_name} - {era}")
                 self.process_sample(sample_name, era)
 
@@ -423,18 +445,20 @@ def build_model(mass_var):
     jpsi_mean   = ROOT.RooRealVar("jpsi_mean", "mu", peak, peak - search_width, peak + search_width)
     jpsi_lambda = ROOT.RooRealVar("jpsi_lambda", "lambda", 0.1, 0.01, 0.2) # sigma
     jpsi_gamma  = ROOT.RooRealVar("jpsi_gamma", "gamma", 1, -5, 5) # skewness
-    jpsi_delta  = ROOT.RooRealVar("jpsi_delta", "delta", 1, 0.1, 10) # larger value smaller tails
-    jpsi_john = ROOT.RooJohnson("jpsi_john", "signal", mass_var, jpsi_mean, jpsi_lambda, jpsi_gamma, jpsi_delta)
-    jpsi_G2_sigma = ROOT.RooRealVar("jpsi_G2_sigma", "", 0.03, 0.01, 0.50)
-    jpsi_G2_mean = ROOT.RooRealVar("jpsi_G2_mean", "", peak, peak - search_width, peak + search_width)
-    jpsi_G2       = ROOT.RooGaussian("jpsi_G2", "", mass_var, jpsi_G2_mean, jpsi_G2_sigma)
-    jpsi_G2_frac = ROOT.RooRealVar("jpsi_G2_frac","",0.3,0.0,1.0)
-    jpsi = ROOT.RooAddPdf("jpsi"," ", ROOT.RooArgList(jpsi_G2,jpsi_john), ROOT.RooArgList(jpsi_G2_frac))
+    jpsi_delta  = ROOT.RooRealVar("jpsi_delta", "delta", 1, 0.1, 3) # larger value smaller tails
+    # jpsi_john = ROOT.RooJohnson("jpsi_john", "signal", mass_var, jpsi_mean, jpsi_lambda, jpsi_gamma, jpsi_delta)
+    jpsi = ROOT.RooJohnson("jpsi", "signal", mass_var, jpsi_mean, jpsi_lambda, jpsi_gamma, jpsi_delta)
+    # jpsi_G2_sigma = ROOT.RooRealVar("jpsi_G2_sigma", "", 0.03, 0.01, 0.50)
+    # jpsi_G2_mean = ROOT.RooRealVar("jpsi_G2_mean", "", peak, peak - search_width, peak + search_width)
+    # jpsi_G2       = ROOT.RooGaussian("jpsi_G2", "", mass_var, jpsi_G2_mean, jpsi_G2_sigma)
+    # jpsi_G2_frac = ROOT.RooRealVar("jpsi_G2_frac","",0.3,0.0,1.0)
+    # jpsi = ROOT.RooAddPdf("jpsi"," ", ROOT.RooArgList(jpsi_G2,jpsi_john), ROOT.RooArgList(jpsi_G2_frac))
 
     psi2S_mean = ROOT.RooFormulaVar("psi2S_mean", "@0 + @1", ROOT.RooArgList(jpsi_mean, delta))
-    psi2S_john = ROOT.RooJohnson("psi2S_john", "", mass_var, psi2S_mean, jpsi_lambda, jpsi_gamma, jpsi_delta)
-    psi2S_G2 = ROOT.RooGaussian("psi2S_G2", "", mass_var, psi2S_mean, jpsi_G2_sigma)
-    psi2S = ROOT.RooAddPdf("psi2S"," ", ROOT.RooArgList(psi2S_G2, psi2S_john), ROOT.RooArgList(jpsi_G2_frac))
+    psi2S = ROOT.RooJohnson("psi2S", "", mass_var, psi2S_mean, jpsi_lambda, jpsi_gamma, jpsi_delta)
+    # psi2S_john = ROOT.RooJohnson("psi2S_john", "", mass_var, psi2S_mean, jpsi_lambda, jpsi_gamma, jpsi_delta)
+    # psi2S_G2 = ROOT.RooGaussian("psi2S_G2", "", mass_var, psi2S_mean, jpsi_G2_sigma)
+    # psi2S = ROOT.RooAddPdf("psi2S"," ", ROOT.RooArgList(psi2S_G2, psi2S_john), ROOT.RooArgList(jpsi_G2_frac))
     
     psi2S_frac = ROOT.RooRealVar("psi2S_frac","",0.03,0.0,0.1)
     sig = ROOT.RooAddPdf("sig"," ", ROOT.RooArgList(psi2S, jpsi), ROOT.RooArgList(psi2S_frac))
@@ -477,7 +501,8 @@ def build_model(mass_var):
 
     return ws
 
-def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed, hist_ref=None):
+def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed,
+             hist_ref=None, hist_tag_tag=None, fix_shape_to_ref=True):
     results = dict()
     mass_var = ws.var("m")
     
@@ -485,7 +510,33 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed, hist_re
     data_failed = make_dataset("data_failed", mass_var, hist_failed)
     
     model = ws.pdf("model")
-
+    latex_list = []
+    
+    psi2S_frac = None
+    ## fit tag-tag to get psi2S fraction
+    if hist_tag_tag != None:
+        data_tag_tag = make_dataset("data_tag_tag", mass_var, hist_tag_tag)
+        ws.var("jpsi_lambda").setConstant(False)
+        ws.var("jpsi_lambda").setRange(0.05,0.2)
+        ws.var("jpsi_lambda").setVal(0.01)
+        ws.var("jpsi_gamma").setConstant(False)
+        ws.var("jpsi_delta").setConstant(False) 
+        ws.var("psi2S_frac").setVal(0.002)
+        ws.var("psi2S_frac").setConstant(False)
+        fit_result = model.fitTo(data_tag_tag, ROOT.RooFit.Save(),
+                                 ROOT.RooFit.Range(min_mass_tag_tag, max_mass_tag_tag))
+        fit_result.Print()
+        # plot results
+        frame = mass_var.frame()
+        data_tag_tag.plotOn(frame)
+        model.plotOn(frame)
+        frame.Draw()
+        print_canvas(f"{filename_prefix}_tag-tag", f"{output_path}/{subdirectory}")
+        psi2S_frac = ws.var("psi2S_frac").getVal()
+        latex_list.append("f_{\psi(2S)} = %0.3f \pm %0.3f" % (ws.var("psi2S_frac").getVal(), ws.var("psi2S_frac").getError()))
+        # reset
+        ws.var("jpsi_lambda").setRange(0.01,0.2)
+    
     ## prefit
     if hist_ref != None:
         # fit signal shape
@@ -494,9 +545,9 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed, hist_re
         ws.var("jpsi_lambda").setConstant(False)
         ws.var("jpsi_gamma").setConstant(False)
         ws.var("jpsi_delta").setConstant(False)
-        ws.var("jpsi_G2_mean").setConstant(False)
-        ws.var("jpsi_G2_sigma").setConstant(False)
-        ws.var("jpsi_G2_frac").setConstant(False)
+        # ws.var("jpsi_G2_mean").setConstant(False)
+        # ws.var("jpsi_G2_sigma").setConstant(False)
+        # ws.var("jpsi_G2_frac").setConstant(False)
         ws.var("psi2S_frac").setVal(0.0)
         ws.var("psi2S_frac").setConstant(True)
         fit_result = jpsi.fitTo(data_ref, ROOT.RooFit.Save())
@@ -507,52 +558,47 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed, hist_re
         jpsi.plotOn(frame)
         frame.Draw()
         print_canvas(f"{filename_prefix}_ref", f"{output_path}/{subdirectory}")
+        
         # fix shape
         ws.var("jpsi_lambda").setConstant(True)
         ws.var("jpsi_gamma").setConstant(True)
         ws.var("jpsi_delta").setConstant(True)
-        ws.var("jpsi_G2_mean").setConstant(True)
-        ws.var("jpsi_G2_sigma").setConstant(True)
-        ws.var("jpsi_G2_frac").setConstant(True)
+        if hist_tag_tag != None:
+            ws.var("psi2S_frac").setVal(psi2S_frac)
+            ws.var("psi2S_frac").setConstant(True)
+        else:
+            ws.var("psi2S_frac").setConstant(False)
         
         ws.var("Nsig").setVal(hist_probe.Integral() * 0.7)
         ws.var("Nbkg").setVal(hist_probe.Integral() * 0.3)
-        ws.var("c2").setConstant(True)
-        ws.var("c2").setVal(0.0)
-        model.fitTo(data_probe, ROOT.RooFit.Extended(ROOT.kTRUE))
+        # ws.var("c2").setConstant(True)
+        # ws.var("c2").setVal(0.0)
+        fit_result = model.fitTo(data_probe, ROOT.RooFit.Extended(ROOT.kTRUE), ROOT.RooFit.Save())
+        nDOF = get_number_of_free_parameters(model, mass_var)
+        chi2ndof = frame.chiSquare(nDOF)
+
+        latex_list.append("N^{fix}_{sig} = %0.0f \pm %0.0f" % (ws.var("Nsig").getVal(), ws.var("Nsig").getError()))
+        latex_list.append("N^{fix}_{bkg} = %0.0f \pm %0.0f" % (ws.var("Nbkg").getVal(), ws.var("Nbkg").getError()))
+        latex_list.append("#chi^{2}_{fix}/nDOF = %0.1f" % (chi2ndof))
         
-        ws.var("c2").setConstant(False)
-        ws.var("psi2S_frac").setConstant(False)
+        # ws.var("c2").setConstant(False)
     else:
         ws.var("Nsig").setVal(hist_probe.Integral() * 0.7)
         ws.var("Nbkg").setVal(hist_probe.Integral() * 0.3)
-        ws.var("jpsi_G2_frac").setVal(0.0)
-        ws.var("jpsi_G2_frac").setConstant(True)
-        model.fitTo(data_probe, ROOT.RooFit.Extended(ROOT.kTRUE))
+        fit_result = model.fitTo(data_probe, ROOT.RooFit.Extended(ROOT.kTRUE), ROOT.RooFit.Save())
         
-    # ws.var("sig_G1_mean").setConstant(False)
-    # ws.var("sig_G1_sigma").setConstant(False)
-    # ws.var("sig_G2_frac").setVal(0.0)
-    # ws.var("sig_G2_frac").setConstant(True)
-    # ws.var("sig_G2_scale").setVal(2.0)
-    # ws.var("sig_G2_scale").setConstant(True)
-    # ws.var("sig_G3_frac").setVal(0.0)
-    # ws.var("sig_G3_frac").setConstant(True)
-    # ws.var("sig_G3_scale").setVal(3.0)
-    # ws.var("sig_G3_scale").setConstant(True)
-    # model.fitTo(data_probe, ROOT.RooFit.Extended(ROOT.kTRUE))
+    if not fix_shape_to_ref:
+        ws.var("jpsi_lambda").setConstant(False)
+        ws.var("jpsi_gamma").setConstant(False)
+        ws.var("jpsi_delta").setConstant(False)
 
-    # ## prefit 2
-    # ws.var("sig_G2_frac").setConstant(False)
-    # ws.var("sig_G2_scale").setConstant(False)
-    # model.fitTo(data_probe, ROOT.RooFit.Extended(ROOT.kTRUE))
-    
-    # ## nominal fit 
-    # ws.var("sig_G3_frac").setConstant(False)
-    # ws.var("sig_G3_scale").setConstant(False)
-    
-    ws.var("jpsi_G2_frac").setConstant(False)
-    fit_result = model.fitTo(data_probe, ROOT.RooFit.Extended(ROOT.kTRUE), ROOT.RooFit.Save())
+        fit_result = model.fitTo(data_probe, ROOT.RooFit.Extended(ROOT.kTRUE), ROOT.RooFit.Save())
+        nDOF = get_number_of_free_parameters(model, mass_var)
+        chi2ndof = frame.chiSquare(nDOF)
+        print(f"chiSquare: {chi2ndof:0.2f} nDOF: {nDOF}")
+        latex_list.append("N^_{sig} = %0.0f \pm %0.0f" % (ws.var("Nsig").getVal(), ws.var("Nsig").getError()))
+        latex_list.append("N_{bkg} = %0.0f \pm %0.0f" % (ws.var("Nbkg").getVal(), ws.var("Nbkg").getError()))
+        latex_list.append("#chi^{2}/nDOF = %0.1f" % (chi2ndof))
     fit_result.Print()
     
     ## Plot results
@@ -560,18 +606,15 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed, hist_re
     data_probe.plotOn(frame)
     model.plotOn(frame, ROOT.RooFit.Components("bkg"),  ROOT.RooFit.LineColor(ROOT.kRed))
     model.plotOn(frame)
-    nDOF = get_number_of_free_parameters(model, mass_var)
-    chi2ndof = frame.chiSquare(nDOF)
-    print(f"chiSquare: {chi2ndof:0.2f} nDOF: {nDOF}")
-    frame.Draw()
+    frame.GetYaxis().SetTitleOffset(1.6)
     
+    frame.Draw()
     latex = ROOT.TLatex()
     latex.SetTextSize(0.02)
     latex.SetTextFont(42) # Helvetica-like font, Greek works
-    latex.DrawLatexNDC(0.20, 0.80, "N_{sig} = %0.0f \pm %0.0f" % (ws.var("Nsig").getVal(), ws.var("Nsig").getError()))
-    latex.DrawLatexNDC(0.20, 0.75, "f_{\psi(2S)} = %0.3f \pm %0.3f" % (ws.var("psi2S_frac").getVal(), ws.var("psi2S_frac").getError()))
-    latex.DrawLatexNDC(0.20, 0.70, "N_{bkg} = %0.0f \pm %0.0f" % (ws.var("Nbkg").getVal(), ws.var("Nbkg").getError()))
-    latex.DrawLatexNDC(0.20, 0.20, "#chi^{2}/nDOF = %0.1f" % (chi2ndof))
+    for i, entry in enumerate(latex_list):
+        latex.DrawLatexNDC(0.65, 0.85 - i * 0.05, entry) 
+    
     print_canvas(f"{filename_prefix}_probe", f"{output_path}/{subdirectory}")
     results["all_probe_fit"] = {
         "Nsig": ws.var("Nsig").getVal(),
@@ -593,8 +636,8 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed, hist_re
     ws.var("jpsi_lambda").setConstant(True)
     ws.var("jpsi_gamma").setConstant(True)
     ws.var("jpsi_delta").setConstant(True)
-    ws.var("jpsi_G2_sigma").setConstant(True)
-    ws.var("jpsi_G2_frac").setConstant(True)
+    # ws.var("jpsi_G2_sigma").setConstant(True)
+    # ws.var("jpsi_G2_frac").setConstant(True)
     ws.var("psi2S_frac").setConstant(True)
     fit_result = model.fitTo(data_failed, ROOT.RooFit.Extended(ROOT.kTRUE), ROOT.RooFit.Save())
     fit_result.Print()
@@ -620,8 +663,8 @@ def fit_data(ws, filename_prefix, subdirectory, hist_probe, hist_failed, hist_re
     ws.var("jpsi_lambda").setConstant(False)
     ws.var("jpsi_gamma").setConstant(False)
     ws.var("jpsi_delta").setConstant(False)
-    ws.var("jpsi_G2_sigma").setConstant(False)
-    ws.var("jpsi_G2_frac").setConstant(False)
+    # ws.var("jpsi_G2_sigma").setConstant(False)
+    # ws.var("jpsi_G2_frac").setConstant(False)
     ws.var("psi2S_frac").setConstant(False)
 
     return results
@@ -669,6 +712,8 @@ def compute_ratio(data_result, mc_result):
         return None, None
 
 def aggregate_corrections(name, hist_name, hist_title, projection_type, eras):
+    if projection_type not in correction_results:
+        return
     if projection_type == "pt":
         projection_bins = pt_bins
     elif projection_type == "eta":
@@ -686,6 +731,9 @@ def aggregate_corrections(name, hist_name, hist_title, projection_type, eras):
         sum_weight_val = 0
         sum_weights = 0
         for era in eras:
+            if era not in correction_results[projection_type]:
+                print(f"{era} is not in correction_results for type: {projection_type}. Abort aggregation.")
+                return
             correction, correction_err =  correction_results[projection_type][era][i - 1]
             weight = 1/(correction_err**2)
             sum_weight_val += weight * correction
@@ -701,6 +749,101 @@ def aggregate_corrections(name, hist_name, hist_title, projection_type, eras):
     c.SetGridy(0)
 
         
+def corrections_with_bands(name, hist_name, x_title, projection_type, eras):
+    if projection_type not in correction_results:
+        return
+    if projection_type == "pt":
+        bins = pt_bins
+    elif projection_type == "eta":
+        bins = eta_bins
+    else:
+        raise Exception(f"Uknown projection: {projection_type}")
+
+    x = array("d")
+    y = array("d")
+    exl = array("d")
+    exh = array("d")
+    eyl = array("d")
+    eyh = array("d")
+    nbins = len(bins) - 1
+    for ibin in range(nbins):
+        central_vals = []
+
+        xlow  = bins[ibin]
+        xhigh = bins[ibin + 1]
+        xcenter = 0.5 * (xlow + xhigh)
+        bin_width = xhigh - xlow
+
+        for era in eras:
+            val, err =  correction_results[projection_type][era][ibin]
+            central_vals.append(val)
+        
+        vmin = min(central_vals)
+        vmax = max(central_vals)
+        ycenter = 0.5 * (vmin + vmax)
+
+        x.append(xcenter)
+        y.append(ycenter)
+        exl.append(0.5 * bin_width)
+        exh.append(0.5 * bin_width)
+        eyl.append(ycenter - vmin)
+        eyh.append(vmax - ycenter)
+
+    band = ROOT.TGraphAsymmErrors(nbins, x, y, exl, exh, eyl, eyh)
+    band.SetFillColorAlpha(ROOT.kGray, 1.0)
+    band.SetLineColor(ROOT.kGray)
+    band.SetLineWidth(1)
+    band.SetMarkerStyle(0)
+    band.SetFillStyle(1001)
+
+    band.Draw("A2")  # A = axes, 2 = filled band
+
+    c.SetGridy()
+    
+    # set y limits
+    c.Update() # make sure the frame histogram exists
+    hframe = band.GetHistogram()
+    hframe.GetXaxis().SetTitle(x_title)
+    hframe.GetYaxis().SetTitle("#varepsilon_{data}/#varepsilon_{MC}")
+    hframe.GetYaxis().SetRangeUser(0.9, 1.07)
+    c.Modified()
+
+    # legend
+    leg = ROOT.TLegend(0.65, 0.65, 0.88, 0.88)
+    leg.AddEntry(band, "Envelope (min to max)", "f")
+    
+    # add results
+    hist_cache = []
+    for i, era in enumerate(eras):
+        x = array("d")
+        y = array("d")
+        ex = array("d")
+        ey = array("d")
+        for ibin, (v, e) in enumerate(correction_results[projection_type][era]):
+            xlow = bins[ibin]
+            xhigh = bins[ibin + 1]
+            xc = 0.5 * (xlow + xhigh)
+            x.append(xc)
+            y.append(v)
+            ex.append(0.0)        # no horizontal error for the points
+            ey.append(e)          
+
+        gr = ROOT.TGraphErrors(nbins, x, y, ex, ey)
+        gr.SetTitle(era)
+        gr.SetLineWidth(2)
+        gr.SetMarkerStyle(20 + i)
+        gr.SetMarkerSize(1.5)
+        gr.Draw("PE same")  # points + error bars + line
+        hist_cache.append(gr)
+
+        leg.AddEntry(gr, era, "pl")
+        
+    leg.Draw()
+    
+    c.Update()
+    print_canvas(f"correction_vs_{projection_type}_{name}", output_path)
+    c.SetGridy(0)
+    
 if __name__ == "__main__":
     
     #################################
@@ -722,7 +865,9 @@ if __name__ == "__main__":
     ROOT.gStyle.SetOptFit(1)
 
     c = ROOT.TCanvas("c", "", 1600, 1200)
-
+    c2 = ROOT.TCanvas("c2", "", 1600, 800)
+    c.cd()
+    
     # histos = defaultdict(dict)
     
     #######################################################
@@ -736,7 +881,8 @@ if __name__ == "__main__":
     processor.process_samples()
     # pprint(processor.samples)
 
-    mass = ROOT.RooRealVar("m", "",  min_mass, max_mass) 
+    mass = ROOT.RooRealVar("m", "",  min_mass, max_mass)
+    
     if force_data_fits or not os.path.exists(file_fit_results):
  
         print_level = 0
@@ -799,12 +945,14 @@ if __name__ == "__main__":
         for sample in processor.histos:
             # if sample != "BuToJpsiK": continue
             for era in processor.histos[sample]:
+                if process_only and not re.search(process_only, era):
+                    continue
                 # if era not in ["Run2022D"]: continue
                 if era in ["Run2022G"]: continue
 
-                h = processor.histos[sample][era]["tag_tag"]
-                h.SetLineWidth(2)
-                h.Draw()
+                hist_tag_tag = processor.histos[sample][era]["tag_tag"]
+                hist_tag_tag.SetLineWidth(2)
+                hist_tag_tag.Draw()
                 print_canvas(f"tag_tag_mass_{era}", output_path)
                 
                 # Integrated Fit
@@ -824,68 +972,70 @@ if __name__ == "__main__":
                     fit_results[sample] = dict()
                 if era not in fit_results[sample]:
                     fit_results[sample][era] = dict()
-                fit_results[sample][era]["average"] = fit_data(ws, era, era, hist_probe, hist_failed, hist_ref)
+                fit_results[sample][era]["average"] = fit_data(ws, era, "fits", hist_probe, hist_failed,
+                                                               hist_ref, hist_tag_tag, False)
 
                 # Eta Fit
-                h_ineff_eta = ROOT.TH1F("h_ineff_eta", "", len(eta_bins) - 1, array("d", eta_bins))
-                h_ineff_eta.SetMinimum(0)
-                h_ineff_eta.SetLineWidth(2)
-                h_ineff_eta.SetMarkerStyle(20)
-                h_ineff_eta.SetMarkerSize(1.5)
-                for i in range(1, len(eta_bins)):
-                    hist_probe = hist3D_probe.ProjectionX("hist_probe", 0, -1, i, i)
-                    hist_ref = hist3D_ref.ProjectionX("hist_ref", 0, -1, i, i)
-                    hist_failed = hist3D_failed.ProjectionX("hist_failed", 0, -1, i, i)
+                if do_eta_fits:
+                    h_ineff_eta = ROOT.TH1F("h_ineff_eta", "", len(eta_bins) - 1, array("d", eta_bins))
+                    h_ineff_eta.SetMinimum(0)
+                    h_ineff_eta.SetLineWidth(2)
+                    h_ineff_eta.SetMarkerStyle(20)
+                    h_ineff_eta.SetMarkerSize(1.5)
+                    for i in range(1, len(eta_bins)):
+                        hist_probe = hist3D_probe.ProjectionX("hist_probe", 0, -1, i, i)
+                        hist_ref = hist3D_ref.ProjectionX("hist_ref", 0, -1, i, i)
+                        hist_failed = hist3D_failed.ProjectionX("hist_failed", 0, -1, i, i)
 
-                    result = fit_data(ws, f"{era}_eta_{eta_bins[i-1]}_{eta_bins[i]}", era,
-                                      hist_probe, hist_failed, hist_ref)
-                    if "eta" not in fit_results[sample][era]:
-                        fit_results[sample][era]["eta"] = list()
-                    result['bin'] = f"[{eta_bins[i-1]},{eta_bins[i]}]"
-                    fit_results[sample][era]["eta"].append(result)
+                        result = fit_data(ws, f"{era}_eta_{eta_bins[i-1]}_{eta_bins[i]}", era,
+                                          hist_probe, hist_failed, hist_ref)
+                        if "eta" not in fit_results[sample][era]:
+                            fit_results[sample][era]["eta"] = list()
+                        result['bin'] = f"[{eta_bins[i-1]},{eta_bins[i]}]"
+                        fit_results[sample][era]["eta"].append(result)
 
-                    if result["all_probe_fit"]["Nsig"] > 0:
-                        inefficiency = result["failed_probe_fit"]["Nsig"] / result["all_probe_fit"]["Nsig"]
-                        inefficiency_err = result["failed_probe_fit"]["Nsig_err"] / result["all_probe_fit"]["Nsig"]
-                        h_ineff_eta.SetBinContent(i, inefficiency)
-                        h_ineff_eta.SetBinError(i, inefficiency_err)
+                        if result["all_probe_fit"]["Nsig"] > 0:
+                            inefficiency = result["failed_probe_fit"]["Nsig"] / result["all_probe_fit"]["Nsig"]
+                            inefficiency_err = result["failed_probe_fit"]["Nsig_err"] / result["all_probe_fit"]["Nsig"]
+                            h_ineff_eta.SetBinContent(i, inefficiency)
+                            h_ineff_eta.SetBinError(i, inefficiency_err)
 
-                h_ineff_eta.Draw("E1")
-                c.SetGridy()
-                c.Update()
-                print_canvas(f"inefficiency_vs_eta_{era}", output_path)
-                c.SetGridy(0)
+                    h_ineff_eta.Draw("E1")
+                    c.SetGridy()
+                    c.Update()
+                    print_canvas(f"inefficiency_vs_eta_{era}", output_path)
+                    c.SetGridy(0)
 
                 # Pt Fit
-                h_ineff_pt = ROOT.TH1F("h_ineff_pt", "", len(pt_bins) - 1, array("d", pt_bins))
-                h_ineff_pt.SetMinimum(0)
-                h_ineff_eta.SetLineWidth(2)
-                h_ineff_pt.SetMarkerStyle(20)
-                h_ineff_pt.SetMarkerSize(1.5)
-                for i in range(1, len(pt_bins)):
-                    hist_probe = hist3D_probe.ProjectionX("hist_probe", i, i)
-                    hist_ref = hist3D_ref.ProjectionX("hist_ref", i, i)
-                    hist_failed = hist3D_failed.ProjectionX("hist_failed", i, i)
+                if do_pt_fits:
+                    h_ineff_pt = ROOT.TH1F("h_ineff_pt", "", len(pt_bins) - 1, array("d", pt_bins))
+                    h_ineff_pt.SetMinimum(0)
+                    h_ineff_eta.SetLineWidth(2)
+                    h_ineff_pt.SetMarkerStyle(20)
+                    h_ineff_pt.SetMarkerSize(1.5)
+                    for i in range(1, len(pt_bins)):
+                        hist_probe = hist3D_probe.ProjectionX("hist_probe", i, i)
+                        hist_ref = hist3D_ref.ProjectionX("hist_ref", i, i)
+                        hist_failed = hist3D_failed.ProjectionX("hist_failed", i, i)
 
-                    result = fit_data(ws, f"{era}_pt_{pt_bins[i-1]}_{pt_bins[i]}", era,
-                                      hist_probe, hist_failed, hist_ref)
-                    if "pt" not in fit_results[sample][era]:
-                        fit_results[sample][era]["pt"] = list()
-                    result['bin'] = f"[{pt_bins[i-1]},{pt_bins[i]}]"
-                    fit_results[sample][era]["pt"].append(result)
+                        result = fit_data(ws, f"{era}_pt_{pt_bins[i-1]}_{pt_bins[i]}", era,
+                                          hist_probe, hist_failed, hist_ref)
+                        if "pt" not in fit_results[sample][era]:
+                            fit_results[sample][era]["pt"] = list()
+                        result['bin'] = f"[{pt_bins[i-1]},{pt_bins[i]}]"
+                        fit_results[sample][era]["pt"].append(result)
 
-                    if result["all_probe_fit"]["Nsig"] > 0:
-                        inefficiency = result["failed_probe_fit"]["Nsig"] / result["all_probe_fit"]["Nsig"]
-                        inefficiency_err = result["failed_probe_fit"]["Nsig_err"] / result["all_probe_fit"]["Nsig"]
-                        h_ineff_pt.SetBinContent(i, inefficiency)
-                        h_ineff_pt.SetBinError(i, inefficiency_err)
+                        if result["all_probe_fit"]["Nsig"] > 0:
+                            inefficiency = result["failed_probe_fit"]["Nsig"] / result["all_probe_fit"]["Nsig"]
+                            inefficiency_err = result["failed_probe_fit"]["Nsig_err"] / result["all_probe_fit"]["Nsig"]
+                            h_ineff_pt.SetBinContent(i, inefficiency)
+                            h_ineff_pt.SetBinError(i, inefficiency_err)
 
-                h_ineff_pt.Draw("E1")
-                c.SetGridy()
-                c.Update()
-                print_canvas(f"inefficiency_vs_pt_{era}", output_path)
-                c.SetGridy(0)
-
+                    h_ineff_pt.Draw("E1")
+                    c.SetGridy()
+                    c.Update()
+                    print_canvas(f"inefficiency_vs_pt_{era}", output_path)
+                    c.SetGridy(0)
 
         # pprint(fit_results)
         with open(f"{output_path}/fit_results.json", "w") as f:
@@ -918,68 +1068,73 @@ if __name__ == "__main__":
 
     if compute_corrections:
         # Compute corrections
-        c.SetGridy()
+        c2.cd()
+        c2.SetGridy()
         mc_sample = "BuToJpsiK"
         correction_results = dict()
         for sample, info in processor.samples.items():
+            print(f"Processing {sample}")
             if not info["Data"]: continue
             if sample not in fit_results: continue
 
             for era in fit_results[sample]:
                 if era not in processor.era2campaign: continue
                 campaign = processor.era2campaign[era]
+
                 if mc_sample not in fit_results: continue
                 if campaign not in fit_results[mc_sample]: continue
 
                 # eta
-                h_eff_corr_eta = ROOT.TH1F("h_eff_corr_eta", ";#eta;#varepsilon_{data}/#varepsilon_{MC}",
-                                           len(eta_bins) - 1, array("d", eta_bins))
-                h_eff_corr_eta.SetMinimum(0.9)
-                h_eff_corr_eta.SetMaximum(1.05)
-                h_eff_corr_eta.SetLineWidth(2)
-                h_eff_corr_eta.SetMarkerStyle(20)
-                h_eff_corr_eta.SetMarkerSize(1.5)
-                correction_result = []
-                for i in range(1, len(eta_bins)):
-                    data_result = fit_results[sample][era]["eta"][i - 1]
-                    mc_result = fit_results[mc_sample][campaign]["eta"][i - 1]
+                if "eta" in fit_results[sample][era]:
+                    h_eff_corr_eta = ROOT.TH1F("h_eff_corr_eta", ";#eta;#varepsilon_{data}/#varepsilon_{MC}",
+                                               len(eta_bins) - 1, array("d", eta_bins))
+                    h_eff_corr_eta.SetMinimum(0.9)
+                    h_eff_corr_eta.SetMaximum(1.05)
+                    h_eff_corr_eta.SetLineWidth(2)
+                    h_eff_corr_eta.SetMarkerStyle(20)
+                    h_eff_corr_eta.SetMarkerSize(1.5)
+                    correction_result = []
+                    for i in range(1, len(eta_bins)):
+                        data_result = fit_results[sample][era]["eta"][i - 1]
+                        mc_result = fit_results[mc_sample][campaign]["eta"][i - 1]
 
-                    correction, correction_err = compute_ratio(data_result, mc_result)
-                    correction_result.append((correction, correction_err))
-                    if correction != None:
-                        h_eff_corr_eta.SetBinContent(i, correction)
-                        h_eff_corr_eta.SetBinError(i, correction_err)
+                        correction, correction_err = compute_ratio(data_result, mc_result)
+                        correction_result.append((correction, correction_err))
+                        if correction != None:
+                            h_eff_corr_eta.SetBinContent(i, correction)
+                            h_eff_corr_eta.SetBinError(i, correction_err)
 
-                h_eff_corr_eta.Draw("E1")
-                print_canvas(f"efficiency_correction_vs_eta_{era}", output_path)
-                if "eta" not in correction_results:
-                    correction_results["eta"] = dict()
-                correction_results["eta"][era] = correction_result
+                    h_eff_corr_eta.Draw("E1")
+                    print_canvas(f"efficiency_correction_vs_eta_{era}", output_path)
+                    if "eta" not in correction_results:
+                        correction_results["eta"] = dict()
+                    correction_results["eta"][era] = correction_result
 
                 # pt
-                h_eff_corr_pt = ROOT.TH1F("h_eff_corr_pt", ";p_{T}, GeV;#varepsilon_{data}/#varepsilon_{MC}",
-                                          len(pt_bins) - 1, array("d", pt_bins))
-                h_eff_corr_pt.SetMinimum(0.9)
-                h_eff_corr_pt.SetMaximum(1.05)
-                h_eff_corr_pt.SetLineWidth(2)
-                h_eff_corr_pt.SetMarkerStyle(20)
-                h_eff_corr_pt.SetMarkerSize(1.5)
-                correction_result = []
-                for i in range(1, len(pt_bins)):
-                    data_result = fit_results[sample][era]["pt"][i - 1]
-                    mc_result = fit_results[mc_sample][campaign]["pt"][i - 1]
+                if "pt" in fit_results[sample][era]:
+                    h_eff_corr_pt = ROOT.TH1F("h_eff_corr_pt", ";p_{T}, GeV;#varepsilon_{data}/#varepsilon_{MC}",
+                                              len(pt_bins) - 1, array("d", pt_bins))
+                    h_eff_corr_pt.SetMinimum(0.9)
+                    h_eff_corr_pt.SetMaximum(1.05)
+                    h_eff_corr_pt.SetLineWidth(2)
+                    h_eff_corr_pt.SetMarkerStyle(20)
+                    h_eff_corr_pt.SetMarkerSize(1.5)
+                    correction_result = []
+                    for i in range(1, len(pt_bins)):
+                        data_result = fit_results[sample][era]["pt"][i - 1]
+                        mc_result = fit_results[mc_sample][campaign]["pt"][i - 1]
 
-                    correction, correction_err = compute_ratio(data_result, mc_result)
-                    correction_result.append((correction, correction_err))
-                    if correction != None:
-                        h_eff_corr_pt.SetBinContent(i, correction)
-                        h_eff_corr_pt.SetBinError(i, correction_err)
-                if "pt" not in correction_results:
-                    correction_results["pt"] = dict()
-                correction_results["pt"][era] = correction_result
+                        correction, correction_err = compute_ratio(data_result, mc_result)
+                        correction_result.append((correction, correction_err))
+                        if correction != None:
+                            h_eff_corr_pt.SetBinContent(i, correction)
+                            h_eff_corr_pt.SetBinError(i, correction_err)
+                    if "pt" not in correction_results:
+                        correction_results["pt"] = dict()
+                    correction_results["pt"][era] = correction_result
 
-                h_eff_corr_pt.Draw("E1")
-                print_canvas(f"efficiency_correction_vs_pt_{era}", output_path)
+                    h_eff_corr_pt.Draw("E1")
+                    print_canvas(f"efficiency_correction_vs_pt_{era}", output_path)
 
                 # average
                 data_result = fit_results[sample][era]["average"]
@@ -990,7 +1145,7 @@ if __name__ == "__main__":
                 correction_results["average"][era] = compute_ratio(data_result, mc_result)
 
         # Aggregated corrections
-        # pprint(correction_results)
+        pprint(correction_results)
         with open(f"{output_path}/correction_results.json", "w") as f:
             json.dump(correction_results, f, indent=4)
 
@@ -1035,8 +1190,7 @@ if __name__ == "__main__":
 
         h_eff_corr.Draw("E1")
         print_canvas(f"Rs_vs_era", output_path)
-
-
+        
         # Run2022
         aggregate_corrections("Run2022", "h_eff_corr_pt", ";p_{T}, GeV;#varepsilon_{data}/#varepsilon_{MC}",
                               "pt", ["Run2022C", "Run2022D", "Run2022E", "Run2022F"])
@@ -1053,7 +1207,11 @@ if __name__ == "__main__":
         aggregate_corrections("Run2024CDE", "h_eff_corr_eta", ";#eta;#varepsilon_{data}/#varepsilon_{MC}",
                               "eta", ["Run2024C", "Run2024D", "Run2024E"])
         
-
+        # Correction Bands
+        corrections_with_bands("Run2024", "h_eff_corr_eta", "#eta", "eta", processor.eras["Run2024"])
+        corrections_with_bands("Run2025", "h_eff_corr_eta", "#eta", "eta", processor.eras["Run2025"])
+        c.cd()
+        
 # WARNINGs
 
 n_fits = 0
