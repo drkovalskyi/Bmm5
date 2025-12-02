@@ -13,7 +13,7 @@ file. This file is then reused as input for further processing and for
 reruns, unless the script is instructed to recreate it.
 """
 
-force_recreate = True
+force_recreate = False
 aggregate_eras = False
 force_data_fits = True
 do_eta_fits = False
@@ -27,8 +27,8 @@ process_only = None
 max_files = 999999
 path   = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/535/trig/"
 path2  = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/535/"
-# output_path = "/eos/home-d/dmytro/www/plots/2025/fsfu-track_reco_efficiency/"
-output_path = "/eos/home-d/dmytro/www/plots/tmp/2025/track_reco_efficiency/"
+output_path = "/eos/home-d/dmytro/www/plots/2025/track_reco_efficiency/"
+# output_path = "/eos/home-d/dmytro/www/plots/tmp/2025/track_reco_efficiency/"
 file_fit_results = f"{output_path}/fit_results.json"
 
 eta_bins = [-2.4, -2.0, -1.6, -1.2, -0.8, -0.4, 0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4]
@@ -270,6 +270,7 @@ class DataProcessor:
     def process_sample(self, sample_name, era):
         sample = self.samples[sample_name]
         rdf_histos = dict()
+        mc = not sample["Data"]
         
         ### Prepare RDataFrame
 
@@ -313,6 +314,9 @@ class DataProcessor:
         rdf = rdf.Define("tnp_probe2_staNormChi2", "Take(MuonId_staNormChi2,  tnp_mu2_index)")
         rdf = rdf.Define("tnp_probe1_staNdof",     "Take(MuonId_staNdof,      tnp_mu1_index)")
         rdf = rdf.Define("tnp_probe2_staNdof",     "Take(MuonId_staNdof,      tnp_mu2_index)")
+        if mc:
+            rdf = rdf.Define("tnp_probe1_simMotherPdgId", "Take(MuonId_simMotherPdgId,  tnp_mu1_index)")
+            rdf = rdf.Define("tnp_probe2_simMotherPdgId", "Take(MuonId_simMotherPdgId,  tnp_mu2_index)")
 
         # Offline selection
         rdf = rdf.Define("probes_1",        "tnp_probe1_tag2 && tnp_probe1_tag2_trig && tnp_probe1_staNormChi2<1 && tnp_probe1_staNdof>11")
@@ -322,6 +326,9 @@ class DataProcessor:
         rdf = rdf.Define("probes_2_failed", "probes_2 && !tnp_mu2_test")
         rdf = rdf.Define("probes_2_sig",    "probes_2 && tnp_mu2_tag && abs(tnp_mass-3.09)<0.05")
         rdf = rdf.Define("tag_tag",         "tnp_mu1_tag && tnp_mu2_tag")
+        if mc:
+            rdf = rdf.Define("probes_1_failed_mc", "probes_1_failed && tnp_probe1_simMotherPdgId == 443")
+            rdf = rdf.Define("probes_2_failed_mc", "probes_2_failed && tnp_probe2_simMotherPdgId == 443")
 
         rdf1 = rdf.Filter("Sum(probes_1)>0")
         rdf1 = rdf1.Define("probe_pt",     "tnp_mu1_sta_pt[probes_1]")
@@ -369,6 +376,15 @@ class DataProcessor:
         self.book_histo_3D(rdf_histos, rdf2_failed, sample_name, era, "probe2_failed")
         self.book_histo_3D(rdf_histos, rdf2_sig, sample_name, era, "probe2_sig")
         self.book_histo(rdf_histos, rdf3, sample_name, era, "tag_tag", [fine_mass_bins], ["mass"])
+        if mc:
+            rdf1_failed_mc = rdf.Filter("Sum(probes_1_failed_mc)>0")
+            rdf1_failed_mc = rdf1_failed_mc.Define("mass", "tnp_probe1_tag2_mass[probes_1_failed_mc]")
+            self.book_histo(rdf_histos, rdf1_failed_mc, sample_name, era,
+                            "probe1_failed_mc", [mass_bins], ["mass"])
+            rdf2_failed_mc = rdf.Filter("Sum(probes_2_failed_mc)>0")
+            rdf2_failed_mc = rdf2_failed_mc.Define("mass", "tnp_probe2_tag1_mass[probes_2_failed_mc]")
+            self.book_histo(rdf_histos, rdf2_failed_mc, sample_name, era,
+                            "probe2_failed_mc", [mass_bins], ["mass"])
         
         if sample_name not in self.histos:
             self.histos[sample_name] = dict()
@@ -504,7 +520,8 @@ def build_model(mass_var):
 
 def fit_data(ws, filename_prefix, subdirectory,
              hist_probe, hist_failed, hist_ref=None, hist_tag_tag=None,
-             fix_shape_to_ref_all_probes=True, fix_shape_to_ref_failed_probes=True):
+             fix_shape_to_ref_all_probes=True, fix_shape_to_ref_failed_probes=True,
+             n_failed_mc=None):
     results = dict()
     mass_var = ws.var("m")
     
@@ -658,7 +675,7 @@ def fit_data(ws, filename_prefix, subdirectory,
         nDOF = get_number_of_free_parameters(model, mass_var)
         chi2ndof = frame.chiSquare(nDOF)
         print(f"chiSquare: {chi2ndof:0.2f} nDOF: {nDOF}")
-        latex_list.append("N^_{sig} = %0.0f \pm %0.0f" % (ws.var("Nsig").getVal(), ws.var("Nsig").getError()))
+        latex_list.append("N_{sig} = %0.0f \pm %0.0f" % (ws.var("Nsig").getVal(), ws.var("Nsig").getError()))
         latex_list.append("N_{bkg} = %0.0f \pm %0.0f" % (ws.var("Nbkg").getVal(), ws.var("Nbkg").getError()))
         latex_list.append("#chi^{2}/nDOF = %0.1f" % (chi2ndof))
     
@@ -669,6 +686,8 @@ def fit_data(ws, filename_prefix, subdirectory,
     chi2ndof = frame.chiSquare(nDOF)
     print(f"chiSquare: {chi2ndof:0.2f} nDOF: {nDOF}")
     frame.Draw()
+    if n_failed_mc != None:
+        latex_list.append(f"N^{{MC}}_{{sig}} = {int(n_failed_mc)}")
     for i, entry in enumerate(latex_list):
         latex.DrawLatexNDC(0.65, 0.85 - i * 0.05, entry) 
     
@@ -990,12 +1009,17 @@ if __name__ == "__main__":
                     fit_results[sample][era] = dict()
                 fix_shape_to_ref_all_probes = False
                 fix_shape_to_ref_failed_probes = True
-                if re.search("Summer", era):
+                n_failed_mc = None
+                if not processor.samples[sample]["Data"]:
                     fix_shape_to_ref_failed_probes = False
+                    if "probe1_failed_mc" in processor.histos[sample][era]:
+                        n_failed_mc = processor.histos[sample][era]["probe1_failed_mc"].Integral()
+                        n_failed_mc += processor.histos[sample][era]["probe2_failed_mc"].Integral()
                 fit_results[sample][era]["average"] = fit_data(ws, era, "fits",
                                                                hist_probe, hist_failed, hist_ref, hist_tag_tag,
                                                                fix_shape_to_ref_all_probes,
-                                                               fix_shape_to_ref_failed_probes)
+                                                               fix_shape_to_ref_failed_probes,
+                                                               n_failed_mc)
                 # Eta Fit
                 if do_eta_fits:
                     h_ineff_eta = ROOT.TH1F("h_ineff_eta", "", len(eta_bins) - 1, array("d", eta_bins))
