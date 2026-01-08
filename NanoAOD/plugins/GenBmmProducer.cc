@@ -315,6 +315,21 @@ void GenBmmProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
 	}
       }
       break;
+    case 321*211*13*13:  // Kpimm
+      for (auto dau: final_state_particles){
+	if (abs(dau->pdgId())==13){
+	  if (not mu_cand1)
+	    mu_cand1 = dau;
+	  else
+	    mu_cand2 = dau;
+	} else {
+	  if (abs(dau->pdgId())==321)
+	    dau3 = dau;
+	  else
+	    dau4 = dau;
+	}
+      }
+      break;
 
     default:       // unknown signature
       continue;
