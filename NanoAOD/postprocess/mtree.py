@@ -13,7 +13,7 @@ class MTree:
             'UInt_t':{'array':'I','root':'i'}, 
             'Float_t':{'array':'f','root':'F'},
             'ULong64_t':{'array':'L','root':'l'},
-            'Long64_t':{'array':'l','root':'L'},
+            'Long64_t':{'array':'q','root':'L'},
         }
         self.defaults = dict()
         self.variables = dict()
@@ -39,7 +39,11 @@ class MTree:
             self.tree.GetBranch(branch_name).SetTitle(title)
         
     def __setitem__(self, branch_name, value):
-        self.variables[branch_name][0] = value
+        try:
+            self.variables[branch_name][0] = value
+        except OverflowError:
+            print(f"OverflowError for branch {branch_name}: {value}")
+            self.variables[branch_name][0] = 0
 
     def __getitem__(self, branch_name):
         return self.variables[branch_name][0]
