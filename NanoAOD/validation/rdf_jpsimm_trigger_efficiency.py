@@ -25,12 +25,16 @@ For more information about the methods check AN-24-186.
 # force_recreate = ['All']
 # force_recreate = ["EGammaLowPt", "BuToJpsiK", "BsToJpsiPhi"]
 # force_recreate = ["EGamma", "EGammaLowPt"]
-force_recreate = []
+# force_recreate = ["BsToJpsiPhi"]
+force_recreate = ["EGammaLowPt"]
+# force_recreate = []
 
-debug = True
-perform_method_validation = False
-compute_run_average_efficiencies = True
-make_plots = True
+detailed_report = False
+debug = False
+perform_reweighting_validation = False
+perform_sample_dependence_validation = False
+compute_run_average_efficiencies = False
+make_plots = False
 compute_jpsi_efficiency = False
 compute_corrections = True
 
@@ -76,10 +80,11 @@ sample_names = [
     "EGammaLowPt",
     "EGamma",
     ## Cross checks for EGamma
-    # "ZeroBias", 
-    # "ParkingDoubleElectronLowMass",
-    # "ZeroBiasExclusive", # HLT_ZeroBias events
-    # "EGammaExclusive"    # HLT_Ele30_WPTight_Gsf events
+    "ZeroBiasLowPt", 
+    "ZeroBias", 
+    "ParkingDoubleElectronLowMass",
+    "ZeroBiasExclusive", # HLT_ZeroBias events
+    "EGammaExclusive"    # HLT_Ele30_WPTight_Gsf events
 ]
 
 path   = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/535/"
@@ -252,6 +257,11 @@ class DataProcessor:
                 "files": defaultdict(list),
                 "triggers": None
             },
+            "ZeroBiasLowPt": {
+                "Data": True,
+                "files": defaultdict(list),
+                "triggers": None
+            },
             "ZeroBiasExclusive": {
                 "Data": True,
                 "files": defaultdict(list),
@@ -361,7 +371,7 @@ class DataProcessor:
                     egamma_pds = ["EGamma0", "EGamma1"]
                     if re.search("Run2022", era):
                         egamma_pds = ["EGamma"]
-                    elif re.search("Run2022", era):
+                    elif re.search("Run2025", era):
                         egamma_pds = ["EGamma0", "EGamma1", "EGamma2"]
                         
                     for pd in egamma_pds:
@@ -381,6 +391,10 @@ class DataProcessor:
                     self.samples["ZeroBias"]["files"][era].append(
                         path2 + f"/ZeroBias+{era}-PromptReco-v{version}+MINIAOD/*root",
                     )
+                    if re.search("Run20(24|25)", era):
+                        self.samples["ZeroBiasLowPt"]["files"][era].append(
+                            path2 + f"/ZeroBias+{era}-PromptReco-v{version}+MINIAOD/*root",
+                        )
                     self.samples["ZeroBiasExclusive"]["files"][era].append(
                         path + f"/ZeroBias+{era}-PromptReco-v{version}+MINIAOD/*root",
                     )
@@ -585,6 +599,30 @@ class DataProcessor:
         if "preselection" in sample:
             rdf = rdf.Filter(sample["preselection"])
 
+        # Define unprescaled L1 selections
+        if run == "Run2022":
+            l1_unprescaled_HLT_DoubleMu4_3_LowMass = \
+                "L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p6||L1_DoubleMu4_SQ_OS_dR_Max1p2"
+            l1_unprescaled_and_unrestrictive_HLT_DoubleMu4_3_LowMass = \
+                "L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p6"
+            l1_selection_real_mix = l1_unprescaled_HLT_DoubleMu4_3_LowMass
+        elif run == "Run2023":
+            l1_unprescaled_HLT_DoubleMu4_3_LowMass = \
+                "L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4||L1_DoubleMu3er2p0_SQ_OS_dR_Max1p6||" + \
+                "L1_DoubleMu4_SQ_OS_dR_Max1p2"
+            l1_unprescaled_and_unrestrictive_HLT_DoubleMu4_3_LowMass = \
+                "L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4||L1_DoubleMu3er2p0_SQ_OS_dR_Max1p6||"
+            l1_selection_real_mix = l1_unprescaled_HLT_DoubleMu4_3_LowMass
+        elif run in ["Run2024", "Run2025"]:
+            l1_unprescaled_HLT_DoubleMu4_3_LowMass = \
+                "L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4||L1_DoubleMu4er2p0_SQ_OS_dR_Max1p6||" + \
+                "L1_DoubleMu4p5_SQ_OS_dR_Max1p2"
+            l1_unprescaled_HLT_DoubleMu2_Jpsi_LowPt = \
+                "L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4||L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2"
+            l1_unprescaled_and_unrestrictive_HLT_DoubleMu4_3_LowMass = \
+                "L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4"
+            l1_selection_real_mix = "L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4"
+
         ### Extract information from other branches
         
         # mm
@@ -603,7 +641,9 @@ class DataProcessor:
                          "mm_mu1_isGlobal && mm_mu2_isGlobal && "
                          "mm_mu1_pdgId * mm_mu2_pdgId == -169 && "
                          "abs(mm_kin_mass-3.1)<0.2 && mm_kin_vtx_prob>0.01")
-        rdf = rdf.Define("nom_cands", "nom_cands_loose and abs(mm_kin_mass-3.09)<0.10")
+        rdf = rdf.Define("nom_cands", "nom_cands_loose && abs(mm_kin_mass-3.09)<0.10")
+        rdf = rdf.Define("highpt_cands", "nom_cands && mm_mu2_pt > 4")
+        rdf = rdf.Define("vhighpt_cands", "nom_cands && mm_mu1_pt > 5 && mm_mu2_pt > 5")
 
         rdf = rdf.Define("lowpt_cands", "mm_mu1_index>=0 && mm_mu2_index>=0 && "
                          "(mm_mu1_pt < 4 || mm_mu2_pt < 3) && "
@@ -623,6 +663,12 @@ class DataProcessor:
         rdf_nom = rdf_nom.Define("jpsi_m2_eta", "mm_mu2_eta[nom_cands]")
         rdf_nom = rdf_nom.Define("jpsi_dphi",   "mm_dphi[nom_cands]")
         rdf_nom = rdf_nom.Define("jpsi_mass",   "mm_kin_mass[nom_cands]")
+        rdf_highpt = rdf.Filter("Sum(highpt_cands)>0")
+        rdf_highpt = rdf_highpt.Define("jpsi_pt",     "mm_kin_pt[highpt_cands]")
+        rdf_highpt = rdf_highpt.Define("jpsi_eta",    "mm_kin_eta[highpt_cands]")
+        rdf_vhighpt = rdf.Filter("Sum(vhighpt_cands)>0")
+        rdf_vhighpt = rdf_vhighpt.Define("jpsi_pt",     "mm_kin_pt[vhighpt_cands]")
+        rdf_vhighpt = rdf_vhighpt.Define("jpsi_eta",    "mm_kin_eta[vhighpt_cands]")
         rdf_lowpt = rdf.Filter("Sum(lowpt_cands)>0")
         rdf_lowpt = rdf_lowpt.Define("jpsi_pt",  "mm_kin_pt[lowpt_cands]")
         rdf_lowpt = rdf_lowpt.Define("jpsi_eta", "mm_kin_eta[lowpt_cands]")
@@ -647,6 +693,9 @@ class DataProcessor:
         vars5D = ["jpsi_m1_pt", "jpsi_m1_eta", "jpsi_m2_pt", "jpsi_m2_eta", "jpsi_dphi"]
 
         self.book_histo_2D(rdf_histos, rdf_nom, sample_name, era, "All")
+        self.book_histo_2D(rdf_histos, rdf_highpt, sample_name, era, "AllHighPt")
+        self.book_histo_2D(rdf_histos, rdf_vhighpt, sample_name, era, "AllVHighPt")
+        
         self.book_histo_ND(rdf_histos, rdf_nom, sample_name, era, "All3D", bins, vars)
         self.book_histo_ND(rdf_histos, rdf_nom.Filter("HLT_DoubleMu4_3_LowMass"),
                            sample_name, era, "HLT_DoubleMu4_3_LowMass_3D", bins, vars)
@@ -672,6 +721,10 @@ class DataProcessor:
             self.book_histo(rdf_histos, rdf_lowpt, sample_name, era, "AllLowPt", low_pt_bins, low_pt_vars)
             self.book_histo(rdf_histos, rdf_lowpt.Filter("HLT_DoubleMu2_Jpsi_LowPt"),
                             sample_name, era, "HLT_DoubleMu2_Jpsi_LowPt_AllLowPt", low_pt_bins, low_pt_vars)
+            rdf_lowpt_l1_unprescaled = rdf_lowpt.Filter(l1_unprescaled_HLT_DoubleMu2_Jpsi_LowPt)
+            name = "HLT_DoubleMu2_Jpsi_LowPt_l1_unprescaled"
+            self.book_histo(rdf_histos, rdf_lowpt_l1_unprescaled.Filter("HLT_DoubleMu2_Jpsi_LowPt"),
+                               sample_name, era, name, low_pt_bins, low_pt_vars)
 
         
         if sample_name in ["BsToJpsiPhi", "BdToJpsiKstar"]:
@@ -703,7 +756,12 @@ class DataProcessor:
             elif sample_name == "BdToJpsiKstar":
                 selection += "&& abs(bkkmm_jpsikstar_mass-5.3)<0.1"
             
+            highpt_selection = selection + "&& bkkmm_mu2_pt > 4"
+            vhighpt_selection = selection + "&& bkkmm_mu1_pt > 5 && bkkmm_mu2_pt > 5"
+            
             rdf = rdf.Define("nom_b_cands", selection)
+            rdf = rdf.Define("highpt_b_cands", highpt_selection)
+            rdf = rdf.Define("vhighpt_b_cands", vhighpt_selection)
             
             rdf_nom_bsd = rdf.Filter("Sum(nom_b_cands)>0")
             rdf_nom_bsd = rdf_nom_bsd.Define("jpsi_pt",     "bkkmm_mm_kin_pt[nom_b_cands]")
@@ -716,12 +774,47 @@ class DataProcessor:
             rdf_nom_bsd = rdf_nom_bsd.Define("b_pt",        "bkkmm_jpsikk_pt[nom_b_cands]")
             rdf_nom_bsd = rdf_nom_bsd.Define("b_eta",       "bkkmm_jpsikk_eta[nom_b_cands]")
 
-            # TODO: continue
+            rdf_highpt_bsd = rdf.Filter("Sum(highpt_b_cands)>0")
+            rdf_highpt_bsd = rdf_highpt_bsd.Define("jpsi_pt",     "bkkmm_mm_kin_pt[highpt_b_cands]")
+            rdf_highpt_bsd = rdf_highpt_bsd.Define("jpsi_eta",    "bkkmm_mm_kin_eta[highpt_b_cands]")
+            rdf_highpt_bsd = rdf_highpt_bsd.Define("b_pt",        "bkkmm_jpsikk_pt[highpt_b_cands]")
+            rdf_highpt_bsd = rdf_highpt_bsd.Define("b_eta",       "bkkmm_jpsikk_eta[highpt_b_cands]")
+
+            rdf_vhighpt_bsd = rdf.Filter("Sum(vhighpt_b_cands)>0")
+            rdf_vhighpt_bsd = rdf_vhighpt_bsd.Define("jpsi_pt",     "bkkmm_mm_kin_pt[vhighpt_b_cands]")
+            rdf_vhighpt_bsd = rdf_vhighpt_bsd.Define("jpsi_eta",    "bkkmm_mm_kin_eta[vhighpt_b_cands]")
+            rdf_vhighpt_bsd = rdf_vhighpt_bsd.Define("b_pt",        "bkkmm_jpsikk_pt[vhighpt_b_cands]")
+            rdf_vhighpt_bsd = rdf_vhighpt_bsd.Define("b_eta",       "bkkmm_jpsikk_eta[vhighpt_b_cands]")
+            
+            # Book histograms of jpsi(pt,eta) for main HLT triggers
             self.book_histo_2D(rdf_histos, rdf_nom_bsd, sample_name, era, "B_All")
             self.book_histo_2D(rdf_histos, rdf_nom_bsd.Filter("HLT_DoubleMu4_3_LowMass"),
                                sample_name, era, "B_HLT_DoubleMu4_3_LowMass")
+            self.book_histo_2D(rdf_histos, rdf_nom_bsd.Filter("HLT_Mu0_L1DoubleMu"),
+                               sample_name, era, "B_HLT_Mu0_L1DoubleMu")
 
-            # self.book_histo_3D(rdf_histos, rdf_nom_bsd, sample_name, era, "B_All3D")
+            # L1 prescale options
+            name = "B_HLT_DoubleMu4_3_LowMass_l1_unprescaled"
+            self.book_histo_2D(rdf_histos,
+                               rdf_nom_bsd.Filter("HLT_DoubleMu4_3_LowMass && (%s)" %
+                                                  l1_unprescaled_HLT_DoubleMu4_3_LowMass),
+                               sample_name, era, name)
+            name = "B_HLT_DoubleMu4_3_LowMass_l1_unprescaled_and_unrestrictive"
+            self.book_histo_2D(rdf_histos,
+                               rdf_nom_bsd.Filter("HLT_DoubleMu4_3_LowMass && (%s)" %
+                                                  l1_unprescaled_and_unrestrictive_HLT_DoubleMu4_3_LowMass),
+                               sample_name, era, name)
+
+            # High Pt
+            self.book_histo_2D(rdf_histos, rdf_highpt_bsd, sample_name, era, "B_AllHighPt")
+            self.book_histo_2D(rdf_histos, rdf_highpt_bsd.Filter("HLT_DoubleMu4_3_LowMass"),
+                               sample_name, era, "B_HLT_DoubleMu4_3_LowMass_HighPt")
+            self.book_histo_2D(rdf_histos, rdf_vhighpt_bsd, sample_name, era, "B_AllVHighPt")
+            self.book_histo_2D(rdf_histos, rdf_vhighpt_bsd.Filter("HLT_DoubleMu4_3_LowMass"),
+                               sample_name, era, "B_HLT_DoubleMu4_3_LowMass_VHighPt")
+
+            
+            # Advanced reweighting options
             self.book_histo_ND(rdf_histos, rdf_nom_bsd, sample_name, era, "B_All3D",  bins,    vars)
             self.book_histo_ND(rdf_histos, rdf_nom_bsd, sample_name, era, "B_All4D",  bins4D,  vars4D)
             self.book_histo_ND(rdf_histos, rdf_nom_bsd, sample_name, era, "B_All4D2", bins4D2, vars4D2)
@@ -731,6 +824,7 @@ class DataProcessor:
 
             self.book_histo_ND(rdf_histos, rdf_nom_bsd, sample_name, era, "B",  b_bins,    b_vars)
 
+            # Low Pt
             if era == "RunIII2024Summer24" and sample_name == "BsToJpsiPhi":
                 rdf = rdf.Define("lowpt_bs_cands",
                                  "(bkkmm_mu1_pt < 4 || bkkmm_mu2_pt < 3) && "
@@ -751,6 +845,10 @@ class DataProcessor:
                 self.book_histo(rdf_histos, rdf_lowpt_bs.Filter("HLT_DoubleMu2_Jpsi_LowPt"),
                                 sample_name, era, "B_HLT_DoubleMu2_Jpsi_LowPt",
                                 low_pt_bins, low_pt_vars)
+                name = "B_HLT_DoubleMu2_Jpsi_LowPt_l1_unprescaled"
+                self.book_histo(rdf_histos, rdf_lowpt_bs.Filter("HLT_DoubleMu2_Jpsi_LowPt && (%s)" %
+                                                               l1_unprescaled_HLT_DoubleMu2_Jpsi_LowPt),
+                                sample_name, era, name, low_pt_bins, low_pt_vars)
                 self.book_histo_ND(rdf_histos, rdf_lowpt_bs, sample_name, era, "BsLowPt",
                                    b_lowpt_bins, b_lowpt_vars)
             
@@ -804,18 +902,6 @@ class DataProcessor:
                                    b_lowpt_bins, b_lowpt_vars)
 
             
-        if run == "Run2022":
-            l1_selection_unprescaled = "L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p6||L1_DoubleMu4_SQ_OS_dR_Max1p2"
-            l1_selection_real_mix = l1_selection_unprescaled
-        elif run == "Run2023":
-            l1_selection_unprescaled = "L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4||L1_DoubleMu3er2p0_SQ_OS_dR_Max1p6"+ \
-                "||L1_DoubleMu4_SQ_OS_dR_Max1p2"
-            l1_selection_real_mix = l1_selection_unprescaled
-        elif run in ["Run2024", "Run2025"]:
-            l1_selection_unprescaled = "L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4||L1_DoubleMu4er2p0_SQ_OS_dR_Max1p6"+ \
-                "||L1_DoubleMu4p5_SQ_OS_dR_Max1p2"
-            l1_selection_real_mix = "L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4"
-
         # ref_trigger = "HLT_Mu4_L1DoubleMu"
         # if sample["triggers"] == None or ref_trigger in sample["triggers"]:
         #     name = f"{ref_trigger}"
@@ -838,7 +924,7 @@ class DataProcessor:
         #     rdf_nom2 = rdf_nom2.Filter(test_trigger)
         #     self.book_histo_2D(rdf_histos, rdf_nom2, sample_name, era, name)
 
-        #     test_trigger = l1_selection_unprescaled
+        #     test_trigger = l1_unprescaled_HLT_DoubleMu4_3_LowMass
         #     name += f"_L1_DoubleMu_Mix_Unprescaled"
         #     rdf_nom2 = rdf_nom2.Filter(test_trigger)
         #     self.book_histo_2D(rdf_histos, rdf_nom2, sample_name, era, name)
@@ -854,7 +940,7 @@ class DataProcessor:
         #     rdf_nom3 = rdf_nom3.Filter(test_trigger)
         #     self.book_histo_2D(rdf_histos, rdf_nom3, sample_name, era, name)
 
-        #     test_trigger = l1_selection_unprescaled
+        #     test_trigger = l1_unprescaled_HLT_DoubleMu4_3_LowMass
         #     name += f"_L1_DoubleMu_Mix_Unprescaled"
         #     rdf_nom3 = rdf_nom3.Filter(test_trigger)
         #     self.book_histo_2D(rdf_histos, rdf_nom3, sample_name, era, name)
@@ -864,16 +950,27 @@ class DataProcessor:
             test_triggers = ["HLT_Mu0_L1DoubleMu", "HLT_DoubleMu4_3_LowMass"]
             for test_trigger in test_triggers:
                 self.book_histo_2D(rdf_histos, rdf_nom.Filter(test_trigger), sample_name, era, test_trigger)
+                self.book_histo_2D(rdf_histos, rdf_highpt.Filter(test_trigger), sample_name, era,
+                                   f"{test_trigger}_HighPt")
+                self.book_histo_2D(rdf_histos, rdf_vhighpt.Filter(test_trigger), sample_name, era,
+                                   f"{test_trigger}_VHighPt")
 
             test_trigger = "HLT_DoubleMu2_Jpsi_LowPt"
-            self.book_histo_2D(rdf_histos, rdf_lowpt.Filter(test_trigger), sample_name, era, f"lowpt_{test_trigger}")
+            self.book_histo_2D(rdf_histos, rdf_lowpt.Filter(test_trigger), sample_name, era,
+                               f"lowpt_{test_trigger}")
 
             # L1
-            rdf_nom_l1_unprescaled = rdf_nom.Filter(l1_selection_unprescaled)
-            name = "HLT_DoubleMu4_3_LowMass_L1_DoubleMu_Mix_Unprescaled"
+            rdf_nom_l1_unprescaled = rdf_nom.Filter(l1_unprescaled_HLT_DoubleMu4_3_LowMass)
+            name = "HLT_DoubleMu4_3_LowMass_l1_unprescaled"
             self.book_histo_2D(rdf_histos, rdf_nom_l1_unprescaled.Filter("HLT_DoubleMu4_3_LowMass"),
                                sample_name, era, name)
-
+            rdf_nom_l1_unprescaled_and_unrestrictive = \
+                rdf_nom.Filter(l1_unprescaled_and_unrestrictive_HLT_DoubleMu4_3_LowMass)
+            name = "HLT_DoubleMu4_3_LowMass_l1_unprescaled_and_unrestrictive"
+            self.book_histo_2D(rdf_histos,
+                               rdf_nom_l1_unprescaled_and_unrestrictive.Filter("HLT_DoubleMu4_3_LowMass"),
+                               sample_name, era, name)
+            
             rdf_nom_l1_real_mix = rdf_nom.Filter(l1_selection_real_mix)
             name = "HLT_DoubleMu4_3_LowMass_L1_DoubleMu_Real_Mix"
             self.book_histo_2D(rdf_histos, rdf_nom_l1_real_mix.Filter("HLT_DoubleMu4_3_LowMass"),
@@ -980,8 +1077,10 @@ def weighted_efficiency(h_num, h_den, h_target):
     
     # Basic checks
     assert isinstance(h_num, ROOT.TH2) and isinstance(h_den, ROOT.TH2) and isinstance(h_target, ROOT.TH2)
-    assert h_num.GetNbinsX()==h_den.GetNbinsX()==h_target.GetNbinsX()
-    assert h_num.GetNbinsY()==h_den.GetNbinsY()==h_target.GetNbinsY()
+    if not h_num.GetNbinsX()==h_den.GetNbinsX()==h_target.GetNbinsX():
+        raise Exception(f"Wrong binning:\n\tnum NbinsX:{h_num.GetNbinsX()}\n\tden NbinsX:{h_den.GetNbinsX()}\n\ttarget NbinsX:{h_target.GetNbinsX()}")
+    if not h_num.GetNbinsY()==h_den.GetNbinsY()==h_target.GetNbinsY():
+        raise Exception(f"Wrong binning:\n\tnum NbinsY:{h_num.GetNbinsY()}\n\tden NbinsY:{h_den.GetNbinsY()}\n\ttarget NbinsY:{h_target.GetNbinsY()}")
     nx, ny = h_den.GetNbinsX(), h_den.GetNbinsY()
 
     # Use only bins with den>0 and target>0, then renormalize target over those bins
@@ -1131,6 +1230,8 @@ def compute_efficiency(histos, pd, era, h_name_num, h_name_denom, prefix):
     n_num = get_integral(h_num)
     n_den = get_integral(h_den)
     eff   = n_num / n_den
+    if eff > 1:
+        raise Exception(f"ERROR: efficiency is larger than 1. {h_name_num} {h_name_denom} {prefix}")
     eff_err = math.sqrt(eff * (1 - eff)/n_den)
     print(f"{prefix} efficiency using {pd} {era}: {eff:0.4f} +/- {eff_err:0.4f}")
 
@@ -1156,7 +1257,9 @@ def aggregate_two_sets_of_histograms(histos, pd, era_pattern, h_name_num, h_name
     h_den = aggregate_histograms(histos, pd, era_pattern, h_name_denom, "h_den")
     return (h_num, h_den)
         
-def compute_reweighted_efficiency(histos, pd, era_pattern, h_name_num, h_name_denom, h_target, plot=False):
+def compute_reweighted_efficiency(histos, pd, era_pattern,
+                                  h_name_num, h_name_denom, h_target,
+                                  plot=False):
 
     h_num, h_den = aggregate_two_sets_of_histograms(histos, pd, era_pattern, h_name_num, h_name_denom)
     if h_num:
@@ -1444,10 +1547,10 @@ if __name__ == "__main__":
     ## Method validation
     ##############################################################
 
-    if perform_method_validation:
+    if perform_reweighting_validation:
         print("\nMethod validation")
-        # campaign = 'RunIII2024Summer24'
-        campaign = 'Run3Summer22'
+        campaign = 'RunIII2024Summer24'
+        # campaign = 'Run3Summer22'
         h_target = processor.histos['BsToJpsiPhi'][campaign]['B_All']
         h_target3D = processor.histos['BsToJpsiPhi'][campaign]['B_All3D']
 
@@ -1460,8 +1563,8 @@ if __name__ == "__main__":
         
         print("Reweighted efficiency using BsToJpsiPhi Run3Summer22 as target:")
         print("2D")
-        compute_reweighted_efficiency(processor.histos, "BuToJpsiK", "Run3Summer22", "HLT_DoubleMu4_3_LowMass", "All", h_target)
-        compute_reweighted_efficiency(processor.histos, "BsToJpsiPhi", "Run3Summer22", "HLT_DoubleMu4_3_LowMass", "All", h_target)
+        compute_reweighted_efficiency(processor.histos, "BuToJpsiK", campaign, "HLT_DoubleMu4_3_LowMass", "All", h_target)
+        compute_reweighted_efficiency(processor.histos, "BsToJpsiPhi", campaign, "HLT_DoubleMu4_3_LowMass", "All", h_target)
                 
         print("3D")
         h_target = processor.histos['BsToJpsiPhi'][campaign]['B_All3D']
@@ -1478,6 +1581,8 @@ if __name__ == "__main__":
         h_target = processor.histos['BsToJpsiPhi'][campaign]['B_All5D']
         compute_reweighted_efficiency(processor.histos, "BuToJpsiK", campaign, "HLT_DoubleMu4_3_LowMass_5D", "All5D", h_target)
 
+
+    if perform_sample_dependence_validation:
         print("Data validation")
         h_target = processor.histos['BsToJpsiPhi']['Run3Summer22']['B_All']
         # pds = ['ZeroBias', 'ZeroBiasExclusive', 'EGamma', 'EGammaExclusive', 'ParkingDoubleElectronLowMass']
@@ -1512,32 +1617,80 @@ if __name__ == "__main__":
 
 
     if compute_run_average_efficiencies:
-        print("\nAverage efficiency of HLT_DoubleMu4_3_LowMass for nominal BsToJpsiPhi selection")
-        for campaign in ['Run3Summer22', 'Run3Summer23', 'RunIII2024Summer24']:
-            if campaign not in processor.histos['BsToJpsiPhi']:
-                continue
-            compute_efficiency(processor.histos, "BsToJpsiPhi", campaign,
-                               "B_HLT_DoubleMu4_3_LowMass", "B_All", "BsToJpsiPhi")
-        
-        pd = 'EGamma'
-        for run,campaign in [("Run2022", 'Run3Summer22'),
-                             ("Run2023", 'Run3Summer23'),
-                             ("Run2024", 'RunIII2024Summer24'),
-                             ("Run2025", 'RunIII2024Summer24')]:
-            if campaign not in processor.histos['BsToJpsiPhi']:
-                continue
-            h_target = processor.histos['BsToJpsiPhi'][campaign]['B_All']
-            compute_reweighted_efficiency(processor.histos, pd, run,
-                                          "HLT_DoubleMu4_3_LowMass", "All", h_target)
+        ref_triggers = ["HLT_DoubleMu4_3_LowMass"]
+        if detailed_report:
+            ref_triggers.append("HLT_Mu0_L1DoubleMu")
+            
+        for ref_trigger in ref_triggers:
+            print(f"\nAverage efficiency of {ref_trigger} for nominal BsToJpsiPhi selection")
+            print("Monte Carlo trigger efficiency")
+            for campaign in ['Run3Summer22', 'Run3Summer23', 'RunIII2024Summer24']:
+                if campaign not in processor.histos['BsToJpsiPhi']:
+                    continue
+                compute_efficiency(processor.histos, "BsToJpsiPhi", campaign,
+                                   f"B_{ref_trigger}", "B_All", "\tNominal")
+                if detailed_report and ref_trigger == "HLT_DoubleMu4_3_LowMass":
+                    compute_efficiency(processor.histos, "BsToJpsiPhi", campaign,
+                                       "B_HLT_DoubleMu4_3_LowMass_l1_unprescaled",
+                                       "B_All", "\tHLT + L1 unprescaled")
+                    compute_efficiency(processor.histos, "BsToJpsiPhi", campaign,
+                                       "B_HLT_DoubleMu4_3_LowMass_l1_unprescaled_and_unrestrictive",
+                                       "B_All", "\tHLT + L1 unprescaled and unrestrictive")
+                    compute_efficiency(processor.histos, "BsToJpsiPhi", campaign,
+                                       "B_HLT_DoubleMu4_3_LowMass_HighPt", "B_AllHighPt", "\tMu pT > 4 GeV")
+                    compute_efficiency(processor.histos, "BsToJpsiPhi", campaign,
+                                       "B_HLT_DoubleMu4_3_LowMass_VHighPt", "B_AllVHighPt", "\tMu pT > 5 GeV")
+
+            print("Data trigger efficiency estimated by reweighting the Jpsi trigger efficiency")
+            pd = 'EGamma'
+            for run,campaign in [("Run2022", 'Run3Summer22'),
+                                 ("Run2023", 'Run3Summer23'),
+                                 ("Run2024", 'RunIII2024Summer24'),
+                                 ("Run2025", 'RunIII2024Summer24')]:
+                if campaign not in processor.histos['BsToJpsiPhi']:
+                    continue
+                h_target = processor.histos['BsToJpsiPhi'][campaign]['B_All']
+                if detailed_report:
+                    print(ref_trigger)
+                compute_reweighted_efficiency(processor.histos, pd, run,
+                                              ref_trigger, "All", h_target)
+                if detailed_report and ref_trigger == "HLT_DoubleMu4_3_LowMass":
+                    print("HLT_DoubleMu4_3_LowMass_l1_unprescaled")
+                    compute_reweighted_efficiency(processor.histos, pd, run,
+                                                  "HLT_DoubleMu4_3_LowMass_l1_unprescaled",
+                                                  "All", h_target)
+                    print("HLT_DoubleMu4_3_LowMass_l1_unprescaled_and_unrestrictive")
+                    compute_reweighted_efficiency(processor.histos, pd, run,
+                                                  "HLT_DoubleMu4_3_LowMass_l1_unprescaled_and_unrestrictive",
+                                                  "All", h_target)
+
+                    h_target = processor.histos['BsToJpsiPhi'][campaign]['B_AllHighPt']
+                    print("HLT_DoubleMu4_3_LowMass (mu pt > 4)")
+                    compute_reweighted_efficiency(processor.histos, pd, run,
+                                                  "HLT_DoubleMu4_3_LowMass_HighPt", "AllHighPt", h_target)
+                    h_target = processor.histos['BsToJpsiPhi'][campaign]['B_AllVHighPt']
+                    print("HLT_DoubleMu4_3_LowMass (mu pt > 5)")
+                    compute_reweighted_efficiency(processor.histos, pd, run,
+                                                  "HLT_DoubleMu4_3_LowMass_HighPt", "AllHighPt", h_target)
 
         # Low Pt
         print("\nAverage efficiency of HLT_DoubleMu2_Jpsi_LowPt for low pt BsToJpsiPhi selection")
         pd = 'EGammaLowPt'
-        h_target = processor.histos['BsToJpsiPhi']['RunIII2024Summer24']['B_AllLowPt']
         compute_efficiency(processor.histos, "BsToJpsiPhi", "RunIII2024Summer24",
-                           "B_HLT_DoubleMu2_Jpsi_LowPt", "B_AllLowPt", "BsToJpsiPhi")
-        compute_reweighted_efficiency(processor.histos, pd, "Run2024",
-                                      "HLT_DoubleMu2_Jpsi_LowPt_AllLowPt", "AllLowPt", h_target)
+                           "B_HLT_DoubleMu2_Jpsi_LowPt", "B_AllLowPt", "\tReference low pt selection")
+        compute_efficiency(processor.histos, "BsToJpsiPhi", "RunIII2024Summer24",
+                           "B_HLT_DoubleMu2_Jpsi_LowPt_l1_unprescaled", "B_AllLowPt", "\tHLT + L1 unprescaled")
+        for run,campaign in [("Run2024", 'RunIII2024Summer24'),
+                             ("Run2025", 'RunIII2024Summer24')]:
+            if campaign not in processor.histos['BsToJpsiPhi']:
+                continue
+            h_target = processor.histos['BsToJpsiPhi'][campaign]['B_AllLowPt']
+            print("HLT_DoubleMu2_Jpsi_LowPt")
+            compute_reweighted_efficiency(processor.histos, pd, run,
+                                          "HLT_DoubleMu2_Jpsi_LowPt_AllLowPt", "AllLowPt", h_target)
+            print("HLT_DoubleMu2_Jpsi_LowPt_l1_unprescaled")
+            compute_reweighted_efficiency(processor.histos, pd, run,
+                                          "HLT_DoubleMu2_Jpsi_LowPt_l1_unprescaled", "AllLowPt", h_target)
         
 
     ##############################################################
