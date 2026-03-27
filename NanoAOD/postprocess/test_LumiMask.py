@@ -58,8 +58,8 @@ else:
 
 # Test RDataFrame
 tree = ROOT.TChain("Events")
-tree.Add("/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/ParkingDoubleMuonLowMass0+Run2022C-PromptReco-v1+MINIAOD/7f06673d-d50c-4bdc-b37c-d75d0ca5565d.root")
-tree.Add("/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/HLTPhysics+Run2022C-PromptReco-v1+MINIAOD/8107f6dc-4bb0-4039-b864-9c014fa6aaa9.root")
+tree.Add("/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/532/ParkingDoubleMuonLowMass0+Run2022C-PromptReco-v1+MINIAOD/7f06673d-d50c-4bdc-b37c-d75d0ca5565d.root")
+tree.Add("/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/532/HLTPhysics+Run2022C-PromptReco-v1+MINIAOD/8107f6dc-4bb0-4039-b864-9c014fa6aaa9.root")
 
 ROOT.gInterpreter.Declare(f'''
 std::string lumi_mask_string;

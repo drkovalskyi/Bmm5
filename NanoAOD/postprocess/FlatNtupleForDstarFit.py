@@ -26,6 +26,15 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
             if parameter not in self.job_info:
                 raise Exception("Missing input '%s'" % parameter)
 
+        # set branches to be kept if pre-skimmed
+        if "pre-selection-keep" not in self.job_info:
+            self.job_info["pre-selection-keep"] = "^(" + \
+                "GenPart_.*|nGenPart|mm_.*|nmm|dstar_.*|ndstar|hh_.*|nhh|" + \
+                "Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + \
+                "HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|HLT_ZeroBias|" + \
+                "PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock" + \
+                ")$"
+
     def __select_candidates(self, candidates):
         """Select candidates to be stored"""
         
@@ -143,6 +152,18 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
         self.tree.addBranch('d0_sl3d',     'Float_t', 0, "D0 significance of flight length 3D")
         self.tree.addBranch('d0_d1_muid',  'Float_t', -1, "D0 daughter1 soft mva muon id")
         self.tree.addBranch('d0_d2_muid',  'Float_t', -1, "D0 daughter2 soft mva muon id")
+        self.tree.addBranch('d0_d1_simProdRho',  'Float_t', -1, "D0 mu1 production radius")
+        self.tree.addBranch('d0_d2_simProdRho',  'Float_t', -1, "D0 mu2 production radius")
+        self.tree.addBranch('d0_d1_simProdZ',    'Float_t', -1, "D0 mu1 production Z")
+        self.tree.addBranch('d0_d2_simProdZ',    'Float_t', -1, "D0 mu2 production Z")
+        self.tree.addBranch('d0_d1_simPdgId',       'Int_t', 0, "D0 mu1 sim id")
+        self.tree.addBranch('d0_d2_simPdgId',       'Int_t', 0, "D0 mu2 sim id")
+        self.tree.addBranch('d0_d1_simType',        'Int_t', 0, "D0 mu1 sim type")
+        self.tree.addBranch('d0_d2_simType',        'Int_t', 0, "D0 mu2 sim type")
+        self.tree.addBranch('d0_d1_simExtType',     'Int_t', 0, "D0 mu1 sim extended type. https://github.com/cms-sw/cmssw/blob/master/DataFormats/MuonReco/interface/MuonSimInfo.h")
+        self.tree.addBranch('d0_d2_simExtType',     'Int_t', 0, "D0 mu2 sim extended type. https://github.com/cms-sw/cmssw/blob/master/DataFormats/MuonReco/interface/MuonSimInfo.h")
+        self.tree.addBranch('d0_d1_simMotherPdgId', 'Int_t', 0, "D0 mu1 sim mother id")
+        self.tree.addBranch('d0_d2_simMotherPdgId', 'Int_t', 0, "D0 mu2 sim mother id")
         
         for trigger in self.triggers_to_store:
             self.tree.addBranch(trigger, 'Int_t', -1, "Trigger decision: 1 - fired, 0 - didn't fire, -1 - no information")
@@ -168,8 +189,8 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
             self.tree['mc_parent'] = self.event.dstar_gen_mpdgId[cand]
             self.tree['mc_dstar_ancestor'] = self.event.dstar_gen_cpdgId[cand]
 
-        self.tree['certified_muon']   = self._is_certified(self.event, "muon")
-        self.tree['certified_golden'] = self._is_certified(self.event, "golden")
+        self.tree['certified_muon']   = self._is_certified_event(self.event, "muon")
+        self.tree['certified_golden'] = self._is_certified_event(self.event, "golden")
         self.tree['n']   = ncands
 
         if self.job_info['final_state'] in ['dzpipi', 'dzkpi']:
@@ -240,6 +261,7 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                 self.tree['chan'] = 2
                 mm_index = self.event.dstar_mm_index[cand]
 
+                # MC information
                 if hasattr(self.event, 'Pileup_nTrueInt'):
                     self.tree['mc_signature'] *= self.event.mm_gen_mu1_pdgId[mm_index]
                     self.tree['mc_signature'] *= self.event.mm_gen_mu2_pdgId[mm_index]
@@ -250,6 +272,18 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                                 self.tree['mc_d0_signature'] *= self.event.GenPart_pdgId[igen]
                     else:
                         self.tree['mc_d0_signature'] = 0
+                    self.tree['d0_d1_simProdRho'] = self.event.MuonId_simProdRho[self.event.mm_mu1_index[mm_index]]
+                    self.tree['d0_d2_simProdRho'] = self.event.MuonId_simProdRho[self.event.mm_mu2_index[mm_index]]
+                    self.tree['d0_d1_simProdZ'] = self.event.MuonId_simProdZ[self.event.mm_mu1_index[mm_index]]
+                    self.tree['d0_d2_simProdZ'] = self.event.MuonId_simProdZ[self.event.mm_mu2_index[mm_index]]
+                    self.tree['d0_d1_simPdgId'] = self.event.MuonId_simPdgId[self.event.mm_mu1_index[mm_index]]
+                    self.tree['d0_d2_simPdgId'] = self.event.MuonId_simPdgId[self.event.mm_mu2_index[mm_index]]
+                    self.tree['d0_d1_simType']  = self.event.MuonId_simType[self.event.mm_mu1_index[mm_index]]
+                    self.tree['d0_d2_simType']  = self.event.MuonId_simType[self.event.mm_mu2_index[mm_index]]
+                    self.tree['d0_d1_simExtType']  = self.event.MuonId_simExtType[self.event.mm_mu1_index[mm_index]]
+                    self.tree['d0_d2_simExtType']  = self.event.MuonId_simExtType[self.event.mm_mu2_index[mm_index]]
+                    self.tree['d0_d1_simMotherPdgId'] = self.event.MuonId_simMotherPdgId[self.event.mm_mu1_index[mm_index]]
+                    self.tree['d0_d2_simMotherPdgId'] = self.event.MuonId_simMotherPdgId[self.event.mm_mu2_index[mm_index]]
 
                 self.tree['dm'] = self.event.dstar_dm_pv[cand]
 
@@ -282,7 +316,6 @@ class FlatNtupleForDstarFit(FlatNtupleBase):
                 self.tree['d0_pvip']        = self.event.mm_kin_pvip[mm_index]
                 self.tree['d0_d1_muid']     = self.event.Muon_softMva[self.event.mm_mu1_index[mm_index]]
                 self.tree['d0_d2_muid']     = self.event.Muon_softMva[self.event.mm_mu2_index[mm_index]]
-
                 self.tree['d0_alpha']       = self.event.mm_kin_alpha[mm_index]
                 self.tree['d0_alphaBS']     = self.event.mm_kin_alphaBS[mm_index]
                 self.tree['d0_sl3d']        = self.event.mm_kin_sl3d[mm_index]
@@ -373,30 +406,31 @@ if __name__ == "__main__":
     #     "best_candidate": "",
     #   }
 
-    input_path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/529/dzkpimm/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/"
+    # input_path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/529/dzkpimm/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/"
     job = {
         "input": [
-            input_path + "016efedcfb512dc565f3c12ed733bd36.root",
-            input_path + "5b902bfcd14e27228d9e3ef0e62f77ac.root",
-            input_path + "198b4ac8be5b86428a0060af0b2c9fb0.root",
-            input_path + "4adaa92b58ed22c509c0d78d43863a6f.root",
-            input_path + "8b66894bb677aa556e83ea30f305eaa9.root",
-            input_path + "b24b04b46c6efebc23a82c9feea852fa.root",
-            input_path + "6d90f1337f551d51cb070f63ecd76a0c.root",
-            input_path + "47bd4fb54daef9c5e281e98e5007081a.root",
-            input_path + "43db4b25b39dc2698ea307269c3cfcd8.root",
-            input_path + "2d09fe05fc08d23696fa471d54157ff3.root",
-            input_path + "5694d5997d63bd72f8cbce8803c85235.root",
-            input_path + "71f1534316bfd0635d4344417cea5953.root",
-            input_path + "06b35e7ff81bf7944b55bfa132a413ed.root",
-            input_path + "b1776360b268e61474b929878641293e.root",
-            input_path + "1bbc2b0ff8ecdeb2a9dd519bb95c3cba.root",
-            input_path + "6699e4a7763ee81656d85c4f812b789d.root",
-            input_path + "25aedb32644787efc5c23d6fb757e0bc.root",
-            input_path + "4bb41e7ec4baa739c16f407fa6406b02.root",
-            input_path + "0faa06bc41097fc29457284027af3c99.root",
-            input_path + "41c4a6f9b52125bdf0668d40734b36ee.root",
+            # input_path + "016efedcfb512dc565f3c12ed733bd36.root",
+            # input_path + "5b902bfcd14e27228d9e3ef0e62f77ac.root",
+            # input_path + "198b4ac8be5b86428a0060af0b2c9fb0.root",
+            # input_path + "4adaa92b58ed22c509c0d78d43863a6f.root",
+            # input_path + "8b66894bb677aa556e83ea30f305eaa9.root",
+            # input_path + "b24b04b46c6efebc23a82c9feea852fa.root",
+            # input_path + "6d90f1337f551d51cb070f63ecd76a0c.root",
+            # input_path + "47bd4fb54daef9c5e281e98e5007081a.root",
+            # input_path + "43db4b25b39dc2698ea307269c3cfcd8.root",
+            # input_path + "2d09fe05fc08d23696fa471d54157ff3.root",
+            # input_path + "5694d5997d63bd72f8cbce8803c85235.root",
+            # input_path + "71f1534316bfd0635d4344417cea5953.root",
+            # input_path + "06b35e7ff81bf7944b55bfa132a413ed.root",
+            # input_path + "b1776360b268e61474b929878641293e.root",
+            # input_path + "1bbc2b0ff8ecdeb2a9dd519bb95c3cba.root",
+            # input_path + "6699e4a7763ee81656d85c4f812b789d.root",
+            # input_path + "25aedb32644787efc5c23d6fb757e0bc.root",
+            # input_path + "4bb41e7ec4baa739c16f407fa6406b02.root",
+            # input_path + "0faa06bc41097fc29457284027af3c99.root",
+            # input_path + "41c4a6f9b52125bdf0668d40734b36ee.root",
             # '/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv3-Pilot_124X_mcRun3_2022_realistic_v12-v5+MINIAODSIM/6516d29c-8ef7-4142-a9ff-da9ba5b3f787.root',
+            '/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/529/DstarToD0Pi_D0ToPiMuNu_DstarFilter_D0Filter_TuneCP5_13p6TeV_pythia8-evtgen+Run3Summer22EEMiniAODv4-130X_mcRun3_2022_realistic_postEE_v6-v1+MINIAODSIM/01a15dba-ff7f-4449-ab5f-e457f440a62e.root'
         ],
         "signal_only" : False,
         "tree_name" : "dzmmMC",

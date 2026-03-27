@@ -12,7 +12,7 @@ def eos_remove(file):
 
 class JobDispatcher(object):
     """Job scheduling"""
-    def __init__(self, lifetime=36000):
+    def __init__(self, lifetime=86400):
         """Initialization"""
         self.lock = None
         self.end_time = time.time() + lifetime
@@ -55,7 +55,9 @@ class JobDispatcher(object):
     def show_resource_availability(self):
         """Current statust of resources"""
         for resource in self.resources():
-            print("%s - free slots: %u" % (resource.name(), resource.number_of_free_slots()))
+            print("%s - free slots: %u, free memory: %0.1f GB" % (resource.name(),
+                                                                  resource.number_of_free_slots(),
+                                                                  resource.get_free_memory()/1000.))
 
     def update_running_jobs(self):
         """Collection information about running jobs from resource handlers"""
@@ -114,7 +116,7 @@ class JobDispatcher(object):
             if status not in self.jobs_by_status:
                 self.jobs_by_status[status] = []
             self.jobs_by_status[status].append(job)
-
+        print(time.ctime())
         for status in self.jobs_by_status:
             print("\t%s: %u" % (status, len(self.jobs_by_status[status])))
 
@@ -144,7 +146,8 @@ class JobDispatcher(object):
                 for job in finished_jobs:
                     print("\t%s finished" % job)
                 n_slots = resource.number_of_free_slots()
-                print("%s has %u free slots" % (resource.name(), n_slots))
+                free_ram = resource.get_free_memory()
+                print("%s has %u free slots and %0.1f GB free memory" % (resource.name(), n_slots, free_ram/1000.))
                 for i in range(n_slots):
                     if len(self.jobs_by_status['New']) > 0:
                         job_to_submit = self.jobs_by_status['New'].pop()
@@ -174,7 +177,7 @@ class JobDispatcher(object):
             with open(report_name, "w") as f:
                 f.write("Detail informtion about failed jobs\n")
                 for job in self.jobs_by_status['Failed']:
-                    f.write("job: " + job + "\n")
+                    f.write("\njob: " + job + "\n")
 
                     job_info = self._job_info(job)
 
@@ -373,12 +376,14 @@ class JobDispatcher(object):
                             
 if __name__ == "__main__":
     jd = JobDispatcher()
+    
     # jd.kill_all_jobs()
+    # jd.clean_up()
     jd.show_resource_availability()
     # jd.update_status_of_jobs()
     # jd.job_report()
     
-    # jd.reset_failures()
+    jd.reset_failures()
     jd.process_jobs()
     jd.show_failures()
     # jd.reset_failures()

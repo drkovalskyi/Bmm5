@@ -52,8 +52,13 @@ class JobCreator(object):
         """Find all files and splits them in datasets"""
         # # look for files that were not modified at least for 30 mins to avoid interferences with transfers
         # command = 'find -L %s/%s -mmin +30 -type f -name "*root"' % (cfg.input_location, cfg.version)
-        # command = 'find -L %s -type f -name "*root"' % (cfg.input_location)
-        command = "eos find -f -name 'root$' %s" % (cfg.input_location)
+
+        ## Slow
+        command = 'find -L %s -type f -name "*root"' % (cfg.input_location)
+
+        ## EOS find doesn't support symbolic links
+        # command = "eos find -f -name 'root$' %s" % (cfg.input_location)
+        
         all_inputs = subprocess.check_output(command, shell=True, encoding='utf8').splitlines()
         all_inputs.sort()
         print("Total number of input file: %u" % len(all_inputs))
@@ -72,7 +77,7 @@ class JobCreator(object):
         """Generate unique file name based on the hash of input file names"""
         return hashlib.md5((",".join(input_files)).encode("utf-8")).hexdigest()
 
-    def create_new_jobs(self, allow_small_jobs=False):
+    def create_new_jobs(self, allow_small_jobs=False, dataset_pattern=None):
         """Find new files and create jobs"""
 
         report = dict()
@@ -85,6 +90,8 @@ class JobCreator(object):
 
             for dataset, ds_inputs in list(self.all_inputs_by_datasets.items()):
                 # print(dataset)
+                if dataset_pattern != None:
+                    if not re.search(dataset_pattern, dataset): continue
                 if not re.search(task['input_pattern'], dataset): continue
                 # find new inputs
                 new_inputs = []
@@ -145,4 +152,5 @@ if __name__ == "__main__":
     jc.find_all_inputs()
     jc.load_existing_jobs()
     # jc.create_new_jobs(allow_small_jobs=False)
-    jc.create_new_jobs(allow_small_jobs=True)
+    jc.create_new_jobs(allow_small_jobs=True, dataset_pattern="ParkingDoubleMuonLowMass.*Run20(23C|24C|24G|25G)")
+    # jc.create_new_jobs(allow_small_jobs=True)

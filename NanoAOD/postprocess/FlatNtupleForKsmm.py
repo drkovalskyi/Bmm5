@@ -1,3 +1,5 @@
+import xgboost as xgb
+
 from PostProcessingBase import FlatNtupleBase
 
 import os, re, sys, time, subprocess, math, json
@@ -5,6 +7,15 @@ import multiprocessing
 from datetime import datetime
 import hashlib
 import numpy as np
+import ROOT
+
+LorentzVector = ROOT.ROOT.Math.LorentzVector('ROOT::Math::PtEtaPhiM4D<double>')
+
+def load_model(model_path):
+    model = xgb.Booster()
+    model.load_model(model_path)
+    print(f"Model loaded from {model_path}")
+    return model
 
 def compute_dip_angle(x, y, z):
     pt = np.sqrt(x**2 + y**2)
@@ -140,7 +151,7 @@ class FlatNtupleForKsmm(FlatNtupleBase):
             self.job_info["pre-selection-keep"] = "^(" + \
                 "GenPart_.*|nGenPart|mm_.*|nmm|hh_.*|nhh|trk_.*|ntrk|iso_.*|niso|" + \
                 "Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" + \
-                "HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|HLT_ZeroBias|" + \
+                "HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_DoubleMu4_3_LowMass_SS|HLT_Mu0_L1DoubleMu|HLT_ZeroBias|" + \
                 "PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock" + \
                 ")$"
 
@@ -162,6 +173,17 @@ class FlatNtupleForKsmm(FlatNtupleBase):
         return [best_candidate]
 
 
+    def _compute_mm_mass_from_hh(self, cand):
+        muon1_p4 = LorentzVector(self.event.hh_had1_pt[cand],
+                                 self.event.hh_had1_eta[cand],
+                                 self.event.hh_had1_phi[cand], 0.10565837)
+        muon2_p4 = LorentzVector(self.event.hh_had2_pt[cand],
+                                 self.event.hh_had2_eta[cand],
+                                 self.event.hh_had2_phi[cand], 0.10565837)
+        mm_mass  = (muon1_p4 + muon2_p4).mass()
+
+        return mm_mass
+    
     def _process_events(self):
         """Event loop"""
 
@@ -256,6 +278,8 @@ class FlatNtupleForKsmm(FlatNtupleBase):
             for var in self.mm_extra_ints:
                 self.tree.addBranch(var, "Int_t", 0)
 
+        if self.job_info['final_state'] == "hh":
+            self.tree.addBranch('m_mm',          'Float_t', 0, "mass of the Ks to pipi candidate reconstructed like mumu")
 
         # Vertex quality block
         self.tree.addBranch('vtx_qual_prob',             'Float_t', 0, "dimuon vertex probability")
@@ -412,6 +436,8 @@ class FlatNtupleForKsmm(FlatNtupleBase):
                 self.tree['d2pt']  = self.event.hh_had2_pt[cand]
                 self.tree['d2eta'] = self.event.hh_had2_eta[cand]
                 self.tree['d2phi'] = self.event.hh_had2_phi[cand]
+
+                self.tree['m_mm'] = self._compute_mm_mass_from_hh(cand)
             
                 self.tree['d1q']   = self.event.hh_had1_pdgId[cand] > 0
                 self.tree['d2q']   = self.event.hh_had2_pdgId[cand] > 0
@@ -422,10 +448,16 @@ class FlatNtupleForKsmm(FlatNtupleBase):
                     self.tree['d2mc_mpdgId']  = self.event.hh_gen_had2_mpdgId[cand]
                 self.tree['d1muId'] = 0
                 self.tree['d2muId'] = 0
-                self.tree['vtx_qual_d1_nLostHitsInner'] = 0 # FIXME
-                self.tree['vtx_qual_d2_nLostHitsInner'] = 0 # FIXME
-                self.tree['vtx_qual_d1_pixel_pattern'] = 0  # FIXME
-                self.tree['vtx_qual_d2_pixel_pattern'] = 0  # FIXME
+                if hasattr(self.event, "hh_had1_nLostHitsInner"):
+                    self.tree['vtx_qual_d1_nLostHitsInner'] = self.event.hh_had1_nLostHitsInner[cand]
+                    self.tree['vtx_qual_d2_nLostHitsInner'] = self.event.hh_had2_nLostHitsInner[cand]
+                    self.tree['vtx_qual_d1_pixel_pattern'] = self.event.hh_had1_pixelPattern[cand]
+                    self.tree['vtx_qual_d2_pixel_pattern'] = self.event.hh_had1_pixelPattern[cand]
+                else:
+                    self.tree['vtx_qual_d1_nLostHitsInner'] = 0
+                    self.tree['vtx_qual_d2_nLostHitsInner'] = 0
+                    self.tree['vtx_qual_d1_pixel_pattern'] = 0
+                    self.tree['vtx_qual_d2_pixel_pattern'] = 0
                 
                 self.tree['muid']   = 0
 
@@ -560,10 +592,11 @@ if __name__ == "__main__":
 
     job = {
         "input": [
-            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/531/ZeroBias+Run2024C-PromptReco-v1+MINIAOD/e4d100e2-3a51-4097-a3d4-4ec637e57e76.root",
+            "root://eoscms.cern.ch://eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/532/ZeroBias+Run2024C-PromptReco-v1+MINIAOD/e4d100e2-3a51-4097-a3d4-4ec637e57e76.root",
+            # "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/532/K0sToPiPi_K0sFilter_TuneCP5_13p6TeV_pythia8-evtgen/KSpipi_nano.root"
         ],
         "signal_only" : False,
-        "tree_name" : "kspipiData",
+        "tree_name" : "kspipiMc",
         "blind" : False,
         "cut" :
            "hh_had1_pdgId * hh_had2_pdgId == -211*211 and hh_had1_pt>4 and "
@@ -574,6 +607,8 @@ if __name__ == "__main__":
         "triggers": ["HLT_ZeroBias"],
         "mm_extra_info": False,
         "pre-selection":"abs(hh_kin_mass-0.50)<0.15 && hh_kin_slxy>3 && hh_kin_alpha<0.1",
+        "bdt_model":"/afs/cern.ch/work/d/dmytro/projects/Run3-Bmm-NanoAODv14/src/MVA/ksmm/xgboost/v10/Model_10.json",
+        "bdt_map":""
       }
     
 
@@ -583,9 +618,10 @@ if __name__ == "__main__":
     # p = FlatNtupleForKsmm("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/FlatNtuples/531/ksmm/ParkingDoubleMuonLowMass6+Run2024F-PromptReco-v1+MINIAOD/7d7d0aeac7a4f0c892f453f1d71c72b9.job")
     # p = FlatNtupleForKsmm("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing-NEW/FlatNtuples/531/ksmm/ParkingDoubleMuonLowMass7+Run2022F-PromptReco-v1+MINIAOD/792208be3d8481d404f870f8f7058f2e.job")
     # p = FlatNtupleForKsmm("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/FlatNtuples/531/kspipi/ZeroBias+Run2024C-PromptReco-v1+MINIAOD/f95441959fea119e92b59b9258f646e4.job")
-    p = FlatNtupleForKsmm("/tmp/dmytro/7d7d0aeac7a4f0c892f453f1d71c72b9.job")
+    # p = FlatNtupleForKsmm("/tmp/dmytro/e7da4ac568221c3c5b14442fd2e90c2a.job")
+    # p = FlatNtupleForKsmm("/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing-NEW/FlatNtuples/531/kspipi/InclusiveDileptonMinBias_TuneCP5Plus_13p6TeV_pythia8+Run3Summer22MiniAODv4-validDigi_130X_mcRun3_2022_realistic_v5-v4+MINIAODSIM/e7da4ac568221c3c5b14442fd2e90c2a.job")
     
-    # p = FlatNtupleForKsmm(file_name)
+    p = FlatNtupleForKsmm(file_name)
 
     print(p.__dict__)
         

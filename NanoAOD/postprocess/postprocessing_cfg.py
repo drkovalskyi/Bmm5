@@ -3,13 +3,15 @@ from resources_cfg import resources
 
 workdir = "/afs/cern.ch/work/d/dmytro/projects/Run3-Bmm-NanoAODv12/src/Bmm5/NanoAOD/postprocess/"
 # version = 'crab-140x-mm'
-version = '529'
+version = '535'
 
 input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/" + str(version)
-# input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing/Skims/523/bkmm"
+# input_location = "/eos/cms/store/group/phys_bphys/bmm/bmm5/NanoAOD/" + str(version)
 
+
+# output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing"
 # output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing-NEW"
-output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing"
+output_location = "/eos/cms/store/group/phys_bphys/bmm/bmm6/PostProcessing-test"
 
 xrootd_prefix = "root://eoscms.cern.ch:/"
 web_report_path = "/afs/cern.ch/user/d/dmytro/www/public_html/bmm5/postprocessing/"
@@ -38,16 +40,18 @@ active_tasks = {
         # "ks", "phi", "dstar"
         # "ks", "phi"
         # "ksmm"
-        #"em", "dzpipi"
+        # "em", "dzpipi"
         # "dzmm"
         # "bkmm"
         # "dstar_mm"
-        # "trig"
+        # "trig",
         # "mm_mva0p9"
         # "tau3mu"
         # "mm_vtx"
         # "dzkpimm"
-        "mm"
+        # "mm",
+        # "kspipi_gen"
+        # "kspipi_ss"
     ],
 
     # Flat ntuples with task specific content
@@ -60,7 +64,12 @@ active_tasks = {
         # "trig-eff",
         # "trig-info"
         # "fit"
-        # "fit-bkmm", "fit-bkkmm"
+        "fit-bkkmm",
+        "fit-bkkmm2",
+        "fit-bkstarmm",
+        # # "fit-bkstarmm2",
+        "fit-bkmm",
+        "fit-bkmm2",
         # "muon_mva"
         # "fit-em"
         # "dstar", "dzpipi", "dzkpi"
@@ -69,7 +78,11 @@ active_tasks = {
         # "dstar",
         # "dzkpi"
         # "ksmm",
-        # "kspipi"
+        # "ksmm_sb",
+        # "ksmm_ss",
+        # "kspipi",
+        # "kspipi_ss"
+        # "jpsimm"
         # "bkkmm"
         # "bkmm"
     ]
@@ -96,28 +109,6 @@ cuts = {
     "Muon_mediumId[em_mu_index] and Electron_mvaNoIso_WPL[em_el_index] and "\
     "abs(em_kin_mass-5.4)<1.0 and "\
     "em_kin_vtx_prob>0.025",
-
-    "fit-bkmm" : (
-        "mm_mu1_index[bkmm_mm_index]>=0 and "
-        "mm_mu2_index[bkmm_mm_index]>=0 and "
-        "Muon_charge[mm_mu1_index[bkmm_mm_index]] * Muon_charge[mm_mu2_index[bkmm_mm_index]] < 0 and "
-        # "abs(Muon_eta[mm_mu1_index[bkmm_mm_index]])<1.4 and "
-        # "Muon_pt[mm_mu1_index[bkmm_mm_index]]>4 and "
-        # "abs(Muon_eta[mm_mu2_index[bkmm_mm_index]])<1.4 and "
-        # "Muon_pt[mm_mu2_index[bkmm_mm_index]]>4 and "
-        # "Muon_softMva[mm_mu1_index[bkmm_mm_index]] > 0.45 and "
-        # "Muon_softMva[mm_mu2_index[bkmm_mm_index]] > 0.45 and "
-        "Muon_isGlobal[mm_mu1_index[bkmm_mm_index]] and "
-        "Muon_isGlobal[mm_mu2_index[bkmm_mm_index]] and "
-        # "mm_kin_pt[bkmm_mm_index]>7.0 and "
-        # "mm_kin_alphaBS[bkmm_mm_index]<0.4 and "
-        "mm_kin_vtx_prob[bkmm_mm_index]>0.01 and "
-        "bkmm_jpsimc_vtx_prob>0.025 and "
-        "bkmm_jpsimc_sl3d>3 and "
-        "abs(bkmm_jpsimc_alpha) < 0.1 and "
-        # "mm_kin_sl3d[bkmm_mm_index]>4 and "
-        "abs(bkmm_jpsimc_mass-5.4)<0.5"
-    ),
 
     "bkmm_skim" : (
         "bkmm_jpsimc_vtx_prob>0.025 and bkmm_jpsimc_sl3d>3"
@@ -163,28 +154,50 @@ cuts = {
         "abs(bkkmm_jpsikk_mass-5.4)<0.5 and "
         "abs(bkkmm_kk_mass-1.02)<0.01"
     ),
-
-    "fit-bkkmm" : (
+    
+    "fit-bkmm-all" : (
+        "mm_mu1_index[bkmm_mm_index]>=0 and "
+        "mm_mu2_index[bkmm_mm_index]>=0 and "
+        "Muon_charge[mm_mu1_index[bkmm_mm_index]] * Muon_charge[mm_mu2_index[bkmm_mm_index]] < 0 and "
+        "Muon_mediumId[mm_mu1_index[bkmm_mm_index]] and "
+        "Muon_mediumId[mm_mu2_index[bkmm_mm_index]] and "
+        "Muon_isGlobal[mm_mu1_index[bkmm_mm_index]] and "
+        "Muon_isGlobal[mm_mu2_index[bkmm_mm_index]] and "
+        "mm_kin_vtx_prob[bkmm_mm_index]>0.01 and "
+        "bkmm_jpsimc_vtx_prob>0.025 and "
+# FIXME        "bkmm_jpsimc_sl3d>3 and "
+        "bkmm_kaon_pt>2.3 and "
+        "abs(bkmm_jpsimc_alpha) < 0.1 and "
+        "abs(bkmm_jpsimc_mass-5.4)<0.5"
+    ),
+    "fit-bkkmm-all" : (
         "mm_mu1_index[bkkmm_mm_index]>=0 and "
         "mm_mu2_index[bkkmm_mm_index]>=0 and "
         "Muon_charge[mm_mu1_index[bkkmm_mm_index]] * Muon_charge[mm_mu2_index[bkkmm_mm_index]] < 0 and "
-        # "abs(Muon_eta[mm_mu1_index[bkkmm_mm_index]])<1.4 and "
-        # "Muon_pt[mm_mu1_index[bkkmm_mm_index]]>4 and "
-        # "abs(Muon_eta[mm_mu2_index[bkkmm_mm_index]])<1.4 and "
-        # "Muon_pt[mm_mu2_index[bkkmm_mm_index]]>4 and "
-        # "Muon_softMva[mm_mu1_index[bkkmm_mm_index]] > 0.45 and "
-        # "Muon_softMva[mm_mu2_index[bkkmm_mm_index]] > 0.45 and "
+        "Muon_mediumId[mm_mu1_index[bkkmm_mm_index]] and "
+        "Muon_mediumId[mm_mu2_index[bkkmm_mm_index]] and "
         "Muon_isGlobal[mm_mu1_index[bkkmm_mm_index]] and "
         "Muon_isGlobal[mm_mu2_index[bkkmm_mm_index]] and "
-        # "mm_kin_alphaBS[bkkmm_mm_index]<0.4 and "
         "mm_kin_vtx_prob[bkkmm_mm_index]>0.01 and "
         "bkkmm_jpsikk_vtx_prob>0.025 and "
-        "bkkmm_jpsikk_sl3d>3 and "
+# FIXME        "bkkmm_jpsikk_sl3d>3 and "
         "abs(bkkmm_jpsikk_alpha) < 0.1 and "        
         "abs(bkkmm_jpsikk_mass-5.4)<0.5 and "
-        "abs(bkkmm_kk_mass-1.02)<0.03"
+        "abs(bkkmm_kk_mass-1.02)<0.01"
     ),
-
+    "fit-bkstarmm-all" : (
+        "mm_mu1_index[bkkmm_mm_index]>=0 and "
+        "mm_mu2_index[bkkmm_mm_index]>=0 and "
+        "Muon_charge[mm_mu1_index[bkkmm_mm_index]] * Muon_charge[mm_mu2_index[bkkmm_mm_index]] < 0 and "
+        "Muon_mediumId[mm_mu1_index[bkkmm_mm_index]] and "
+        "Muon_mediumId[mm_mu2_index[bkkmm_mm_index]] and "
+        "Muon_isGlobal[mm_mu1_index[bkkmm_mm_index]] and "
+        "Muon_isGlobal[mm_mu2_index[bkkmm_mm_index]] and "
+        "mm_kin_vtx_prob[bkkmm_mm_index]>0.01 and "
+        "bkkmm_jpsikk_vtx_prob>0.025 and "
+# FIXME        "bkkmm_jpsikk_sl3d>3 and "
+        "abs(bkkmm_jpsikk_alpha) < 0.1"        
+    ),
     "dstar_dzpipi" : (
         "dstar_hh_index>=0 and "
         "max(hh_had1_pt[dstar_hh_index], hh_had2_pt[dstar_hh_index])>4 and "
@@ -242,28 +255,31 @@ cuts = {
     #     "Muon_isGlobal[mm_mu2_index[dstar_mm_index]]"
     # ),
     
-    # selection for cut-based analysis
-    "ksmm": (
-        "mm_mu1_index>=0 and mm_mu2_index>=0 and "
-        "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] < 0 and "
-        "Muon_softMva[mm_mu1_index] > 0.45 and mm_mu1_pt>4 and "
-        "Muon_softMva[mm_mu2_index] > 0.45 and mm_mu2_pt>4 and "
-        # "abs(mm_kin_mass-0.45)<0.1 and "
-        "abs(mm_kin_mass-0.50)<0.15 and "
-        # "mm_kin_slxy>10 and mm_kin_lxy>1 and mm_kin_alpha<0.01 and "
-        "mm_kin_slxy>3 and mm_kin_alpha<0.1 and "
-        "HLT_DoubleMu4_3_LowMass"
-    ),
-    "kspipi": (
-        "hh_had1_pdgId * hh_had2_pdgId == -211*211 and "
-        "hh_had1_pt>4 and hh_had2_pt>4 and "
-        # "abs(hh_kin_mass-0.45) < 0.1 and "
-        "abs(hh_kin_mass-0.50)<0.15 and "
-        # "hh_kin_slxy>10 and hh_kin_lxy>1 and hh_kin_alpha<0.001 and "
-        "hh_kin_slxy>3 and hh_kin_alpha<0.1"
-        # "hh_kin_vtx_prob>0.01"
-    ),
 }
+
+cuts["fit-bkmm"] = cuts["fit-bkmm-all"] + " and " + \
+    "Muon_pt[mm_mu1_index[bkmm_mm_index]] > 4 and " + \
+    "Muon_pt[mm_mu2_index[bkmm_mm_index]] > 3"
+
+cuts["fit-bkmm2"] = cuts["fit-bkmm-all"] + " and " + \
+    "(Muon_pt[mm_mu1_index[bkmm_mm_index]] < 4 or " + \
+    "Muon_pt[mm_mu2_index[bkmm_mm_index]] < 3) "
+
+cuts["fit-bkkmm"] = cuts["fit-bkkmm-all"] + " and " + \
+    "Muon_pt[mm_mu1_index[bkkmm_mm_index]] > 4 and " + \
+    "Muon_pt[mm_mu2_index[bkkmm_mm_index]] > 3"
+
+cuts["fit-bkkmm2"] = cuts["fit-bkkmm-all"] + " and " + \
+    "(Muon_pt[mm_mu1_index[bkkmm_mm_index]] < 4 or " + \
+    "Muon_pt[mm_mu2_index[bkkmm_mm_index]] < 3)"
+
+cuts["fit-bkstarmm"] = cuts["fit-bkstarmm-all"] + " and " + \
+    "Muon_pt[mm_mu1_index[bkkmm_mm_index]] > 4 and " + \
+    "Muon_pt[mm_mu2_index[bkkmm_mm_index]] > 3"
+
+cuts["fit-bkstarmm2"] = cuts["fit-bkstarmm-all"] + " and " + \
+    "(Muon_pt[mm_mu1_index[bkkmm_mm_index]] < 4 or " + \
+    "Muon_pt[mm_mu2_index[bkkmm_mm_index]] < 3)"
 
 cuts["bkmm"] = (
     "mm_mu1_index[bkmm_mm_index]>=0 and mm_mu2_index[bkmm_mm_index]>=0 and "
@@ -273,6 +289,52 @@ cuts["bkmm"] = (
     "mm_kin_vtx_prob[bkmm_mm_index]>0.1 and " + cuts["bkmm_skim"]
 )    
 
+cuts["ksmm_no_trigger"] = (
+    "mm_mu1_index>=0 and mm_mu2_index>=0 and "
+    "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] < 0 and "
+    "Muon_mediumId[mm_mu1_index] and mm_mu1_pt>4 and "
+    "Muon_mediumId[mm_mu2_index] and mm_mu2_pt>3 and "
+    "abs(mm_kin_mass-0.50)<0.15 and mm_kin_lxy>1 and "
+    "mm_kin_slxy>3 and mm_kin_alpha<0.1 and mm_kin_vtx_prob>0.01"
+)
+cuts["ksmm"] = cuts["ksmm_no_trigger"] + " and HLT_DoubleMu4_3_LowMass"
+cuts["ksmm_ss_no_trigger"] = (
+    "mm_mu1_index>=0 and mm_mu2_index>=0 and "
+    "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] > 0 and "
+    "Muon_mediumId[mm_mu1_index] and mm_mu1_pt>4 and "
+    "Muon_mediumId[mm_mu2_index] and mm_mu2_pt>3 and "
+    "abs(mm_kin_mass-0.50)<0.15 and mm_kin_lxy>1 and "
+    "mm_kin_slxy>3 and mm_kin_alpha<0.1 and mm_kin_vtx_prob>0.01"
+)
+cuts["ksmm_ss"] = cuts["ksmm_ss_no_trigger"] + " and HLT_DoubleMu4_3_LowMass_SS"
+cuts["ksmm_sb_no_trigger"] = (
+    "mm_mu1_index>=0 and mm_mu2_index>=0 and "
+    "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] < 0 and "
+    "Muon_mediumId[mm_mu1_index] and mm_mu1_pt>4 and "
+    "Muon_mediumId[mm_mu2_index] and mm_mu2_pt>3 and "
+    "mm_kin_mass>0.6 and mm_kin_mass<1.0 and mm_kin_lxy>1 and "
+    "mm_kin_slxy>3 and mm_kin_alpha<0.1 and mm_kin_vtx_prob>0.01"
+)
+cuts["ksmm_sb"] = cuts["ksmm_sb_no_trigger"] + " and HLT_DoubleMu4_3_LowMass"
+cuts["kspipi"] = (
+    "hh_had1_pdgId * hh_had2_pdgId == -211*211 and "
+    "hh_had1_pt>4 and hh_had2_pt>3 and hh_kin_mass>0.3 and "
+    "hh_kin_mass<0.7 and hh_kin_lxy>1 and "
+    "hh_kin_slxy>3 and hh_kin_alpha<0.1 and hh_kin_vtx_prob>0.01"
+)
+cuts["kspipi_ss"] = (
+    "hh_had1_pdgId * hh_had2_pdgId == 211*211 and "
+    "hh_had1_pt>4 and hh_had2_pt>3 and hh_kin_mass>0.4 and "
+    "hh_kin_mass<0.7 and hh_kin_lxy>1 and "
+    "hh_kin_slxy>3 and hh_kin_alpha<0.1 and hh_kin_vtx_prob>0.01"
+)
+cuts["jpsimm"] = (
+    "mm_mu1_index>=0 and mm_mu2_index>=0 and "
+    "Muon_charge[mm_mu1_index] * Muon_charge[mm_mu2_index] < 0 and "
+    "Muon_mediumId[mm_mu1_index] and mm_mu1_pt>4 and "
+    "Muon_mediumId[mm_mu2_index] and mm_mu2_pt>3 and "
+    "abs(mm_kin_mass-3.1)<0.2 and mm_kin_vtx_prob>0.1"
+)
 
 common_branches = "PV_npvs|PV_npvsGood|Pileup_nTrueInt|Pileup_nPU|run|event|luminosityBlock"
 
@@ -493,17 +555,20 @@ tasks = [
     # },
     {
         "input_pattern":"ZeroBias|HLTPhysics|EGamma|ParkingDoubleElectronLowMass",
+        # "input_pattern":"EGamma.*(2024|2025)",
         "processor":"SimpleSkimmer",
         "cut":"mm_mass > 0",
         "name":"mm",
         "type":"Skims",
         "lumi_mask": "muon",
         "keep": "^(mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|" +
-        "HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" +
+        "HLT_Ele30_WPTight_Gsf|HLT_ZeroBias|" +
+        "HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|HLT_DoubleMu2_Jpsi_LowPt|" +
         "L1_DoubleMu3er2p0_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p6|" +
         "L1_DoubleMu0er1p4_OQ_OS_dEta_Max1p6|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|" +
         "L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|" +
         "L1_DoubleMu4p5_SQ_OS_dR_Max1p2|L1_DoubleMu4_SQ_OS_dR_Max1p2|" +
+        "L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2|" +
         common_branches + ")$",
         "files_per_job":100
     },
@@ -535,13 +600,40 @@ tasks = [
     #     "files_per_job":100
     # },
     {
-        "input_pattern":"InclusiveDileptonMinBias",
+        "input_pattern":"InclusiveDileptonMinBias|ZeroBias",
         "processor":"SimpleSkimmer",
-        "cut":"mm_kin_vtx_prob>0.01&&mm_kin_slxy>10&&mm_kin_lxy>1&&mm_kin_alpha<0.01&&mm_mu1_pdgId==-mm_mu2_pdgId&&abs(mm_kin_mass-0.5)<0.2",
+        "cut":"mm_mu1_pt>4 &&  mm_mu2_pt>3 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_lxy>1 && mm_kin_alpha<0.1 && mm_mu1_pdgId==-mm_mu2_pdgId && abs(mm_kin_mass-0.5)<0.15",
         "name":"ksmm",
         "type":"Skims",
         "keep": "^(GenPart_.*|nGenPart|mm_.*|nmm|trk_.*|ntrk|mmiso_.*|nmmiso|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + common_branches + ")$",
         "files_per_job":100
+    },
+    {
+        "input_pattern":"K0sToMuMu",
+        "processor":"SimpleSkimmer",
+        "cut":"mm_mu1_pt>4 &&  mm_mu2_pt>3 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_lxy>1 && mm_kin_alpha<0.1 && mm_mu1_pdgId==-mm_mu2_pdgId && abs(mm_kin_mass-0.5)<0.15",
+        "name":"ksmm",
+        "type":"Skims",
+        "keep": "^(GenPart_.*|nGenPart|mm_.*|nmm|trk_.*|ntrk|mmiso_.*|nmmiso|Muon_.*|nMuon|MuonId_.*|nMuonId|npvs|pvs_.*|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + common_branches + ")$",
+        "files_per_job":10
+    },
+    {
+        "input_pattern":"InclusiveDileptonMinBias",
+        "processor":"SimpleSkimmer",
+        "cut":"abs(hh_gen_pdgId)==310",
+        "name":"kspipi_gen",
+        "type":"Skims",
+        "keep": "^(GenPart_.*|nGenPart|hh_.*|nhh|npvs|pvs_.*|" + common_branches + ")$",
+        "files_per_job":100
+    },
+    {
+        "input_pattern":"InclusiveDileptonMinBias",
+        "processor":"SimpleSkimmer",
+        "cut":"hh_had1_pdgId*hh_had2_pdgId==211^2&&hh_kin_vtx_prob>0.01&&hh_kin_lxy>1",
+        "name":"kspipi_ss",
+        "type":"Skims",
+        "keep": "^(GenPart_.*|nGenPart|hh_.*|nhh|npvs|pvs_.*|" + common_branches + ")$",
+        "files_per_job":20
     },
     # {
     #     "input_pattern":"K0sToMuMu",
@@ -1016,7 +1108,7 @@ tasks = [
     
     ################ fit-bkmm ################
     {
-        "input_pattern":"BuToJpsiK",
+        "input_pattern":"(BuToJpsiK|ButoJpsiK).*202",
         "processor":"FlatNtupleForMLFit",
         "name":"fit-bkmm",
         "type":"FlatNtuples",
@@ -1025,11 +1117,54 @@ tasks = [
         "blind" : False,
         "cut" : cuts["fit-bkmm"],
         # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
         "final_state" : "bkmm",
         "best_candidate": "",
     },
     {
-        "input_pattern":"BuToJpsiPi",
+        "input_pattern":"InclusiveDileptonMinBias",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkmm",
+        "type":"FlatNtuples",
+        "files_per_job":100,
+        "tree_name" : "inclusiveMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
+        "final_state" : "bkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"(BdToJpsiKstar|BdtoJpsiKstar).*202",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkmm",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bdpsikstarMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkmm"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
+        "final_state" : "bkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"(BuToJpsiK|ButoJpsiK).*RunIISummer20UL18",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkmm",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bupsikMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi"],
+        "triggers": ["HLT_DoubleMu4_JpsiTrk_Displaced"],
+        "final_state" : "bkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"BuToJpsiPi.*RunIISummer20UL18",
         "processor":"FlatNtupleForMLFit",
         "name":"fit-bkmm",
         "type":"FlatNtuples",
@@ -1038,11 +1173,41 @@ tasks = [
         "blind" : False,
         "cut" : cuts["fit-bkmm"],
         # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi"],
+        "triggers": ["HLT_DoubleMu4_JpsiTrk_Displaced"],
         "final_state" : "bkmm",
         "best_candidate": "",
     },
     {
-        "input_pattern":"Charmonium|ParkingDoubleMuonLowMass",
+        "input_pattern":"BuToJpsiPi.*202",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkmm",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bupsipiMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkmm"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
+        "final_state" : "bkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"ParkingDoubleMuonLowMass",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkmm",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bupsikData",
+        "blind" : False,
+        "cut" : cuts["fit-bkmm"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
+        "final_state" : "bkmm",
+        "best_candidate": "",
+        "pre-selection":"bkmm_jpsimc_sl3d>3",
+        "pre-selection-keep":"^(bkmm_.*|nbkmm|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|HLT_DoubleMu2_Jpsi_LowPt|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2|L1_DoubleMu4p5_SQ_OS_dR_Max1p2|" + common_branches + ")$",
+    },
+    {
+        "input_pattern":"Charmonium.*Run2018",
         "processor":"FlatNtupleForMLFit",
         "name":"fit-bkmm",
         "type":"FlatNtuples",
@@ -1051,10 +1216,79 @@ tasks = [
         "blind" : False,
         "cut" : cuts["fit-bkmm"],
         # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi"],
+        "triggers": ["HLT_DoubleMu4_JpsiTrk_Displaced"],
         "final_state" : "bkmm",
         "best_candidate": "",
         "pre-selection":"bkmm_jpsimc_sl3d>3",
-        "pre-selection-keep":"^(bkmm_.*|nbkmm|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|HLT_DoubleMu2_Jpsi_LowPt|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2|" + common_branches + ")$",
+        "pre-selection-keep":"^(bkmm_.*|nbkmm|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_JpsiTrk_Displaced|HLT_DoubleMu4_3_Jpsi|HLT_DoubleMu4_3_LowMass|HLT_DoubleMu2_Jpsi_LowPt|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2|" + common_branches + ")$",
+    },
+    {
+        "input_pattern":"(BuToJpsiK|ButoJpsiK).*2024",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkmm2",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bupsikMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkmm2"],
+        "triggers": ["HLT_DoubleMu2_Jpsi_LowPt"],
+        "final_state" : "bkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"InclusiveDileptonMinBias_TuneCP5Plus",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkmm2",
+        "type":"FlatNtuples",
+        "files_per_job":100,
+        "tree_name" : "inclusiveMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkmm2"],
+        "triggers": ["HLT_DoubleMu2_Jpsi_LowPt"],
+        "final_state" : "bkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"BuToJpsiPi.*2024",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkmm2",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bupsipiMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkmm2"],
+        "triggers": ["HLT_DoubleMu2_Jpsi_LowPt"],
+        "final_state" : "bkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"(BdToJpsiKstar|BdtoJpsiKstar).*2024",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkmm2",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bdpsikstarMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkmm2"],
+        "triggers": ["HLT_DoubleMu2_Jpsi_LowPt"],
+        "final_state" : "bkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"ParkingDoubleMuonLowMass.\+Run202(4|5)",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkmm2",
+        "type":"FlatNtuples",
+        "files_per_job":50,
+        "tree_name" : "bupsikData",
+        "blind" : False,
+        "cut" : cuts["fit-bkmm2"],
+        "triggers": ["HLT_DoubleMu2_Jpsi_LowPt"],
+        "final_state" : "bkmm",
+        "best_candidate": "",
+        "pre-selection":"bkmm_jpsimc_sl3d>3",
+        "pre-selection-keep":"^(bkmm_.*|nbkmm|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|HLT_DoubleMu2_Jpsi_LowPt|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2|L1_DoubleMu4p5_SQ_OS_dR_Max1p2|" + common_branches + ")$",
     },
     {
         "input_pattern":"ParkingDoubleMuonLowMass",
@@ -1072,7 +1306,7 @@ tasks = [
 
     ################ fit-bkkmm ################
     {
-        "input_pattern":"BsToJPsiPhi",
+        "input_pattern":"BsToJPsiPhi.*202",
         "processor":"FlatNtupleForMLFit",
         "name":"fit-bkkmm",
         "type":"FlatNtuples",
@@ -1081,11 +1315,12 @@ tasks = [
         "blind" : False,
         "cut" : cuts["fit-bkkmm"],
         # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
         "final_state" : "bkkmm",
         "best_candidate": "",
     },
     {
-        "input_pattern":"BdToJpsiKstar",
+        "input_pattern":"(BdToJpsiKstar|BdtoJpsiKstar).*202",
         "processor":"FlatNtupleForMLFit",
         "name":"fit-bkkmm",
         "type":"FlatNtuples",
@@ -1094,6 +1329,35 @@ tasks = [
         "blind" : False,
         "cut" : cuts["fit-bkkmm"],
         # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
+        "final_state" : "bkkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"BsToJPsiPhi.*RunIISummer20UL18",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkkmm",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bspsiphiMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkkmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi"],
+        "triggers": ["HLT_DoubleMu4_JpsiTrk_Displaced"],
+        "final_state" : "bkkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"(BdToJpsiKstar|BdtoJpsiKstar).*RunIISummer20UL18",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkkmm",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bdpsikstarMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkkmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi"],
+        "triggers": ["HLT_DoubleMu4_JpsiTrk_Displaced"],
         "final_state" : "bkkmm",
         "best_candidate": "",
     },
@@ -1107,12 +1371,127 @@ tasks = [
         "blind" : False,
         "cut" : cuts["fit-bkkmm"],
         # "triggers": ["HLT_DoubleMu4_3_Jpsi", "HLT_DoubleMu4_3_Jpsi_Displaced"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
         "final_state" : "bkkmm",
         "best_candidate": "",
-        "pre-selection":"abs(bkkmm_kk_mass-1.02)<0.01&&bkkmm_jpsikk_sl3d>5",
-        "pre-selection-keep":"^(bkkmm_.*|nbkkmm|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|HLT_DoubleMu2_Jpsi_LowPt|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2|" + common_branches + ")$",
+        "pre-selection":"abs(bkkmm_kk_mass-1.02)<0.02&&bkkmm_jpsikk_sl3d>3",
+        "pre-selection-keep":"^(bkkmm_.*|nbkkmm|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_JpsiTrk_Displaced|HLT_DoubleMu4_3_LowMass|HLT_DoubleMu2_Jpsi_LowPt|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2|L1_DoubleMu4p5_SQ_OS_dR_Max1p2|" + common_branches + ")$",
     },
-
+    ################ fit-bkstarmm ################
+    {
+        "input_pattern":"(BdToJpsiKstar|BdtoJpsiKstar|BsToJ).*202",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkstarmm",
+        "type":"FlatNtuples",
+        "files_per_job":10,
+        "tree_name" : "bdpsikstarMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkstarmm"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
+        "final_state" : "bkstarmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"(BdToJpsiKstar|BdtoJpsiKstar|BsToJ).*RunIISummer20UL18",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkstarmm",
+        "type":"FlatNtuples",
+        "files_per_job":10,
+        "tree_name" : "bdpsikstarMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkstarmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi"],
+        "triggers": ["HLT_DoubleMu4_JpsiTrk_Displaced"],
+        "final_state" : "bkstarmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"InclusiveDileptonMinBias",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkstarmm",
+        "type":"FlatNtuples",
+        "files_per_job":100,
+        "tree_name" : "inclusiveMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkstarmm"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
+        "final_state" : "bkstarmm",
+        "best_candidate": "",
+        "pre-selection":"bkkmm_jpsikk_vtx_prob>0.025 && bkkmm_jpsikk_sl3d>3 && abs(bkkmm_jpsikk_alpha) < 0.1",
+    },
+    {
+        "input_pattern":"ParkingDoubleMuonLowMass",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkstarmm",
+        "type":"FlatNtuples",
+        "files_per_job":50,
+        "tree_name" : "bdpsikstarData",
+        "blind" : False,
+        "cut" : cuts["fit-bkstarmm"],
+        "triggers": ["HLT_DoubleMu4_3_LowMass"],
+        "final_state" : "bkstarmm",
+        "best_candidate": "",
+        "pre-selection":"bkkmm_jpsikk_vtx_prob>0.025 && bkkmm_jpsikk_sl3d>3 && abs(bkkmm_jpsikk_alpha) < 0.1",
+    },
+    {
+        "input_pattern":"Charmonium.Run2018",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkstarmm",
+        "type":"FlatNtuples",
+        "files_per_job":50,
+        "tree_name" : "bdpsikstarData",
+        "blind" : False,
+        "cut" : cuts["fit-bkstarmm"],
+        # "triggers": ["HLT_DoubleMu4_3_Jpsi"],
+        "triggers": ["HLT_DoubleMu4_JpsiTrk_Displaced"],
+        "final_state" : "bkstarmm",
+        "best_candidate": "",
+        "pre-selection":"bkkmm_jpsikk_vtx_prob>0.025 && bkkmm_jpsikk_sl3d>3 && abs(bkkmm_jpsikk_alpha) < 0.1",
+    },
+    ################ fit-bkkmm2 ################
+    {
+        "input_pattern":"BsToJPsiPhi.*2024",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkkmm2",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bspsiphiMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkkmm2"],
+        "triggers": ["HLT_DoubleMu2_Jpsi_LowPt"],
+        "final_state" : "bkkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"(BdToJpsiKstar|BdtoJpsiKstar).*2024",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkkmm2",
+        "type":"FlatNtuples",
+        "files_per_job":20,
+        "tree_name" : "bdpsikstarMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkkmm2"],
+        "triggers": ["HLT_DoubleMu2_Jpsi_LowPt"],
+        "final_state" : "bkkmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"ParkingDoubleMuonLowMass.\+Run202(4|5)",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkkmm2",
+        "type":"FlatNtuples",
+        "files_per_job":100,
+        "tree_name" : "bspsiphiData",
+        "blind" : False,
+        "cut" : cuts["fit-bkkmm2"],
+        "triggers": ["HLT_DoubleMu2_Jpsi_LowPt"],
+        "final_state" : "bkkmm",
+        "best_candidate": "",
+        "pre-selection":"abs(bkkmm_kk_mass-1.02)<0.02&&bkkmm_jpsikk_sl3d>3",
+        "pre-selection-keep":"^(bkkmm_.*|nbkkmm|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|HLT_DoubleMu2_Jpsi_LowPt|L1_DoubleMu0er2p0_SQ_OS_dEta_Max1p5|L1_DoubleMu0er1p4_SQ_OS_dR_Max1p4|L1_DoubleMu0er1p5_SQ_OS_dR_Max1p4|L1_DoubleMu0er2p0_SQ_OS_dEta_Max0p3_dPhi_0p8to1p2|L1_DoubleMu4p5_SQ_OS_dR_Max1p2|" + common_branches + ")$",
+    },
+    
+    ################################
     {
         "input_pattern":"ScoutingPFRun3|ParkingDoubleMuonLowMass",
         "processor":"FlatNtupleForMLFit",
@@ -1141,6 +1520,35 @@ tasks = [
         "final_state" : "bkmm",
         "pre-selection":"bkmm_jpsimc_sl3d>5 && abs(bkmm_jpsimc_mass-5.4)<0.5 && abs(bkmm_jpsimc_alpha)<0.01",
         "pre-selection-keep":"^(mm_.*|nmm|bkmm_.*|nbkmm|HLT_*|" + common_branches + ")$",
+    },
+    
+    ################ fit-bkstarmm2 ################
+    {
+        "input_pattern":"(BdToJpsiKstar|BdtoJpsiKstar).*2024",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkstarmm2",
+        "type":"FlatNtuples",
+        "files_per_job":10,
+        "tree_name" : "bdpsikstarMc",
+        "blind" : False,
+        "cut" : cuts["fit-bkstarmm2"],
+        "triggers": ["HLT_DoubleMu2_Jpsi_LowPt"],
+        "final_state" : "bkstarmm",
+        "best_candidate": "",
+    },
+    {
+        "input_pattern":"ParkingDoubleMuonLowMass.\+Run2024",
+        "processor":"FlatNtupleForMLFit",
+        "name":"fit-bkstarmm2",
+        "type":"FlatNtuples",
+        "files_per_job":100,
+        "tree_name" : "bdpsikstarData",
+        "blind" : False,
+        "cut" : cuts["fit-bkstarmm2"],
+        "triggers": ["HLT_DoubleMu2_Jpsi_LowPt"],
+        "final_state" : "bkstarmm",
+        "best_candidate": "",
+        "pre-selection":"bkkmm_jpsikk_vtx_prob>0.025 && bkkmm_jpsikk_sl3d>3 && abs(bkkmm_jpsikk_alpha) < 0.1",
     },
     
     ################ Dimuon ################
@@ -1398,7 +1806,7 @@ tasks = [
         "triggers":["HLT_DoubleMu4_3_LowMass"],
         # "pre-selection":"dstar_mm_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
         "pre-selection":"dstar_mm_index>=0",
-        "pre-selection-keep":"^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        # "pre-selection-keep":"^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
     },
     {
         "input_pattern":"ZeroBias",
@@ -1413,7 +1821,7 @@ tasks = [
         "best_candidate": "",
         "triggers":["HLT_ZeroBias"],
         "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
-        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        # "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
     },
     {
         "input_pattern":"ZeroBias",
@@ -1430,7 +1838,7 @@ tasks = [
                     "HLT_ZeroBias_FirstCollisionInTrain", "HLT_ZeroBias_IsolatedBunches",
                     "HLT_ZeroBias_LastCollisionInTrain"],
         "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
-        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias.*|" + common_branches + ")$",
+        # "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias.*|" + common_branches + ")$",
     },
     {
         "input_pattern":"ParkingDoubleElectronLowMass|ParkingDoubleMuonLowMass",
@@ -1445,7 +1853,7 @@ tasks = [
         "best_candidate": "",
         "triggers":[],
         "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
-        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|" + common_branches + ")$",
+        # "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|" + common_branches + ")$",
     },
     {
         "input_pattern":"ZeroBias",
@@ -1460,7 +1868,7 @@ tasks = [
         "best_candidate": "",
         "triggers":["HLT_ZeroBias"],
         "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
-        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias|" + common_branches + ")$",
+        # "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|HLT_ZeroBias|" + common_branches + ")$",
     },
     {
         "input_pattern":"ZeroBias",
@@ -1492,7 +1900,7 @@ tasks = [
         "best_candidate": "",
         "triggers":[],
         "pre-selection":"dstar_hh_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
-        "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|" + common_branches + ")$",
+        # "pre-selection-keep":"^(dstar_.*|ndstar|hh_.*|nhh|" + common_branches + ")$",
     },
     {
         "input_pattern":"Inclusive|DStartoD0Pi_D0toKPi|DstarToD0Pi_D0ToKPi",
@@ -1522,7 +1930,7 @@ tasks = [
         "triggers":["HLT_DoubleMu4_3_LowMass"],
         # "pre-selection":"dstar_mm_index>=0 && dstar_dm_pv>0.140 && dstar_dm_pv<0.155",
         "pre-selection":"dstar_mm_index>=0",
-        "pre-selection-keep":"^(GenPart_.*|nGenPart|dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        # "pre-selection-keep":"^(GenPart_.*|nGenPart|dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
     },
     ################ dstar loose ##################
     # {
@@ -1622,14 +2030,18 @@ tasks = [
     #     "keep": "^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|" + common_branches + ")$",
     # },
     {
-        "input_pattern":"Muon.*MINIAOD$",
+        # "input_pattern":"Muon.*MINIAOD$",
+        "input_pattern":"ParkingDoubleMuon.*MINIAOD$",
         "processor":"SimpleSkimmer",
-        "cut":"HLT_Mu4_L1DoubleMu || HLT_Mu3_PFJet40 || HLT_Mu8",
+        "cut":"HLT_Mu4_L1DoubleMu",
         "name":"trig",
         "candidate_loop":False,
         "type":"Skims",
         "files_per_job":100,
-        "keep": "^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|HLT_Mu3_PFJet40|HLT_Mu8|nJet|Jet_pt|Jet_eta|Jet_phi|" + common_branches + ")$",
+        "keep": "^(dstar_.*|ndstar|mm_.*|nmm|Muon_.*|nMuon|MuonId_.*|nMuonId|" + \
+        "tnp_.*|ntnp|" + \
+        "HLT_Mu4_L1DoubleMu|HLT_DoubleMu4_3_LowMass|HLT_Mu0_L1DoubleMu|" + \
+        "HLT_Mu3_PFJet40|HLT_Mu8|nJet|Jet_pt|Jet_eta|Jet_phi|" + common_branches + ")$",
     },
     {
         "input_pattern":"InclusiveDileptonMinBias",
@@ -1689,11 +2101,12 @@ tasks = [
         "processor":"FlatNtupleForKsmm",
         "name":"ksmm",
 	"type":"FlatNtuples",
-	"files_per_job":50,
+	"files_per_job":10,
         "tree_name" : "ksmmMc",
         "blind" : False,
         "cut" : cuts["ksmm"],
         "final_state" : "mm",
+        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
         "mm_extra_info": True,
     },
     {
@@ -1701,12 +2114,41 @@ tasks = [
         "processor":"FlatNtupleForKsmm",
         "name":"ksmm",
 	"type":"FlatNtuples",
-	"files_per_job":100,
+	"files_per_job":50,
         "tree_name" : "ksmmData",
         "blind" : False,
         "cut" : cuts["ksmm"],
         "final_state" : "mm",
-        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
+        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
+        # "pre-selection-keep":"^(mm_.*|nmm|mmiso_.*|nmmiso|trk_.*|ntrk|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        "mm_extra_info": True,
+    },
+    {
+     	"input_pattern":"ParkingDoubleMuonLowMass",
+        "processor":"FlatNtupleForKsmm",
+        "name":"ksmm_sb",
+	"type":"FlatNtuples",
+	"files_per_job":50,
+        "tree_name" : "ksmmData",
+        "blind" : False,
+        "cut" : cuts["ksmm_sb"],
+        "final_state" : "mm",
+        "pre-selection":"mm_kin_mass>0.6 && mm_kin_mass<1.0 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
+        # "pre-selection-keep":"^(mm_.*|nmm|mmiso_.*|nmmiso|trk_.*|ntrk|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
+        "mm_extra_info": True,
+    },
+    {
+     	"input_pattern":"ParkingDoubleMuonLowMass.*Run2024",
+        "processor":"FlatNtupleForKsmm",
+        "name":"ksmm_ss",
+	"type":"FlatNtuples",
+	"files_per_job":250,
+        "tree_name" : "ksmmData",
+        "blind" : False,
+        "cut" : cuts["ksmm_ss"],
+        "final_state" : "mm",
+        # "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_slxy>3 && mm_kin_alpha<0.1",
+        "event-pre-selection": "HLT_DoubleMu4_3_LowMass_SS",
         # "pre-selection-keep":"^(mm_.*|nmm|mmiso_.*|nmmiso|trk_.*|ntrk|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
         "mm_extra_info": True,
     },
@@ -1715,12 +2157,12 @@ tasks = [
         "processor":"FlatNtupleForKsmm",
         "name":"ksmm",
 	"type":"FlatNtuples",
-	"files_per_job":100,
+	"files_per_job":50,
         "tree_name" : "ksmmMcBkg",
         "blind" : False,
         "cut" : cuts["ksmm"],
         "final_state" : "mm",
-        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
+        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
         # "pre-selection-keep":"^(mm_.*|nmm|mmiso_.*|nmmiso|trk_.*|ntrk|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
         "mm_extra_info": True,
     },
@@ -1734,36 +2176,98 @@ tasks = [
         "blind" : False,
         "cut" : cuts["ksmm"],
         "final_state" : "mm",
-        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_vtx_prob>0.01 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
+        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
         # "pre-selection-keep":"^(mm_.*|nmm|mmiso_.*|nmmiso|trk_.*|ntrk|Muon_.*|nMuon|HLT_DoubleMu4_3_LowMass|" + common_branches + ")$",
         "mm_extra_info": True,
     },
-    # {
-    #  	"input_pattern":"InclusiveDileptonMinBias",
-    #     "processor":"FlatNtupleForMLFit",
-    #     "name":"kspipi",
-    #     "type":"FlatNtuples",
-    #     "files_per_job":200,
-    #     "tree_name" : "kspipiMc",
-    #     "blind" : False,
-    #     "cut" : cuts["kspipi"],
-    #     "final_state" : "hh",
-    #     "pre-selection":"hh_gen_pdgId==310", 
-    #     "pre-selection-keep":"^(hh_.*|nhh|" + common_branches + ")$",
-    # },
     {
-     	"input_pattern":"ZeroBias",
-        "processor":"FlatNtupleForMLFit",
+     	"input_pattern":"InclusiveDileptonMinBias|K0sToPiPi",
+     	# "input_pattern":"K0sToPiPi",
+        "processor":"FlatNtupleForKsmm",
         "name":"kspipi",
-	"type":"FlatNtuples",
-	"files_per_job":200,
+        "type":"FlatNtuples",
+        "files_per_job":50,
+        "tree_name" : "kspipiMc",
+        "blind" : False,
+        "cut" : cuts["kspipi"],
+        "final_state" : "hh",
+        "pre-selection":"hh_kin_mass<0.7 && hh_kin_slxy>3 && hh_kin_alpha<0.1 && hh_kin_lxy>1 && hh_had1_pdgId * hh_had2_pdgId == -211*211", 
+        # "pre-selection":"hh_gen_pdgId==310", 
+    },
+    {
+     	"input_pattern":"ZeroBias.(Run2022[CDEF]|Run2023[CD]|Run2024[CDEFGHI]|Run2025[CDEFG])",
+        "processor":"FlatNtupleForKsmm",
+        "name":"kspipi",
+        "type":"FlatNtuples",
+        "files_per_job":50,
         "tree_name" : "kspipiData",
         "blind" : False,
         "cut" : cuts["kspipi"],
         "triggers": ["HLT_ZeroBias"],
         "final_state" : "hh",
         "pre-selection":"abs(hh_kin_mass-0.50)<0.15 && hh_kin_slxy>3 && hh_kin_alpha<0.1", 
-        "pre-selection-keep":"^(hh_.*|nhh|HLT_ZeroBias|" + common_branches + ")$",
+    },
+    {
+     	"input_pattern":"ParkingDoubleMuonLowMass\d.(Run2022[CDEF]|Run2023[CD]|Run2024[CDEFGHI]|Run2025[CDEFG])",
+        "processor":"FlatNtupleForKsmm",
+        "name":"kspipi",
+        "type":"FlatNtuples",
+        "files_per_job":50,
+        "tree_name" : "kspipiData",
+        "blind" : False,
+        "cut" : cuts["kspipi"],
+        "final_state" : "hh",
+        "pre-selection":"hh_kin_mass<0.7 && hh_kin_slxy>3 && hh_kin_alpha<0.1 && hh_kin_lxy>1 && hh_had1_pdgId * hh_had2_pdgId == -211*211", 
+    },
+    {
+     	"input_pattern":"(ParkingDoubleMuonLowMass|EGamma)\d.(Run2022[CDEF]|Run2023[CD]|Run2024[CDEFGHI])",
+        "processor":"FlatNtupleForKsmm",
+        "name":"kspipi_ss",
+        "type":"FlatNtuples",
+        "files_per_job":50,
+        "tree_name" : "kspipiData",
+        "blind" : False,
+        "cut" : cuts["kspipi_ss"],
+        "final_state" : "hh",
+        "pre-selection":"hh_had1_pdgId * hh_had2_pdgId == 211*211 && hh_kin_mass>0.40 && hh_kin_mass<0.7 && hh_kin_lxy>1 && hh_kin_slxy>3 && hh_kin_alpha<0.1 && hh_kin_vtx_prob>0.01", 
+    },
+    {
+     	"input_pattern":"InclusiveDileptonMinBias",
+        "processor":"FlatNtupleForKsmm",
+        "name":"kspipi_ss",
+        "type":"FlatNtuples",
+        "files_per_job":50,
+        "tree_name" : "kspipiMc",
+        "blind" : False,
+        "cut" : cuts["kspipi_ss"],
+        "final_state" : "hh",
+        "pre-selection":"hh_had1_pdgId * hh_had2_pdgId == 211*211 && hh_kin_mass>0.40 && hh_kin_mass<0.7 && hh_kin_lxy>1 && hh_kin_slxy>3 && hh_kin_alpha<0.1 && hh_kin_vtx_prob>0.01", 
+    },
+    {
+     	"input_pattern":"K0LToMuMu",
+        "processor":"FlatNtupleForKsmm",
+        "name":"ksmm",
+	"type":"FlatNtuples",
+	"files_per_job":50,
+        "tree_name" : "klmmMc",
+        "blind" : False,
+        "cut" : cuts["ksmm"],
+        "final_state" : "mm",
+        "pre-selection":"abs(mm_kin_mass-0.50)<0.15 && mm_kin_slxy>3 && mm_kin_alpha<0.1", 
+        "mm_extra_info": True,
+    },
+    {
+     	"input_pattern":"ZeroBias.(Run2022[CDEF]|Run2023[CD]|Run2024[CDEFGHI])",
+        "processor":"FlatNtupleForKsmm",
+        "name":"jpsimm",
+	"type":"FlatNtuples",
+	"files_per_job":50,
+        "tree_name" : "jpsimmData",
+        "blind" : False,
+        "cut" : cuts["jpsimm"],
+        "triggers": ["HLT_ZeroBias"],
+        "final_state" : "mm",
+        "pre-selection":"abs(mm_kin_mass-3.1)<0.2", 
     },
 
 ]
