@@ -1,7 +1,7 @@
 from PostProcessingBase import FlatNtupleBase
 
 import os, re, sys, time, subprocess, math, json
-from Bmm5.MVA.mtree import MTree
+from mtree import MTree
 import multiprocessing
 from datetime import datetime
 import hashlib
