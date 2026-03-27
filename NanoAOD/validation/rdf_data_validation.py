@@ -14,7 +14,7 @@ ROOT.ROOT.EnableImplicitMT()
 create_used_lumi_json = False
 restrict_to_processed_lumis = True
 process_data = False
-recompute_results = False
+recompute_results = True
 aggregate_eras = True
 
 # if eras list is not empty, only listed eras will be used to make plots
@@ -28,8 +28,8 @@ eras.extend([f"Run2024{chr(c)}" for c in range(ord("C"), ord("I") + 1)])
 eras.extend([f"Run2025{chr(c)}" for c in range(ord("C"), ord("G") + 1)])
 
 input_path = "/eos/cms/store/group/phys_bphys/bmm/bmm6/NanoAOD/535/"
-# output_path = "/eos/home-d/dmytro/www/plots/2025/run3_data_validation"
-output_path = "/eos/home-d/dmytro/www/plots/tmp/2025/run3_data_validation"
+output_path = "/eos/home-d/dmytro/www/plots/2025/run3_data_validation"
+# output_path = "/eos/home-d/dmytro/www/plots/tmp/2025/run3_data_validation"
 
 # histos_file = "rdf_data_validation_new.root"
 # histos_file = "rdf_data_validation.root"

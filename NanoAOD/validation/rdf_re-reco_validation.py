@@ -8,6 +8,7 @@ from math import sqrt
 import numpy as np
 import json
 import tdrstyle
+import inspect
 
 # Set the TDR style
 tdrstyle.setTDRStyle()
@@ -27,7 +28,10 @@ output_path = "/eos/home-d/dmytro/www/plots/2025/Run2025C_re-reco_validation"
 
 histos_file = "rdf_re-reco_validation.root"
 create_lumi_mask = False
-process_data = False
+process_data = True
+fixShapeForAlternativeVersions = True
+makeSplots = True
+makeRatioPlots = True
 
 min_jpsi_mass = 2.8
 max_jpsi_mass = 3.3
@@ -126,16 +130,60 @@ def book_histos(rdf, pd, version, trigger=None):
     
     rdf = rdf.Define("certified", "passed_lumi_mask(run, luminosityBlock)")
     rdf = rdf.Filter("certified == 1", "passed data certification")
-    rdf = rdf.Define("mm_mu1_mediumId", "Take(Muon_mediumId,             mm_mu1_index)")
-    rdf = rdf.Define("mm_mu2_mediumId", "Take(Muon_mediumId,             mm_mu2_index)")
-        
+    rdf = rdf.Define("mm_mu1_mediumId",     "Take(Muon_mediumId,             mm_mu1_index)")
+    rdf = rdf.Define("mm_mu2_mediumId",     "Take(Muon_mediumId,             mm_mu2_index)")
+    # rdf = rdf.Define("mm_mu1_pixelPattern", "Take(MuonId_pixelPatternd,      mm_mu1_index)")
+    # rdf = rdf.Define("mm_mu2_pixelPattern", "Take(MuonId_pixelPatternd,      mm_mu2_index)")
+
     if trigger != None:
         rdf = rdf.Filter(trigger)
 
     #### Jpsi
-    jpsi_loose_selection =   f"mm_kin_mass>{min_jpsi_mass} && mm_kin_mass<{max_jpsi_mass} && mm_mu1_mediumId && mm_mu2_mediumId && mm_kin_vtx_prob>0.001"
-    jpsi_nominal_selection = f"{jpsi_loose_selection} && mm_kin_vtx_prob>0.1"
+    jpsi_very_loose_selection = f"mm_mass>{min_jpsi_mass} && mm_mass<{max_jpsi_mass}" + \
+        " && mm_mu1_mediumId && mm_mu2_mediumId"
+    jpsi_loose_selection      = f"mm_kin_mass>{min_jpsi_mass} && mm_kin_mass<{max_jpsi_mass}" + \
+        " && mm_mu1_mediumId && mm_mu2_mediumId && mm_kin_vtx_prob>0.001"
+    jpsi_nominal_selection    = f"{jpsi_loose_selection} && mm_kin_vtx_prob>0.1"
 
+    ## Very Loose
+    vl_selections = dict()
+    vl_selections["very_loose"]          = jpsi_very_loose_selection
+    vl_selections["very_loose_pix1"]     = vl_selections["very_loose"] + \
+        "&& (mm_mu1_pixelPattern&1)==1 && (mm_mu2_pixelPattern&1)==1"
+    vl_selections["very_loose_pix1_vtx"] = vl_selections["very_loose_pix1"] + \
+        "&& mm_kin_vtx_prob>0.001"
+    vl_selections["very_loose_pix1_tight_vtx"] = vl_selections["very_loose_pix1"] + \
+        "&& mm_kin_vtx_prob>0.1"
+    vl_selections["very_loose_lt0p8"]          = jpsi_very_loose_selection + "&& abs(mm_kin_eta)<0.8"
+    vl_selections["very_loose_lt0p8_pix1"]     = vl_selections["very_loose_lt0p8"] + \
+        "&& (mm_mu1_pixelPattern&1)==1 && (mm_mu2_pixelPattern&1)==1"
+    vl_selections["very_loose_lt0p8_pix1_vtx"] = vl_selections["very_loose_lt0p8_pix1"] + \
+        "&& mm_kin_vtx_prob>0.001"
+    vl_selections["very_loose_lt0p8_pix1_tight_vtx"] = vl_selections["very_loose_lt0p8_pix1"] + \
+        "&& mm_kin_vtx_prob>0.1"
+    vl_selections["very_loose_gt0p8_lt1p4"]          = jpsi_very_loose_selection + \
+        "&& abs(mm_kin_eta)>0.8 && abs(mm_kin_eta)<1.4"
+    vl_selections["very_loose_gt0p8_lt1p4_pix1"]     = vl_selections["very_loose_gt0p8_lt1p4"] + \
+        "&& (mm_mu1_pixelPattern&1)==1 && (mm_mu2_pixelPattern&1)==1"
+    vl_selections["very_loose_gt0p8_lt1p4_pix1_vtx"] = vl_selections["very_loose_gt0p8_lt1p4_pix1"] + \
+        "&& mm_kin_vtx_prob>0.001"
+    vl_selections["very_loose_gt0p8_lt1p4_pix1_tight_vtx"] = vl_selections["very_loose_gt0p8_lt1p4_pix1"] + \
+        "&& mm_kin_vtx_prob>0.1"
+    vl_selections["very_loose_gt1p4"]          = jpsi_very_loose_selection + "&& abs(mm_kin_eta)>1.4"
+    vl_selections["very_loose_gt1p4_pix1"]     = vl_selections["very_loose_gt1p4"] + \
+        "&& (mm_mu1_pixelPattern&1)==1 && (mm_mu2_pixelPattern&1)==1"
+    vl_selections["very_loose_gt1p4_pix1_vtx"] = vl_selections["very_loose_gt1p4_pix1"] + \
+        "&& mm_kin_vtx_prob>0.001"
+    vl_selections["very_loose_gt1p4_pix1_tight_vtx"] = vl_selections["very_loose_gt1p4_pix1"] + \
+        "&& mm_kin_vtx_prob>0.1"
+    
+    for selelection_name, selection in vl_selections.items():
+        rdf = rdf.Define(f"jpsi_{selelection_name}", selection)
+        rdf = rdf.Define(f"jpsi_{selelection_name}_mass", f"mm_mass[jpsi_{selelection_name}]")
+        # Book histograms
+        book_histo1D(rdf, pd, version, "jpsi", selelection_name, "mass", ";Mass, GeV",
+                     nbins_jpsi, min_jpsi_mass, max_jpsi_mass, f"jpsi_{selelection_name}_mass")
+        
     ## Loose
     # Selection
     rdf = rdf.Define("jpsi_loose",               jpsi_loose_selection)
@@ -164,11 +212,11 @@ def book_histos(rdf, pd, version, trigger=None):
         # Variables
         rdf = rdf.Define(f"jpsi_{sel}_mass",     f"mm_kin_mass[jpsi_{sel}]")
         rdf = rdf.Define(f"jpsi_{sel}_vtx_prob", f"mm_kin_vtx_prob[jpsi_{sel}]")
-        # Variables
+        # Histograms
         book_histo1D(rdf, pd, version, "jpsi", sel, "mass", "Vertex constrained dimuon mass;Mass, GeV",
                      nbins_jpsi, min_jpsi_mass, max_jpsi_mass, f"jpsi_{sel}_mass")
         book_histo2D(rdf, pd, version, "jpsi", sel, "vtx_prob_vs_mass", "Jpsi;Mass, GeV;Probability",
-                     nbins_jpsi, min_jpsi_mass, max_jpsi_mass, 18, 0.1, 1.0,
+                     nbins_jpsi, min_jpsi_mass, max_jpsi_mass, 50, 0.0, 1.0,
                      f"jpsi_{sel}_mass", f"jpsi_{sel}_vtx_prob")
 
     #### BuToJpsiK
@@ -279,22 +327,34 @@ def build_model(workspace_name, mass_var, peak=3.09, search_width=0.04, max_exp_
     # sig_delta  = ROOT.RooRealVar("sig_delta", "delta", 1, 0.1, 10)
     # sig = ROOT.RooJohnson("sig", "signal", mass_var, sig_mu, sig_lambda, sig_gamma, sig_delta)
 
-    # multi-gaussian
-    G1_mean  = ROOT.RooRealVar("sig_G1_mean",  "", peak, peak - search_width, peak + search_width)
-    G1_sigma = ROOT.RooRealVar("sig_G1_sigma", "", 0.03, 0.001, 0.10)
-    G2_scale = ROOT.RooRealVar("sig_G2_scale", "", 1.5, 1.1, 3.5)
-    G3_scale = ROOT.RooRealVar("sig_G3_scale", "", 3.0, 1.0, 6.7)
-    G2_sigma = ROOT.RooProduct("sig_G2_sigma", "", ROOT.RooArgList(G1_sigma,G2_scale))
-    G3_sigma = ROOT.RooProduct("sig_G3_sigma", "", ROOT.RooArgList(G1_sigma,G3_scale))
-    G1 = ROOT.RooGaussian("sig_G1", "", mass_var, G1_mean, G1_sigma)
-    G2 = ROOT.RooGaussian("sig_G2", "", mass_var, G1_mean, G2_sigma)
-    G3 = ROOT.RooGaussian("sig_G3", "", mass_var, G1_mean, G3_sigma)
+    # # multi-gaussian
+    # G1_mean  = ROOT.RooRealVar("sig_G1_mean",  "", peak, peak - search_width, peak + search_width)
+    # G1_sigma = ROOT.RooRealVar("sig_G1_sigma", "", 0.03, 0.001, 0.10)
+    # G2_scale = ROOT.RooRealVar("sig_G2_scale", "", 1.5, 1.1, 3.5)
+    # G3_scale = ROOT.RooRealVar("sig_G3_scale", "", 3.0, 1.0, 6.7)
+    # G2_sigma = ROOT.RooProduct("sig_G2_sigma", "", ROOT.RooArgList(G1_sigma,G2_scale))
+    # G3_sigma = ROOT.RooProduct("sig_G3_sigma", "", ROOT.RooArgList(G1_sigma,G3_scale))
+    # G1 = ROOT.RooGaussian("sig_G1", "", mass_var, G1_mean, G1_sigma)
+    # G2 = ROOT.RooGaussian("sig_G2", "", mass_var, G1_mean, G2_sigma)
+    # G3 = ROOT.RooGaussian("sig_G3", "", mass_var, G1_mean, G3_sigma)
     
-    G2_fract = ROOT.RooRealVar("sig_G2_fract","",0.2,0.0,0.5)
-    G3_fract = ROOT.RooRealVar("sig_G3_fract","",0.2,0.0,1.0)
-    sig = ROOT.RooAddPdf("sig"," ", ROOT.RooArgList(G2,G1), ROOT.RooArgList(G2_fract))
-    # sig  = ROOT.RooAddPdf("sig"," ",ROOT.RooArgList(G3,G2,G1),ROOT.RooArgList(G2_fract,G3_fract))
+    # G2_fract = ROOT.RooRealVar("sig_G2_fract","",0.2,0.0,0.5)
+    # G3_fract = ROOT.RooRealVar("sig_G3_fract","",0.2,0.0,1.0)
+    # sig = ROOT.RooAddPdf("sig"," ", ROOT.RooArgList(G2,G1), ROOT.RooArgList(G2_fract))
+    # # sig  = ROOT.RooAddPdf("sig"," ",ROOT.RooArgList(G3,G2,G1),ROOT.RooArgList(G2_fract,G3_fract))
 
+    # multi-gaussian
+    G1_mean   = ROOT.RooRealVar("sig_G1_mean",   "", peak, peak - search_width, peak + search_width)
+    G1_sigma  = ROOT.RooRealVar("sig_G1_sigma",  "", 0.03, 0.01, 0.10)
+    G2_sigmaL = ROOT.RooRealVar("sig_G2_sigmaL", "", 0.03, 0.01, 0.10)
+    G2_sigmaR = ROOT.RooRealVar("sig_G2_sigmaR", "", 0.03, 0.01, 0.10)
+    G1 = ROOT.RooGaussian(  "sig_G1", "", mass_var, G1_mean, G1_sigma)
+    G2 = ROOT.RooBifurGauss("sig_G2", "", mass_var, G1_mean, G2_sigmaL, G2_sigmaR)
+    
+    G2_fract = ROOT.RooRealVar("sig_G2_fract","",0.2,0.0,1.0)
+    sig = ROOT.RooAddPdf("sig"," ", ROOT.RooArgList(G2,G1), ROOT.RooArgList(G2_fract))
+    
+    # sig  = ROOT.RooAddPdf("sig"," ",ROOT.RooArgList(G3,G2,G1),ROOT.RooArgList(G2_fract,G3_fract))
     # # CB
     # sig_mean  = ROOT.RooRealVar("sig_mean",  "", peak, peak - search_width, peak + search_width)
     # sig_sigma = ROOT.RooRealVar("sig_sigma", "sigma", 0.03, 0.001, 0.10)
@@ -341,14 +401,17 @@ def build_model(workspace_name, mass_var, peak=3.09, search_width=0.04, max_exp_
     return ws
 
 def make_plots():
-    for pd in histos:
-        results = defaultdict(                 # pd
-            lambda: defaultdict(               # process
-                lambda: defaultdict(           # selection
-                    lambda: defaultdict(dict)  # hist_name -> {version: hist}
-                )
+    results = defaultdict(                 # pd
+        lambda: defaultdict(               # process
+            lambda: defaultdict(           # selection
+                lambda: defaultdict(dict)  # hist_name -> {version: hist}
             )
         )
+    )
+    model_parameters = defaultdict(        # pd
+        lambda: defaultdict(dict)          # process -> selection -> {param: value}
+    )
+    for pd in histos:
         for version in histos[pd]:
             for process in histos[pd][version]:
                 for selection, histograms in histos[pd][version][process].items():
@@ -381,34 +444,36 @@ def make_plots():
 
                     data = ROOT.RooDataHist("data", "", ROOT.RooArgList(mass), h_ref)
 
-                    # prefit
-                    ws.var("Nsig").setVal(h_ref.GetEntries() * 0.99)
-                    ws.var("Nbkg").setVal(h_ref.GetEntries() * 0.01)
-                    # ws.var("sig_G2_fract").setVal(0.2)
-                    # ws.var("sig_G2_fract").setConstant(True)
-                    # ws.var("sig_G2_scale").setConstant(True)
-                    # ws.var("sig_G3_fract").setVal(0.0)
-                    # ws.var("sig_G3_fract").setConstant(True)
-                    # ws.var("sig_G3_scale").setConstant(True)
-                    # model.fitTo(data,  ROOT.RooFit.NumCPU(8),
-                    #             ROOT.RooFit.Extended(ROOT.kTRUE), ROOT.RooFit.Minos(ROOT.kFALSE),
-                    #             ROOT.RooFit.PrintLevel(print_level))
-
-                    # final fit
-                    # ws.var("sig_G2_fract").setConstant(False)
-                    # ws.var("sig_G2_scale").setConstant(False)
-                    # ws.var("sig_G3_fract").setConstant(False)
-                    # ws.var("sig_G3_scale").setConstant(False)
-                    fr = model.fitTo(
+                    if fixShapeForAlternativeVersions:
+                        if selection in model_parameters[pd][process]:
+                            for var_name, value in model_parameters[pd][process][selection].items():
+                                ws.var(var_name).setVal(value)
+                                if var_name in ("Nsig", "Nbkg"):
+                                    ws.var(var_name).setConstant(False)
+                                else:
+                                    ws.var(var_name).setConstant(True)
+                        else:
+                            for p in model.getParameters(data):
+                                p.setConstant(False)
+                    else:
+                        ws.var("Nsig").setVal(h_ref.GetEntries() * 0.99)
+                        ws.var("Nbkg").setVal(h_ref.GetEntries() * 0.01)
+                    fit_result = model.fitTo(
                         data,
-                        ROOT.RooFit.NumCPU(8),
+                        # ROOT.RooFit.NumCPU(8),
                         ROOT.RooFit.Extended(ROOT.kTRUE),
                         # ROOT.RooFit.Minos(ROOT.kFALSE),
                         ROOT.RooFit.Minos(ROOT.kTRUE),
                         ROOT.RooFit.PrintLevel(print_level),
                         ROOT.RooFit.Save(True)
                     )
-                    fr.Print("V")
+                    fit_result.Print("V")
+                    if fixShapeForAlternativeVersions:
+                        if selection not in model_parameters[pd][process]:
+                            model_parameters[pd][process][selection] = dict()
+                            for p in fit_result.floatParsFinal():
+                                model_parameters[pd][process][selection][p.GetName()] = p.getVal()
+
                     #     h.Draw("hist")
                     #     print_canvas(f"{sample_name}_{name}", f"{output_path}/{study}/histograms")
 
@@ -431,67 +496,67 @@ def make_plots():
 
                     # results[name][sample_name] = (ws.var("Nsig").getVal(), ws.var("Nsig").getError())
 
-                    ### Compute sWeights for sPlots
+                    if makeSplots:
+                        ### Compute sWeights for sPlots
+                        # Covariance matrix for the yields only
+                        cov = fit_result.reducedCovarianceMatrix(ROOT.RooArgList(ws.var("Nsig"), ws.var("Nbkg")))
+                        # print(f"cov[0][0]: {cov[0][0]}")
+                        # print(f"cov[0][1]: {cov[0][1]}")
 
-                    # Covariance matrix for the yields only
-                    cov = fr.reducedCovarianceMatrix(ROOT.RooArgList(ws.var("Nsig"), ws.var("Nbkg")))
-                    # print(f"cov[0][0]: {cov[0][0]}")
-                    # print(f"cov[0][1]: {cov[0][1]}")
+                        # Normally sWeights are computed per event as a function
+                        # of mass. In our case instead of events we use 2D
+                        # histograms and sWeights are computed as a function of
+                        # the the mass bin instead.
 
-                    # Normally sWeights are computed per event as a function
-                    # of mass. In our case instead of events we use 2D
-                    # histograms and sWeights are computed as a function of
-                    # the the mass bin instead.
+                        # Compute binned PDFs
+                        Fsig = [0.0] * nbins
+                        Fbkg = [0.0] * nbins
+                        sig_pdf = ws.pdf("sig")
+                        bkg_pdf = ws.pdf("bkg")
 
-                    # Compute binned PDFs
-                    Fsig = [0.0] * nbins
-                    Fbkg = [0.0] * nbins
-                    sig_pdf = ws.pdf("sig")
-                    bkg_pdf = ws.pdf("bkg")
+                        for ib in range(1, nbins + 1):
+                            xl = h_ref.GetXaxis().GetBinLowEdge(ib)
+                            xh = h_ref.GetXaxis().GetBinUpEdge(ib)
+                            bin_name = f"bin_{ib}"
+                            mass.setRange(bin_name, xl, xh)
 
-                    for ib in range(1, nbins + 1):
-                        xl = h_ref.GetXaxis().GetBinLowEdge(ib)
-                        xh = h_ref.GetXaxis().GetBinUpEdge(ib)
-                        bin_name = f"bin_{ib}"
-                        mass.setRange(bin_name, xl, xh)
+                            # Integral of pdf over this bin (normalization handled by NormSet)
+                            isig = sig_pdf.createIntegral(
+                                ROOT.RooArgSet(mass),
+                                ROOT.RooFit.NormSet(ROOT.RooArgSet(mass)),
+                                ROOT.RooFit.Range(bin_name)
+                            ).getVal()
 
-                        # Integral of pdf over this bin (normalization handled by NormSet)
-                        isig = sig_pdf.createIntegral(
-                            ROOT.RooArgSet(mass),
-                            ROOT.RooFit.NormSet(ROOT.RooArgSet(mass)),
-                            ROOT.RooFit.Range(bin_name)
-                        ).getVal()
+                            ibkg = bkg_pdf.createIntegral(
+                                ROOT.RooArgSet(mass),
+                                ROOT.RooFit.NormSet(ROOT.RooArgSet(mass)),
+                                ROOT.RooFit.Range(bin_name)
+                            ).getVal()
 
-                        ibkg = bkg_pdf.createIntegral(
-                            ROOT.RooArgSet(mass),
-                            ROOT.RooFit.NormSet(ROOT.RooArgSet(mass)),
-                            ROOT.RooFit.Range(bin_name)
-                        ).getVal()
+                            # You can keep them as integrals (no need to divide by bin width)
+                            Fsig[ib - 1] = isig
+                            Fbkg[ib - 1] = ibkg
 
-                        # You can keep them as integrals (no need to divide by bin width)
-                        Fsig[ib - 1] = isig
-                        Fbkg[ib - 1] = ibkg
+                        # print(Fsig)
+                        # print(Fbkg)
 
-                    # print(Fsig)
-                    # print(Fbkg)
-                    
-                    # Compute binned sWeights for signal
-                    wSig = [0.0] * nbins
+                        # Compute binned sWeights for signal
+                        wSig = [0.0] * nbins
 
-                    NS = ws.var("Nsig").getVal()
-                    NB = ws.var("Nbkg").getVal()
-                    # print(f"NS: {NS}")
-                    # print(f"NB: {NB}")
+                        NS = ws.var("Nsig").getVal()
+                        NB = ws.var("Nbkg").getVal()
+                        # print(f"NS: {NS}")
+                        # print(f"NB: {NB}")
 
-                    for ib in range(nbins):
-                        denom = NS * Fsig[ib] + NB * Fbkg[ib]
-                        if denom <= 0:
-                            wSig[ib] = 0.0
-                            continue
-                        numSig = cov[0][0] * Fsig[ib] + cov[0][1] * Fbkg[ib]
-                        wSig[ib] = numSig / denom
+                        for ib in range(nbins):
+                            denom = NS * Fsig[ib] + NB * Fbkg[ib]
+                            if denom <= 0:
+                                wSig[ib] = 0.0
+                                continue
+                            numSig = cov[0][0] * Fsig[ib] + cov[0][1] * Fbkg[ib]
+                            wSig[ib] = numSig / denom
 
-                    # print(wSig)
+                        # print(wSig)
                     
                     ### Make plots
 
@@ -513,117 +578,124 @@ def make_plots():
                             print_canvas(f"{pd}_{version}_{process}_{selection}_{histo_name}", f"{output_path}/projections")
                             results[pd][process][selection][f"{histo_name}_projection"][version] = hProjY
                             
-                            ### Make sPlots
-                            
-                            # skip vtx_prob - doesn't look right
-                            if re.search("vtx_prob", hist.GetName()):
-                                continue
-                            hSplotY = hist.ProjectionY(f"{hist.GetName()}_hSplotY")
-                            hSplotY.SetDirectory(0)
-                            hSplotY.Reset("ICE")
-                            hSplotY.Sumw2()
+                            if makeSplots:
+                                ### Make sPlots
 
-                            # Build sWeighted y histogram
-                            for ix in range(1, nbins + 1):
-                                w = wSig[ix - 1]           # sWeight for this x-bin
-                                if w == 0:
+                                # skip vtx_prob - doesn't look right
+                                if re.search("vtx_prob", hist.GetName()):
                                     continue
+                                hSplotY = hist.ProjectionY(f"{hist.GetName()}_hSplotY")
+                                hSplotY.SetDirectory(0)
+                                hSplotY.Reset("ICE")
+                                hSplotY.Sumw2()
 
-                                for iy in range(1, hist.GetNbinsY() + 1):
-                                    n = hist.GetBinContent(ix, iy)
-                                    if n <= 0:
+                                # Build sWeighted y histogram
+                                for ix in range(1, nbins + 1):
+                                    w = wSig[ix - 1]           # sWeight for this x-bin
+                                    if w == 0:
                                         continue
 
-                                    # Add weighted content
-                                    old = hSplotY.GetBinContent(iy)
-                                    hSplotY.SetBinContent(iy, old + w * n)
+                                    for iy in range(1, hist.GetNbinsY() + 1):
+                                        n = hist.GetBinContent(ix, iy)
+                                        if n <= 0:
+                                            continue
 
-                                    # Poisson variance propagation: var += w^2 * n
-                                    old_err2 = hSplotY.GetBinError(iy)**2
-                                    new_err2 = old_err2 + (w * w) * n
-                                    hSplotY.SetBinError(iy, sqrt(new_err2))
-                                    
-                            hSplotY.Draw()
-                            hSplotY.Print("V")
-                            print_canvas(f"{pd}_{version}_{process}_{selection}_{histo_name}", f"{output_path}/splots")
-                            results[pd][process][selection][histo_name][version] = hSplotY
+                                        # Add weighted content
+                                        old = hSplotY.GetBinContent(iy)
+                                        hSplotY.SetBinContent(iy, old + w * n)
 
-        ### Ratio plots
-        ratio_plots = list()
-        for process in results[pd]:
-            for selection in results[pd][process]:
-                for histo_name, histograms in results[pd][process][selection].items():
-                    if "rereco" not in histograms or "prompt" not in histograms:
-                        print("ERROR: missing histograms")
-                        for n, h in histograms.items():
-                            print(f"{n}: {h.GetName()}")
-                        continue
-                    histograms["rereco"].SetMarkerStyle(20)
-                    # histograms["rereco"].SetMinimum(0)
-                    histograms["prompt"].SetLineColor(ROOT.kRed)
-                    histograms["prompt"].SetLineWidth(2)
-                    # histograms["prompt"].SetMinimum(0)
+                                        # Poisson variance propagation: var += w^2 * n
+                                        old_err2 = hSplotY.GetBinError(iy)**2
+                                        new_err2 = old_err2 + (w * w) * n
+                                        hSplotY.SetBinError(iy, sqrt(new_err2))
 
-                    ratio_plot = ROOT.TRatioPlot(histograms["rereco"], histograms["prompt"])
-                    ratio_plots.append(ratio_plot) # keep it memory to avoid seg fault
-                    ratio_plot.SetH1DrawOpt("e")
-                    ratio_plot.SetH2DrawOpt("hist")
-                    ratio_plot.Draw()
-                    ratio_plot.SetSeparationMargin(0.03)
-                    if pd == "ParkingDoubleMuonLowMass0" and process == "jpsi":
-                        ratio_plot.GetLowerRefGraph().SetMinimum(0.8)
-                        ratio_plot.GetLowerRefGraph().SetMaximum(1.2)
-                    else:
-                        ratio_plot.GetLowerRefGraph().SetMinimum(0.5)
-                        ratio_plot.GetLowerRefGraph().SetMaximum(2.0)
-                    # ratio_plot.GetXaxis().SetTitleSize()
-                    # SetBottomMargin(2.0)           
-                    # c1.SetBottomMargin(2.0)
-                    # rp->GetLowerRefYaxis()->SetRange(...)
-                    # rp->SetH1DrawOpt("E");
+                                hSplotY.Draw()
+                                hSplotY.Print("V")
+                                print_canvas(f"{pd}_{version}_{process}_{selection}_{histo_name}", f"{output_path}/splots")
+                                results[pd][process][selection][histo_name][version] = hSplotY
 
-                    ratio_plot.GetLowerRefYaxis().SetTitle("rereco/prompt")
+        if makeRatioPlots:
+            ### Ratio plots
+            ratio_plots = list()
+            for process in results[pd]:
+                for selection in results[pd][process]:
+                    for histo_name, histograms in results[pd][process][selection].items():
+                        if "rereco" not in histograms or "prompt" not in histograms:
+                            print("ERROR: missing histograms")
+                            for n, h in histograms.items():
+                                print(f"{n}: {h.GetName()}")
+                            continue
+                        # if re.search('jpsi__nominal.*vtx_prob_vs_mass_hProjY', histograms["rereco"].GetName()):
+                        #     continue
 
-                    ratio_plot.GetLowerRefYaxis().SetTitleSize()
-                    ratio_plot.GetLowerRefYaxis().SetTitleOffset(1.1)
-                    ratio_plot.GetLowerRefYaxis().SetLabelSize(0.035)
-                    ratio_plot.GetLowYaxis().SetNdivisions(503)
+                        histograms["rereco"].SetMarkerStyle(20)
+                        # histograms["rereco"].SetMinimum(0)
+                        histograms["prompt"].SetLineColor(ROOT.kRed)
+                        histograms["prompt"].SetLineWidth(2)
+                        # histograms["prompt"].SetMinimum(0)
 
-                    ratio_plot.GetLowerRefXaxis().SetTitleSize()
-                    ratio_plot.GetLowerRefXaxis().SetTitleOffset()
-                    ratio_plot.GetLowerRefXaxis().SetLabelSize(0.035)
+                        ratio_plot = ROOT.TRatioPlot(histograms["rereco"], histograms["prompt"])
+                        ratio_plots.append(ratio_plot) # keep it memory to avoid seg fault
+                        ratio_plot.SetH1DrawOpt("e")
+                        ratio_plot.SetH2DrawOpt("hist")
+                        ratio_plot.Draw()
 
-                    ratio_plot.GetUpperRefYaxis().SetTitle("")
-                    ratio_plot.GetUpperRefYaxis().SetTitleSize()
-                    ratio_plot.GetUpperRefYaxis().SetTitleOffset()
-                    ratio_plot.GetUpperRefYaxis().SetLabelSize(0.035)
+                        ratio_plot.SetSeparationMargin(0.03)
+                        if pd == "ParkingDoubleMuonLowMass0" and process == "jpsi":
+                            ratio_plot.GetLowerRefGraph().SetMinimum(0.8)
+                            ratio_plot.GetLowerRefGraph().SetMaximum(1.2)
+                        else:
+                            ratio_plot.GetLowerRefGraph().SetMinimum(0.5)
+                            ratio_plot.GetLowerRefGraph().SetMaximum(2.0)
+                        # ratio_plot.GetXaxis().SetTitleSize()
+                        # SetBottomMargin(2.0)           
+                        # c1.SetBottomMargin(2.0)
+                        # rp->GetLowerRefYaxis()->SetRange(...)
+                        # rp->SetH1DrawOpt("E");
 
-                    ratio_plot.GetUpperRefXaxis().SetTitleSize()
-                    ratio_plot.GetUpperRefXaxis().SetTitleOffset(0)
-                    ratio_plot.GetUpperRefXaxis().SetLabelSize(0.035)
+                        ratio_plot.GetLowerRefYaxis().SetTitle("rereco/prompt")
 
-                    c.Update()
-                    c.cd()
-                    # right position
-                    legend = ROOT.TLegend(0.70,0.75,0.85,0.85)
-                    # left position
-                    # legend = ROOT.TLegend(0.15,0.75,0.5,0.87)
-                    legend.SetFillStyle(0)
-                    legend.SetLineWidth(0)
-                    legend.SetBorderSize(1)
+                        ratio_plot.GetLowerRefYaxis().SetTitleSize()
+                        ratio_plot.GetLowerRefYaxis().SetTitleOffset(1.1)
+                        ratio_plot.GetLowerRefYaxis().SetLabelSize(0.035)
+                        ratio_plot.GetLowYaxis().SetNdivisions(503)
 
-                    legend.AddEntry(histograms["rereco"], "Rereco", "p")
-                    legend.AddEntry(histograms["prompt"], "Prompt", "l")
-                    legend.Draw()
+                        ratio_plot.GetLowerRefXaxis().SetTitleSize()
+                        ratio_plot.GetLowerRefXaxis().SetTitleOffset()
+                        ratio_plot.GetLowerRefXaxis().SetLabelSize(0.035)
 
-                    if histo_name == "mass":
-                        print_canvas(f"{pd}_{process}_{selection}_{histo_name}", f"{output_path}/simple_ratios")
-                    elif re.search("hSplotY", histograms["prompt"].GetName()):
-                        print_canvas(f"{pd}_{process}_{selection}_{histo_name}", f"{output_path}/splot_ratios")
-                    elif re.search("hProjY", histograms["prompt"].GetName()):
-                        print_canvas(f"{pd}_{process}_{selection}_{histo_name}", f"{output_path}/proj_ratios")
-                    else:
-                        print_canvas(f"{pd}_{process}_{selection}_{histo_name}", f"{output_path}")
+                        ratio_plot.GetUpperRefYaxis().SetTitle("")
+                        ratio_plot.GetUpperRefYaxis().SetTitleSize()
+                        ratio_plot.GetUpperRefYaxis().SetTitleOffset()
+                        ratio_plot.GetUpperRefYaxis().SetLabelSize(0.035)
+
+                        ratio_plot.GetUpperRefXaxis().SetTitleSize()
+                        ratio_plot.GetUpperRefXaxis().SetTitleOffset(0)
+                        ratio_plot.GetUpperRefXaxis().SetLabelSize(0.035)
+
+                        c.Update()
+                        c.cd()
+                        
+                        # right position
+                        legend = ROOT.TLegend(0.70,0.75,0.85,0.85)
+                        # left position
+                        # legend = ROOT.TLegend(0.15,0.75,0.5,0.87)
+                        legend.SetFillStyle(0)
+                        legend.SetLineWidth(0)
+                        legend.SetBorderSize(1)
+
+                        legend.AddEntry(histograms["rereco"], "Rereco", "p")
+                        legend.AddEntry(histograms["prompt"], "Prompt", "l")
+                        legend.Draw()
+
+                        if histo_name == "mass":
+                            print_canvas(f"{pd}_{process}_{selection}_{histo_name}", f"{output_path}/simple_ratios")
+                        elif re.search("hSplotY", histograms["prompt"].GetName()):
+                            print_canvas(f"{pd}_{process}_{selection}_{histo_name}", f"{output_path}/splot_ratios")
+                        elif re.search("hProjY", histograms["prompt"].GetName()):
+                            print_canvas(f"{pd}_{process}_{selection}_{histo_name}", f"{output_path}/proj_ratios")
+                        else:
+                            print_canvas(f"{pd}_{process}_{selection}_{histo_name}", f"{output_path}")
             
 
 def add_files(chain, path):
