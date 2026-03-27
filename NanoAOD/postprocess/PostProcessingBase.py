@@ -18,6 +18,8 @@ import ROOT
 from ROOT import TFile, TTree, RDataFrame
 import numpy as np
 
+import psutil
+
 class Processor(object):
     """Base class for processors"""
     
@@ -47,14 +49,15 @@ class Processor(object):
     def _prepare(self):
         print("processing %s at %s " % (self.job_filename, platform.node()))
         
-        # Create a lock
-        self._update_lock(self.take_ownership)
-
         # Create a temporary directory
         self.tmp_dir = tempfile.mkdtemp(prefix=cfg.tmp_prefix)
         self.job_output_tmp = "%s/%s.root" % (self.tmp_dir, self.job_name)
+        
+        # Create a lock
+        self._update_lock(self.tmp_dir, self.take_ownership)
 
-    def _update_lock(self, take_ownership=False):
+
+    def _update_lock(self, tmp_dir, take_ownership=False):
         """Create and update job lock"""
         # check if lock exists
         if os.path.exists(self.job_lock):
@@ -65,7 +68,7 @@ class Processor(object):
                 if not take_ownership:
                     raise Exception("The job is locked. Ownership information:\n" + str(info))
         # update
-        info = {'pid':os.getpid(), 'node':platform.node(), 'lastupdate':time.time()}
+        info = {'pid':os.getpid(), 'node':platform.node(), 'lastupdate':time.time(), 'tmp_dir':tmp_dir}
         json.dump(info, open(self.job_lock,'w'))
 
     def _release_lock(self):
@@ -205,6 +208,15 @@ class FlatNtupleBase(Processor):
         
         raise Exception("Not implemented")
 
+    def _check_memory(self):
+        if 'memory_limit' in self.job_info:
+            memory_limit = self.job_info['memory_limit']
+        else:
+            memory_limit = 3.5 #GB
+        process = psutil.Process(os.getpid())
+        memory_usage = process.memory_info().rss / 1024. / 1024. / 1024. #GB
+        if memory_usage > memory_limit:
+            raise Exception(f"Too much memory is used (RSS:{memory_usage:.2f} GB, limit:{memory_limit:.2f} GB)")
 
     def _process(self):
         """Process input files, merge output and report performance"""
@@ -215,6 +227,7 @@ class FlatNtupleBase(Processor):
         t0 = time.perf_counter()
         n_events = 0
         for f in self.job_info['input']:
+            self._check_memory()
             result, n = self.process_file(f)
             n_events += n
             results.append(result)
@@ -259,11 +272,14 @@ class FlatNtupleBase(Processor):
         raise Exception("Not implemented")
     
 
-    def _preselect(self, input_tree, file_out, cut, keep=""):
+    def _preselect(self, input_tree, file_out, cut_candidate, cut_event=None, keep=""):
         df = RDataFrame(input_tree)
-        df2 = df.Define("goodCandidates", cut)
-        dfFinal = df2.Filter("Sum(goodCandidates) > 0", "Event has good candidates")
-        dfFinal.Snapshot("Events", file_out, keep)
+        if cut_event != None:
+            df = df.Filter(cut_event)
+        if cut_candidate != None:
+            df = df.Define("goodCandidates", cut_candidate)
+            df = df.Filter("Sum(goodCandidates) > 0", "Event has good candidates")
+        df.Snapshot("Events", file_out, keep)
 
     def process_file(self, input_file):
         """Initialize input and output trees and initiate the event loop"""
@@ -307,13 +323,21 @@ class FlatNtupleBase(Processor):
         nevents = input_tree.GetEntries()
         print(nevents)
 
-        if 'pre-selection' in self.job_info and nevents > 0:
+        fin2 = None
+
+        if ('pre-selection' in self.job_info or 'event-pre-selection' in self.job_info) and nevents > 0:
             keep = ""
+            candidate_cut = None
+            event_cut = None
             if "pre-selection-keep" in self.job_info:
                 keep = self.job_info['pre-selection-keep']
-            self._preselect(input_tree, skim_filename, self.job_info['pre-selection'], keep)
-            f = TFile.Open(skim_filename)
-            self.input_tree = f.Get("Events")
+            if 'pre-selection' in self.job_info:
+                candidate_cut = self.job_info['pre-selection']
+            if 'event-pre-selection' in self.job_info:
+                event_cut = self.job_info['event-pre-selection']
+            self._preselect(input_tree, skim_filename, candidate_cut, event_cut, keep)
+            fin2 = TFile.Open(skim_filename)
+            self.input_tree = fin2.Get("Events")
             n_preselect = self.input_tree.GetEntries()
             print('Pre-selected %d / %d entries from %s (%.2f%%)' % (n_preselect, nevents, input_file, 100.*n_preselect/nevents if nevents else 0))
         else:
@@ -328,6 +352,9 @@ class FlatNtupleBase(Processor):
         if 'pre-selection' in self.job_info and nevents > 0:
             subprocess.call("rm -v %s" % (skim_filename), shell=True)
 
+        fin.Close()
+        if fin2 != None:
+            fin2.Close()
         return output_filename, nevents
 
     def get_cut(self):
@@ -407,6 +434,9 @@ class ResourceHandler(object):
     def _get_running_jobs(self):
         raise Exception("Not implemented")
 
+    def get_free_memory(self):
+        raise Exception("Not implemented")
+    
     def number_of_running_jobs(self, owned=True):
         """Get number of running jobs. Can be restricted to only owned jobs"""
         jobs = self.get_running_jobs()
