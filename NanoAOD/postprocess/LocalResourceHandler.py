@@ -24,6 +24,10 @@ class LocalResourceHandler(ResourceHandler):
                 jobs.append(match.group(1))
         return jobs
 
+    def get_free_memory(self):
+        return int(subprocess.check_output("free -m | awk 'NR==2 {print $4 + $6}'",
+                                           shell=True, encoding='utf8', env={}))
+    
     def name(self):
         return "localhost"
 

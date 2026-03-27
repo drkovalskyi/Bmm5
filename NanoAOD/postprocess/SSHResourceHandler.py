@@ -71,6 +71,9 @@ class SSHResourceHandler(ResourceHandler):
                 jobs.append(match.group(1))
         return jobs
 
+    def get_free_memory(self):
+        return int(self._send_command_and_get_response("free -m | awk 'NR==2 {print $4 + $6}'"))
+    
     def wait_for_jobs_to_finish(self):
         time.sleep(10)
         while self.number_of_running_jobs(owned=True) > 0:
