@@ -1676,8 +1676,8 @@ void DileptonPlusXProducer::fillBtoLLhhInfo(pat::CompositeCandidate& bCand,
   auto bToKKll = fitBToLLhh(lepton1, lepton2, kaon1, kaon2);
   bToKKll.postprocess(*beamSpot_);
   auto bToKKll_displacement = compute3dDisplacement(bToKKll);
-  addFitInfo(bCand, bToKKll, "kin", bToKKll_displacement,-1,-1,1,2);
-  bCand.addUserFloat("kin_kk_mass",    bToKKll.refit_mass(1,2));
+  addFitInfo(bCand, bToKKll, "kin", bToKKll_displacement, 0, 1, 2, 3);
+  bCand.addUserFloat("kin_kk_mass",    bToKKll.refit_mass(2,3));
 
   // Jpsi hh
   
@@ -1699,18 +1699,18 @@ void DileptonPlusXProducer::fillBtoLLhhInfo(pat::CompositeCandidate& bCand,
     bToJpsiPiPi.postprocess(*beamSpot_);
   }
   auto bToJpsiKK_displacement = compute3dDisplacement(bToJpsiKK);
-  addFitInfo(bCand, bToJpsiKK, "jpsikk", bToJpsiKK_displacement, -1, -1, 1, 2);
-  bCand.addUserFloat("jpsikk_kk_mass",        bToJpsiKK.dau_mass(1));
-  
-  bCand.addUserFloat("jpsikpi_hh_mass",       bToJpsiKPi.dau_mass(1));
+  addFitInfo(bCand, bToJpsiKK, "jpsikk", bToJpsiKK_displacement, 0, 1, 2, 3);
+  bCand.addUserFloat("jpsikk_kk_mass",        bToJpsiKK.refit_mass(2,3));
+
+  bCand.addUserFloat("jpsikpi_hh_mass",       bToJpsiKPi.refit_mass(2,3));
   bCand.addUserFloat("jpsikpi_mass",          bToJpsiKPi.mass());
   bCand.addUserFloat("jpsikpi_massErr",       bToJpsiKPi.massErr());
-  
-  bCand.addUserFloat("jpsipik_hh_mass",       bToJpsiPiK.dau_mass(1));
+
+  bCand.addUserFloat("jpsipik_hh_mass",       bToJpsiPiK.refit_mass(2,3));
   bCand.addUserFloat("jpsipik_mass",          bToJpsiPiK.mass());
   bCand.addUserFloat("jpsipik_massErr",       bToJpsiPiK.massErr());
-  
-  bCand.addUserFloat("jpsipipi_hh_mass",       bToJpsiPiPi.dau_mass(1));
+
+  bCand.addUserFloat("jpsipipi_hh_mass",       bToJpsiPiPi.refit_mass(2,3));
   bCand.addUserFloat("jpsipipi_mass",          bToJpsiPiPi.mass());
   bCand.addUserFloat("jpsipipi_massErr",       bToJpsiPiPi.massErr());
 
@@ -1789,7 +1789,7 @@ void DileptonPlusXProducer::fillBtoLLhhInfo(pat::CompositeCandidate& bCand,
     bToPhill.postprocess(*beamSpot_);
   }
   auto bToPhill_displacement = compute3dDisplacement(bToPhill);
-  addFitInfo(bCand, bToPhill, "phill", bToPhill_displacement,-1,-1,1,2);
+  addFitInfo(bCand, bToPhill, "phill", bToPhill_displacement, 2, 3, 0, 1);
 
   // Bs to Ds mu nu, Ds to Phi mu nu, Phi to KK
   
@@ -3899,70 +3899,67 @@ DileptonPlusXProducer::fitBToLLhh( const bmm::Candidate& lepton1,
 				   float ll_mass_constraint,
 				   float hh_mass_constraint)
 {
-  // Rebuild ll vertex to ensure that the KinematicTree remains self
-  // consistent and no elements get out of scope or get deleted
-  // when the tree is used in subsequent fits
-  auto llVertexFit = vertexLeptonsWithKinematicFitter(lepton1, lepton2);
-  auto ll_tree = llVertexFit.tree();
-
-  KinematicFitResult result; 
+  KinematicFitResult result;
   if (lepton1.track()) result.tracks.push_back(lepton1.track());
   if (lepton2.track()) result.tracks.push_back(lepton2.track());
   if (had1.bestTrack()) result.tracks.push_back(had1.bestTrack());
   if (had2.bestTrack()) result.tracks.push_back(had2.bestTrack());
 
-  if ( not llVertexFit.valid()) return result;
+  if (!lepton1.track() || !lepton2.track()) return result;
+  if (!had1.bestTrack() || !had2.bestTrack()) return result;
 
-  auto hhVertexFit = vertexCandsWithKinematicFitter(had1, had2);
-  auto hh_tree = hhVertexFit.tree();
+  auto mu1 = theTTBuilder_->build(lepton1.track());
+  auto mu2 = theTTBuilder_->build(lepton2.track());
+  auto h1 = theTTBuilder_->build(had1.bestTrack());
+  auto h2 = theTTBuilder_->build(had2.bestTrack());
 
-  if ( not hhVertexFit.valid()) return result;
-  
-  KinematicConstraint* ll_mc(0);
-  if (ll_mass_constraint > 0){
-    ParticleMass mass = ll_mass_constraint;
-    // mass constraint fit
-    KinematicParticleFitter csFitter;
-    float mass_sigma = 1e-4;
-    // FIXME: potential memory leak
-    ll_mc = new MassKinematicConstraint(mass, mass_sigma);
-    try {
-      ll_tree = csFitter.fit(ll_mc, ll_tree);
-    } catch (const std::exception& e) {
-      return result;
-    }
-  }
+  KinematicParticleFactoryFromTransientTrack partFactory;
 
-  KinematicConstraint* hh_mc(0);
-  if (hh_mass_constraint > 0){
-    ParticleMass mass = hh_mass_constraint;
-    // mass constraint fit
-    KinematicParticleFitter csFitter;
-    float mass_sigma = 1e-4;
-    // FIXME: potential memory leak
-    hh_mc = new MassKinematicConstraint(mass, mass_sigma);
-    try {
-      hh_tree = csFitter.fit(hh_mc, hh_tree);
-    } catch (const std::exception& e) {
-      return result;
-    }
-  }
+  float muMass = MuonMass_;
+  float muSigma = muMass * 1.e-6f;
+  float h1Mass = had1.mass();
+  float h1Sigma = h1Mass * 1.e-6f;
+  float h2Mass = had2.mass();
+  float h2Sigma = h2Mass * 1.e-6f;
+  float chi = 0.f;
+  float ndf = 0.f;
 
-  KinematicParticleVertexFitter fitter;
-
+  // TwoTrackMassKinematicConstraint constrains the first two particles
+  // in the vector, so place the constrained pair first.
+  // ll and hh constraints cannot be used simultaneously.
   std::vector<RefCountedKinematicParticle> particles;
+  particles.reserve(4);
 
-  ll_tree->movePointerToTheTop();
-  particles.push_back(ll_tree->currentParticle());
-  hh_tree->movePointerToTheTop();
-  particles.push_back(hh_tree->currentParticle());
+  if (hh_mass_constraint > 0) {
+    particles.push_back(partFactory.particle(h1, h1Mass, chi, ndf, h1Sigma));
+    particles.push_back(partFactory.particle(h2, h2Mass, chi, ndf, h2Sigma));
+    particles.push_back(partFactory.particle(mu1, muMass, chi, ndf, muSigma));
+    particles.push_back(partFactory.particle(mu2, muMass, chi, ndf, muSigma));
+  } else {
+    particles.push_back(partFactory.particle(mu1, muMass, chi, ndf, muSigma));
+    particles.push_back(partFactory.particle(mu2, muMass, chi, ndf, muSigma));
+    particles.push_back(partFactory.particle(h1, h1Mass, chi, ndf, h1Sigma));
+    particles.push_back(partFactory.particle(h2, h2Mass, chi, ndf, h2Sigma));
+  }
+
+  float mass_constraint = ll_mass_constraint > 0 ? ll_mass_constraint : hh_mass_constraint;
 
   RefCountedKinematicTree vertexFitTree;
   try {
-    vertexFitTree = fitter.fit(particles);
-  } catch (const std::exception& e) {
+    if (mass_constraint > 0) {
+      ParticleMass pMass = mass_constraint;
+      TwoTrackMassKinematicConstraint constraint(pMass);
+      KinematicConstrainedVertexFitter fitter;
+      vertexFitTree = fitter.fit(particles, &constraint);
+    } else {
+      KinematicParticleVertexFitter fitter;
+      vertexFitTree = fitter.fit(particles);
+    }
+  } catch (const std::exception&) {
     return result;
   }
+
+  if (!vertexFitTree.get() || vertexFitTree->isEmpty()) return result;
 
   result.set_tree(vertexFitTree);
   return result;
