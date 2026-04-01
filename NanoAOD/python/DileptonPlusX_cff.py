@@ -113,7 +113,7 @@ json_files = [
     "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2022_355100_362760_Muon.json",
     "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2023_366442_370790_Muon.json",
     "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2024_378981_386951_Muon.json",
-    "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2025_391658_398082_Muon.json"
+    "Bmm5/NanoAOD/data/certification/muon/Cert_Collisions2025_391658_398860_Muon.json"
 ]
 
 json_files_fullpath = [fip(t) for t in json_files]
@@ -191,8 +191,8 @@ Dileptons = cms.EDProducer(
     maxD0Mass = cms.double(1.95),
     minDmmMass = cms.double(1.25),
     maxDmmMass = cms.double(2.45),
-    minKsMassLoose = cms.double(0.00),
-    maxKsMassLoose = cms.double(0.70),
+    minKsMassVeryLoose = cms.double(0.00),
+    maxKsMassVeryLoose = cms.double(0.70),
     minKsMass = cms.double(0.45),
     maxKsMass = cms.double(0.55),
     minKstarMass  = cms.double(0.7),
@@ -891,6 +891,7 @@ DileptonsKstarMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProduce
 DileptonsKKmumuTableVariables =  merge_psets(
     kinematic_pset,
     copy_pset(kinematic_pset, {"kin_":"jpsikk_"}),
+    copy_pset(kinematic_pset, {"kin_":"jpsiks_"}),
     copy_pset(kinematic_pset, {"kin_":"phill_"}),
     cms.PSet(
         mm_index        = Var("userInt('mm_index')",           int,   doc = "Index of dimuon pair"),
@@ -929,6 +930,13 @@ DileptonsKKmumuTableVariables =  merge_psets(
         jpsikk_kaon2_eta   = Var("userFloat('jpsikk_kaon2_eta')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 2 eta"),
         jpsikk_kaon2_phi   = Var("userFloat('jpsikk_kaon2_phi')",      float, doc = "Kinematic fit (with Jpsi mass constraint): refitted kaon 2 phi"),
 
+        # jpsiks
+        jpsiks_ks_decay_length = Var("userFloat('jpsiks_ks_decay_length')", float, doc = "Decay length of Ks wrt to B"),
+        jpsiks_ks_decay_length_significance = Var("userFloat('jpsiks_ks_decay_length_significance')",
+                                                  float, doc = "Decay length of Ks wrt to B"),
+        jpsiks_ks_mass = Var("userFloat('jpsiks_ks_mass')", float, doc = "Ks fitted mass"),
+        jpsiks_ks_massErr = Var("userFloat('jpsiks_ks_massErr')", float, doc = "Ks fitted mass uncertainty"),
+        
         # kaon2_mu1_doca  = Var("userFloat('kaon2_mu1_doca')",   float, doc = "Kaon2 distance of closest approach to muon1"),
         # kaon2_mu2_doca  = Var("userFloat('kaon2_mu2_doca')",   float, doc = "Kaon2 distance of closest approach to muon2"),
     #     bmm_nTrks      = Var("userInt('bmm_nTrks')",         int,   doc = "Number of tracks compatible with the vertex by vertex probability (BtoJpsiK as Bmm)"),
@@ -964,6 +972,7 @@ DileptonsKKmumuMcTableVariables = merge_psets(
         gen_l3d         = Var("userFloat('gen_l3d')",         float, doc = "Gen match: kkmm decay legnth 3D"),
         gen_lxy         = Var("userFloat('gen_lxy')",         float, doc = "Gen match: kkmm decay legnth XY"),
         gen_tau         = Var("userFloat('gen_tau')",         float, doc = "Gen match: kkmm decay time 3D"),
+        jpsiks_gen_ks_pdgId = Var("userInt('jpsiks_gen_ks_pdgId')", float, doc = "Ks MC match"),
     )
 )
 

@@ -32,6 +32,7 @@
 #include "RecoVertex/KinematicFit/interface/KinematicConstrainedVertexFitter.h"
 #include "RecoVertex/KinematicFit/interface/ColinearityKinematicConstraintT.h"
 #include "RecoVertex/KinematicFit/interface/KinematicConstrainedVertexFitterT.h"
+#include "RecoVertex/KinematicFit/interface/TwoTrackMassKinematicConstraint.h"
 #include "RecoVertex/KalmanVertexFit/interface/KalmanVertexFitter.h"
 #include "TrackingTools/PatternTools/interface/TwoTrackMinimumDistance.h"
 #include "TrackingTools/IPTools/interface/IPTools.h"
@@ -61,6 +62,7 @@
 //
 
 typedef reco::Candidate::LorentzVector LorentzVector;
+typedef std::pair<pat::CompositeCandidate, KinematicFitResult> FitCandidate;
 
 using namespace bmm;
 
@@ -144,6 +146,11 @@ namespace {
     double jpsi_mass2 = 0.0;
   };
 
+  enum KsSelectionType {
+    LooseKsSelection, 
+    NominalKsSelection, 
+    KsmmSelection, 
+  };
 }
 
 
@@ -213,13 +220,22 @@ private:
 		       const pat::PackedCandidate& had1,
 		       const pat::PackedCandidate& had2);
 
+  float trackIPSwrtBS(const reco::Track& track);
+  
+  std::unique_ptr<FitCandidate>
+  buildKsCandidate(const edm::Event& iEvent,
+		   const pat::PackedCandidate& had1,
+		   const pat::PackedCandidate& had2,
+		   KsSelectionType type);
+  
   const pat::CompositeCandidate*
-  buildKsCandidates(pat::CompositeCandidateCollection& hh_collection,
-		    pat::CompositeCandidateCollection& iso_collection,
-		    std::vector<const reco::Track*>& interestingTracks,
-		    const edm::Event& iEvent,
-		    const pat::PackedCandidate& had1,
-		    const pat::PackedCandidate& had2);
+  buildAndDressKsCandidate(pat::CompositeCandidateCollection& hh_collection,
+			   pat::CompositeCandidateCollection& iso_collection,
+			   std::vector<const reco::Track*>& interestingTracks,
+			   const edm::Event& iEvent,
+			   const pat::PackedCandidate& had1,
+			   const pat::PackedCandidate& had2,
+			   KsSelectionType type);
   
 
   bool isGoodMuon(const pat::Muon& muon);
@@ -294,6 +310,13 @@ private:
 	      float ll_mass_constraint=-1.0,
 	      float kk_mass_constraint=-1.0);
   
+  KinematicFitResult
+  fitBToJpsiKs(const bmm::Candidate& lepton1,
+	       const bmm::Candidate& lepton2,
+	       const std::unique_ptr<FitCandidate>& ksCand,
+	       bool jpsi_mass_constraint=false,
+	       bool ks_mass_constraint=false);
+
   KinematicFitResult
   fitDstar(const bmm::Candidate& lepton1,
 	   const bmm::Candidate& lepton2,
@@ -396,7 +419,8 @@ private:
 		  const pat::PackedCandidate & kaon1,
 		  const pat::PackedCandidate & kaon2, 
 		  const pat::PackedCandidate & pion1,
-		  const pat::PackedCandidate & pion2); 
+		  const pat::PackedCandidate & pion2,
+		  const std::unique_ptr<FitCandidate>& ksCand); 
   void
   fillLLGammaGenInfo(pat::CompositeCandidate& llgCand,
 		     const edm::Event& iEvent,
@@ -555,8 +579,8 @@ private:
   double maxD0Mass_;
   double minKsMass_;
   double maxKsMass_;
-  double minKsMassLoose_;
-  double maxKsMassLoose_;
+  double minKsMassVeryLoose_;
+  double maxKsMassVeryLoose_;
   double minKstarMass_;
   double maxKstarMass_;
   double minDmmMass_;
@@ -638,8 +662,8 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   maxD0Mass_(      iConfig.getParameter<double>( "maxD0Mass" ) ),
   minKsMass_(      iConfig.getParameter<double>( "minKsMass" ) ),
   maxKsMass_(      iConfig.getParameter<double>( "maxKsMass" ) ),
-  minKsMassLoose_( iConfig.getParameter<double>( "minKsMassLoose" ) ),
-  maxKsMassLoose_( iConfig.getParameter<double>( "maxKsMassLoose" ) ),
+  minKsMassVeryLoose_( iConfig.getParameter<double>( "minKsMassVeryLoose" ) ),
+  maxKsMassVeryLoose_( iConfig.getParameter<double>( "maxKsMassVeryLoose" ) ),
   minKstarMass_(   iConfig.getParameter<double>( "minKstarMass" ) ),
   maxKstarMass_(   iConfig.getParameter<double>( "maxKstarMass" ) ),
   minDmmMass_(      iConfig.getParameter<double>( "minDmmMass" ) ),
@@ -911,6 +935,13 @@ DileptonPlusXProducer::findTracksCompatibleWithTheVertex(const bmm::Candidate& l
   return result;
 }
 
+float DileptonPlusXProducer::trackIPSwrtBS(const reco::Track& track) {
+  if (track.dxyError(*beamSpot_) > 0)
+    return std::abs(track.dxy(*beamSpot_)) / track.dxyError(*beamSpot_);
+  else
+    return -1.0;
+}
+  
 float
 DileptonPlusXProducer::computeTrkLeptonIsolation(const bmm::Candidate& theLepton,
 						 const bmm::Candidate& theOtherLepton, 
@@ -1595,7 +1626,8 @@ void DileptonPlusXProducer::fillBtoLLhhInfo(pat::CompositeCandidate& bCand,
 					    const pat::PackedCandidate & kaon1,
 					    const pat::PackedCandidate & kaon2,
 					    const pat::PackedCandidate & pion1,
-					    const pat::PackedCandidate & pion2) 
+					    const pat::PackedCandidate & pion2,
+					    const std::unique_ptr<FitCandidate>& ksCand)
 {
   bCand.addUserFloat("kaon1_pt",     kaon1.pt());
   bCand.addUserFloat("kaon1_eta",    kaon1.eta());
@@ -1682,9 +1714,75 @@ void DileptonPlusXProducer::fillBtoLLhhInfo(pat::CompositeCandidate& bCand,
   bCand.addUserFloat("jpsipipi_mass",          bToJpsiPiPi.mass());
   bCand.addUserFloat("jpsipipi_massErr",       bToJpsiPiPi.massErr());
 
+  // Jpsi Ks
+
+  // Cache Ks properties before fitBToJpsiKs, which may apply a mass
+  // constraint to the Ks kinematic tree and invalidate ksCand state
+  float ks_mass = -1.0;
+  float ks_massErr = -1.0;
+  LorentzVector ks_p4;
+  VertexState ks_vtx_state;
+  bool ks_valid = ksCand && ksCand->second.valid();
+  if (ks_valid) {
+    ks_mass = ksCand->second.mass();
+    ks_massErr = ksCand->second.massErr();
+    ks_p4 = ksCand->second.p4();
+    ks_vtx_state = ksCand->second.vtx_state();
+  }
+
+  KinematicFitResult bToJpsiKs;
+  if (ksCand and fabs((lepton1.p4() + lepton2.p4()).mass() - JPsiMass_) < 0.2) {
+    bToJpsiKs = fitBToJpsiKs(lepton1, lepton2, ksCand, true, true);
+    bToJpsiKs.postprocess(*beamSpot_);
+  }
+  auto bToJpsiKs_displacement = compute3dDisplacement(bToJpsiKs);
+  addFitInfo(bCand, bToJpsiKs, "jpsiks", bToJpsiKs_displacement, -1, -1, 1, 2);
+
+  // compute decay length
+  if (bToJpsiKs.valid() && ks_valid) {
+    VertexDistance3D distance3D;
+    auto dist = distance3D.distance(bToJpsiKs.vtx_state(), ks_vtx_state);
+    bCand.addUserFloat("jpsiks_ks_decay_length", dist.value());
+    bCand.addUserFloat("jpsiks_ks_decay_length_significance",
+		       dist.error() > 0 ? dist.value() / dist.error() : -1);
+    bCand.addUserFloat("jpsiks_ks_mass", ks_mass);
+    bCand.addUserFloat("jpsiks_ks_massErr", ks_massErr);
+
+    if (isMC_){
+      // MC matching
+      // It is easier to match K_S gen particle to a composite refitted
+      // candidate since one does not need to take into account momentum
+      // direction change for charged tracks originating away from the
+      // primary vertex
+      const reco::GenParticle* gen_ks_match = genCandidateMatch(310, ks_p4);
+      bCand.addUserInt("jpsiks_gen_ks_pdgId", gen_ks_match ? gen_ks_match->pdgId() : 0);
+    } else {
+      bCand.addUserInt("jpsiks_gen_ks_pdgId", 0);
+    }
+  } else {
+    bCand.addUserFloat("jpsiks_ks_decay_length", -1.0);
+    bCand.addUserFloat("jpsiks_ks_decay_length_significance", -1.0);
+    bCand.addUserFloat("jpsiks_ks_mass", -1.0);
+    bCand.addUserFloat("jpsiks_ks_massErr", -1.0);
+    bCand.addUserInt("jpsiks_gen_ks_pdgId", 0);
+  }
+    
+  
+  // K_S case
+  //
+  // It is easier to match K_S gen particle to a composite refitted
+  // candidate since one does not need to take into account momentum
+  // direction change for charged tracks originating away from the
+  // primary vertex
+  // const reco::GenParticle* gen_ks_match = genCandidateMatch(310, kinematicLLVertexFit.p4());
+  // if (gen_ks_match) {
+  //   dileptonCand.addUserInt("gen_ks_pdgId", gen_ks_match->pdgId());
+  // } else {
+  //   dileptonCand.addUserInt("gen_ks_pdgId", 0);
+  // }
+
   
   // Phi ll
-  
   KinematicFitResult bToPhill;
   if (fabs((kaon1.p4() + kaon2.p4()).mass() - PhiMass_) < 0.01) { 
     bToPhill = fitBToLLhh(lepton1, lepton2, kaon1, kaon2, -1, PhiMass_);
@@ -2502,16 +2600,19 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
 						    kaonCand1.bestTrack());
     double l2_kaon_doca = distanceOfClosestApproach(lepton2.track(),
 						    kaonCand1.bestTrack());
-    if (maxTwoTrackDOCA_ > 0 and l1_kaon_doca > maxTwoTrackDOCA_) continue;
-    if (maxTwoTrackDOCA_ > 0 and l2_kaon_doca > maxTwoTrackDOCA_) continue;
-	      
     bool goodBtoLLK = true;
+    bool good3ProngVtx = true;
 
-    double kll_mass = (lepton1.p4() + lepton2.p4() + kaonCand1.p4()).mass();
-    if (kll_mass < minBKllMass_ || kll_mass > maxBKllMass_) goodBtoLLK = false;
+    if (maxTwoTrackDOCA_ > 0 and l1_kaon_doca > maxTwoTrackDOCA_) good3ProngVtx = false;
+    if (maxTwoTrackDOCA_ > 0 and l2_kaon_doca > maxTwoTrackDOCA_) good3ProngVtx = false;
+
+    if (good3ProngVtx) {
+      double kll_mass = (lepton1.p4() + lepton2.p4() + kaonCand1.p4()).mass();
+      if (kll_mass < minBKllMass_ || kll_mass > maxBKllMass_) goodBtoLLK = false;
+    }
 	    
     // fill BtoLLK candidate info
-    if (goodBtoLLK){
+    if (good3ProngVtx and goodBtoLLK){
       pat::CompositeCandidate btokllCand;
       btokllCand.addUserInt(dileptonCand.name() + "_index", ll_index);
       btokllCand.addUserFloat("kaon_l1_doca", l1_kaon_doca);
@@ -2543,11 +2644,17 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
 						       kaonCand2.bestTrack());
       double l2_kaon2_doca = distanceOfClosestApproach(lepton2.track(),
 						       kaonCand2.bestTrack());
-      if (maxTwoTrackDOCA_>0 and l1_kaon2_doca > maxTwoTrackDOCA_) continue;
-      if (maxTwoTrackDOCA_>0 and l2_kaon2_doca > maxTwoTrackDOCA_) continue;
+      bool good4ProngVtx = good3ProngVtx;
+      if (good4ProngVtx) {
+	if (maxTwoTrackDOCA_>0 and l1_kaon2_doca > maxTwoTrackDOCA_) good4ProngVtx = false;
+	if (maxTwoTrackDOCA_>0 and l2_kaon2_doca > maxTwoTrackDOCA_) good4ProngVtx = false;
+      }
+
+      auto ksCand = buildKsCandidate(iEvent, pionCand1, pionCand2, NominalKsSelection);
       
       // make sure that all hypothese fit within the B mass window to avoid biasing the selection
       bool goodBtoLLhh = false;
+      bool goodBtoLLKs = false;
       double llkk_mass   = (lepton1.p4() + lepton2.p4() + kaonCand1.p4() + kaonCand2.p4()).mass();
       double llpik_mass  = (lepton1.p4() + lepton2.p4() + pionCand1.p4() + kaonCand2.p4()).mass();
       double llkpi_mass  = (lepton1.p4() + lepton2.p4() + kaonCand1.p4() + pionCand2.p4()).mass();
@@ -2557,6 +2664,11 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
 	   (llkpi_mass  >= minBhhllMass_ && llkpi_mass  <= maxBhhllMass_ ) ||
 	   (llpipi_mass >= minBhhllMass_ && llpipi_mass <= maxBhhllMass_ ) )
 	goodBtoLLhh = true;
+      if (ksCand) {
+	double llks_mass   = (lepton1.p4() + lepton2.p4() + ksCand->first.p4()).mass();
+	if (llks_mass   >= minBhhllMass_ && llks_mass   <= maxBhhllMass_ )
+	  goodBtoLLKs = true;
+      }
 
       // Bs to Ds mu nu, Ds to Phi mu nu, Phi to KK
       bool goodBsToDsmunu = true;
@@ -2575,7 +2687,7 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
       }
 
       // fill BtoLLhh candidate info
-      if (goodBtoLLhh or goodBsToDsmunu){
+      if (goodBtoLLhh or goodBtoLLKs or goodBsToDsmunu){
 	pat::CompositeCandidate btokkllCand;
 	btokkllCand.addUserInt(dileptonCand.name() + "_index", ll_index);
 	btokkllCand.addUserFloat("kaon1_l1_doca", l1_kaon_doca);
@@ -2583,7 +2695,7 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
 	btokkllCand.addUserFloat("kaon2_l1_doca", l1_kaon2_doca);
 	btokkllCand.addUserFloat("kaon2_l2_doca", l2_kaon2_doca);
 	
-	fillBtoLLhhInfo(btokkllCand, iEvent, lepton1, lepton2, kaonCand1, kaonCand2, pionCand1, pionCand2);
+	fillBtoLLhhInfo(btokkllCand, iEvent, lepton1, lepton2, kaonCand1, kaonCand2, pionCand1, pionCand2, ksCand);
 	// FIXME
 	// fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokkllCand,dileptonCand,iEvent,kinematicLLVertexFit,lepton1,lepton2,kaonCand1);
 
@@ -2686,20 +2798,34 @@ DileptonPlusXProducer::buildDstarCandidates(pat::CompositeCandidateCollection& d
   }
 }
 
-const pat::CompositeCandidate*
-DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_collection,
-					 pat::CompositeCandidateCollection& iso_collection,
-					 std::vector<const reco::Track*>& tracks,
-					 const edm::Event& iEvent,
-					 const pat::PackedCandidate& had1,
-					 const pat::PackedCandidate& had2) {
+
+std::unique_ptr<FitCandidate>
+DileptonPlusXProducer::buildKsCandidate(const edm::Event& iEvent,
+					const pat::PackedCandidate& had1,
+					const pat::PackedCandidate& had2,
+					KsSelectionType type) {
   // This part of the code needs to be efficient. We cannot rely on
   // the raw mass since, Ks can fly far enough that track momentum at
   // the beamline is different enough from the decay vertex to smear
   // the mass distribution.
   if (not recoKspipi_) return nullptr;
-  if (had1.pt() < minKsTrkPt_ || fabs(had1.eta()) > maxKsTrkEta_) return nullptr;
-  if (had2.pt() < minKsTrkPt_ || fabs(had2.eta()) > maxKsTrkEta_) return nullptr;
+
+  if (type == KsmmSelection) {
+    if (had1.pt() < minKsTrkPt_ || fabs(had1.eta()) > maxKsTrkEta_) return nullptr;
+    if (had2.pt() < minKsTrkPt_ || fabs(had2.eta()) > maxKsTrkEta_) return nullptr;
+  }
+  
+  if (type == NominalKsSelection) {
+    if (trackIPSwrtBS(*had1.bestTrack()) < 1) return nullptr;
+    if (trackIPSwrtBS(*had2.bestTrack()) < 1) return nullptr;
+  }
+  
+  if (maxTwoTrackDOCA_ > 0) {
+    double doca = distanceOfClosestApproach(had1.bestTrack(),
+					    had2.bestTrack());
+    if (doca > maxTwoTrackDOCA_) return nullptr;
+  }
+  
   AddFourMomenta addP4;
   bmm::Candidate pion1(had1);
   pion1.setType(PionMass_, "had", had1.pdgId());
@@ -2722,20 +2848,38 @@ DileptonPlusXProducer::buildKsCandidates(pat::CompositeCandidateCollection& hh_c
     if (preprocess(ksCand, iEvent, pion1, pion2)){
       // Kinematic Fits
       auto vtxFit = fillDileptonInfo(ksCand, iEvent, pion1, pion2);
-      bool good_ks = abs(had1.pdgId()) == 211 && had1.pdgId() == -had2.pdgId() &&
+      bool ks_loose = abs(had1.pdgId()) == 211 && had1.pdgId() == -had2.pdgId() &&
 	vtxFit.mass() > minKsMass_ && vtxFit.mass() < maxKsMass_;
-      bool loose_ks = fabs(vtxFit.lxy()) > 1.0 && vtxFit.mass() > minKsMassLoose_ &&
-	vtxFit.mass() < maxKsMassLoose_;
-      if (good_ks || loose_ks){
-	fillIsolationInfo(ksCand, vtxFit, -1, hh_collection.size(),
-			  iso_collection, tracks, iEvent, pion1.track(), pion2.track());
-	hh_collection.push_back(ksCand);
-	return &hh_collection.back();
+      bool ks_sideband = fabs(vtxFit.lxy()) > 1.0 && vtxFit.mass() > minKsMassVeryLoose_ &&
+	vtxFit.mass() < maxKsMassVeryLoose_;
+      if ( (type == KsmmSelection && (ks_loose || ks_sideband)) ||
+	   (type == LooseKsSelection && ks_loose) ||
+	   (type == NominalKsSelection && ks_loose) ) {
+	return std::make_unique<FitCandidate>(ksCand, vtxFit);
       }
     }
   }
   return nullptr;
 }
+
+const pat::CompositeCandidate*
+DileptonPlusXProducer::buildAndDressKsCandidate(pat::CompositeCandidateCollection& hh_collection,
+						pat::CompositeCandidateCollection& iso_collection,
+						std::vector<const reco::Track*>& tracks,
+						const edm::Event& iEvent,
+						const pat::PackedCandidate& had1,
+						const pat::PackedCandidate& had2,
+						KsSelectionType type) {
+  auto fitCand = buildKsCandidate(iEvent, had1, had2, type);
+  if (fitCand){
+    fillIsolationInfo(fitCand->first, fitCand->second, -1, hh_collection.size(),
+		      iso_collection, tracks, iEvent, had1.bestTrack(), had2.bestTrack());
+    hh_collection.push_back(std::move(fitCand->first));
+    return &hh_collection.back();
+  }
+  return nullptr;
+}
+
 
 
 void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
@@ -3169,8 +3313,8 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	  buildDstarCandidates(*dstar_collection, *hh_collection, iEvent, cand1, cand2);
 	}
 	  
-	const auto* ksCand = buildKsCandidates(*hh_collection, *iso_collection, interestingTracks,
-					       iEvent, cand1, cand2);
+	const auto* ksCand = buildAndDressKsCandidate(*hh_collection, *iso_collection, interestingTracks,
+						      iEvent, cand1, cand2, KsmmSelection);
 	
 	// Kstar->Kspi->mmpi
 	if (recoKstar_ && ksCand){
@@ -3523,6 +3667,73 @@ DileptonPlusXProducer::fitBToKLL(const bmm::Candidate& lepton1,
   } catch (const std::exception& e) {
     return result;
   }
+
+  result.set_tree(vertexFitTree);
+  return result;
+}
+
+KinematicFitResult
+DileptonPlusXProducer::fitBToJpsiKs(const bmm::Candidate& lepton1,
+				    const bmm::Candidate& lepton2,
+				    const std::unique_ptr<FitCandidate>& ksCand,
+				    bool jpsi_mass_constraint,
+				    bool ks_mass_constraint)
+{
+  KinematicFitResult result;
+
+  if (!lepton1.track() || !lepton2.track()) return result;
+  if (!ksCand) return result;
+
+  auto ksTree = ksCand->second.tree();
+  if (!ksTree.get() || ksTree->isEmpty()) return result;
+
+  if (ks_mass_constraint) {
+    ParticleMass mass = KsMass_;
+    KinematicParticleFitter csFitter;
+    float mass_sigma = 1e-4;
+    KinematicConstraint* ks_mc = new MassKinematicConstraint(mass, mass_sigma);
+    try {
+      ksTree = csFitter.fit(ks_mc, ksTree);
+    } catch (const std::exception&) {
+      return result;
+    }
+  }
+
+  auto mu1 = theTTBuilder_->build(lepton1.track());
+  auto mu2 = theTTBuilder_->build(lepton2.track());
+
+  KinematicParticleFactoryFromTransientTrack partFactory;
+
+  float muMass = MuonMass_;
+  float muSigma = muMass * 1.e-6f;
+  float chi = 0.f;
+  float ndf = 0.f;
+
+  std::vector<RefCountedKinematicParticle> particles;
+  particles.reserve(3);
+
+  particles.push_back(partFactory.particle(mu1, muMass, chi, ndf, muSigma));
+  particles.push_back(partFactory.particle(mu2, muMass, chi, ndf, muSigma));
+
+  ksTree->movePointerToTheTop();
+  particles.push_back(ksTree->currentParticle());
+
+  RefCountedKinematicTree vertexFitTree;
+  try {
+    if (jpsi_mass_constraint) {
+      ParticleMass pMass = JPsiMass_;
+      TwoTrackMassKinematicConstraint jpsiConstraint(pMass);
+      KinematicConstrainedVertexFitter fitter;
+      vertexFitTree = fitter.fit(particles, &jpsiConstraint);
+    } else {
+      KinematicParticleVertexFitter fitter;
+      vertexFitTree = fitter.fit(particles);
+    }
+  } catch (const std::exception&) {
+    return result;
+  }
+
+  if (!vertexFitTree.get() || vertexFitTree->isEmpty()) return result;
 
   result.set_tree(vertexFitTree);
   return result;
