@@ -50,7 +50,7 @@ class KinematicFitResult{
   float sigLxy() const {return sigLxy_;}
   float alphaBS() const {return alphaBS_;}
   float alphaBSErr() const {return alphaBSErr_;}
-  RefCountedKinematicTree tree(){return refitTree;}
+  RefCountedKinematicTree tree() const {return refitTree;}
   const RefCountedKinematicParticle particle() const {return refitMother;}
 
   std::vector<const reco::Track*> tracks;

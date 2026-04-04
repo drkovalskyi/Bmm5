@@ -62,6 +62,7 @@
 //
 
 typedef reco::Candidate::LorentzVector LorentzVector;
+
 typedef std::pair<pat::CompositeCandidate, KinematicFitResult> FitCandidate;
 
 using namespace bmm;
@@ -504,6 +505,7 @@ private:
   
 
   // ----------member data ---------------------------
+  
     
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
   const reco::BeamSpot* beamSpot_;
@@ -552,6 +554,7 @@ private:
   double minBhhllMass_;
   double maxBhhllMass_;
   double maxTwoTrackDOCA_;
+  double minBhhllVtxProb_;
   bool   injectMatchedBtohh_;
   bool   injectBtohh_;
   bool   injectJpsiTracks_;
@@ -635,6 +638,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   minBhhllMass_(    iConfig.getParameter<double>( "minBKKllMass" ) ),
   maxBhhllMass_(    iConfig.getParameter<double>( "maxBKKllMass" ) ),
   maxTwoTrackDOCA_( iConfig.getParameter<double>( "maxTwoTrackDOCA" ) ),
+  minBhhllVtxProb_( iConfig.getParameter<double>( "minBhhllVtxProb" ) ),
   injectMatchedBtohh_( iConfig.getParameter<bool>( "injectMatchedBtohh" ) ),
   injectBtohh_(        iConfig.getParameter<bool>( "injectBtohh" ) ),
   injectJpsiTracks_(  iConfig.getParameter<bool>( "injectJpsiTracks" ) ),
@@ -1680,39 +1684,59 @@ void DileptonPlusXProducer::fillBtoLLhhInfo(pat::CompositeCandidate& bCand,
   bCand.addUserFloat("kin_kk_mass",    bToKKll.refit_mass(2,3));
 
   // Jpsi hh
-  
+  // Only run the JpsiKK constrained fit. For other hadron mass hypotheses
+  // (KPi, PiK, PiPi), recompute masses from JpsiKK refitted momenta —
+  // the JPsi constraint acts on the dimuon pair and barely affects hadron momenta.
   KinematicFitResult bToJpsiKK;
-  KinematicFitResult bToJpsiKPi;
-  KinematicFitResult bToJpsiPiK;
-  KinematicFitResult bToJpsiPiPi;
-  if (fabs((lepton1.p4() + lepton2.p4()).mass() - JPsiMass_) < 0.2) { 
+  if (bToKKll.vtxProb() > 0.001 && fabs((lepton1.p4() + lepton2.p4()).mass() - JPsiMass_) < 0.2) { 
     bToJpsiKK = fitBToLLhh(lepton1, lepton2, kaon1, kaon2, JPsiMass_);
     bToJpsiKK.postprocess(*beamSpot_);
-    
-    bToJpsiKPi = fitBToLLhh(lepton1, lepton2, kaon1, pion2, JPsiMass_);
-    bToJpsiKPi.postprocess(*beamSpot_);
-    
-    bToJpsiPiK = fitBToLLhh(lepton1, lepton2, pion1, kaon2, JPsiMass_);
-    bToJpsiPiK.postprocess(*beamSpot_);
-    
-    bToJpsiPiPi = fitBToLLhh(lepton1, lepton2, pion1, pion2, JPsiMass_);
-    bToJpsiPiPi.postprocess(*beamSpot_);
   }
   auto bToJpsiKK_displacement = compute3dDisplacement(bToJpsiKK);
   addFitInfo(bCand, bToJpsiKK, "jpsikk", bToJpsiKK_displacement, 0, 1, 2, 3);
   bCand.addUserFloat("jpsikk_kk_mass",        bToJpsiKK.refit_mass(2,3));
 
-  bCand.addUserFloat("jpsikpi_hh_mass",       bToJpsiKPi.refit_mass(2,3));
-  bCand.addUserFloat("jpsikpi_mass",          bToJpsiKPi.mass());
-  bCand.addUserFloat("jpsikpi_massErr",       bToJpsiKPi.massErr());
-
-  bCand.addUserFloat("jpsipik_hh_mass",       bToJpsiPiK.refit_mass(2,3));
-  bCand.addUserFloat("jpsipik_mass",          bToJpsiPiK.mass());
-  bCand.addUserFloat("jpsipik_massErr",       bToJpsiPiK.massErr());
-
-  bCand.addUserFloat("jpsipipi_hh_mass",       bToJpsiPiPi.refit_mass(2,3));
-  bCand.addUserFloat("jpsipipi_mass",          bToJpsiPiPi.mass());
-  bCand.addUserFloat("jpsipipi_massErr",       bToJpsiPiPi.massErr());
+  // Recompute masses under alternative hadron hypotheses from JpsiKK refitted momenta
+  if (bToJpsiKK.valid()) {
+    auto p0 = bToJpsiKK.dau_p3(0); // mu1
+    auto p1 = bToJpsiKK.dau_p3(1); // mu2
+    auto p2 = bToJpsiKK.dau_p3(2); // had1
+    auto p3 = bToJpsiKK.dau_p3(3); // had2
+    auto inv_mass4 = [](GlobalVector a, float ma, GlobalVector b, float mb,
+                        GlobalVector c, float mc, GlobalVector d, float md) {
+      float e = sqrt(a.mag2()+ma*ma) + sqrt(b.mag2()+mb*mb)
+              + sqrt(c.mag2()+mc*mc) + sqrt(d.mag2()+md*md);
+      auto p = a + b + c + d;
+      float m2 = e*e - p.mag2();
+      return m2 > 0 ? sqrt(m2) : -1.0f;
+    };
+    auto inv_mass2 = [](GlobalVector a, float ma, GlobalVector b, float mb) {
+      float e = sqrt(a.mag2()+ma*ma) + sqrt(b.mag2()+mb*mb);
+      auto p = a + b;
+      float m2 = e*e - p.mag2();
+      return m2 > 0 ? sqrt(m2) : -1.0f;
+    };
+    float m_mu = MuonMass_, m_k = KaonMass_, m_pi = PionMass_;
+    bCand.addUserFloat("jpsikpi_hh_mass",  inv_mass2(p2, m_k, p3, m_pi));
+    bCand.addUserFloat("jpsikpi_mass",     inv_mass4(p0,m_mu, p1,m_mu, p2,m_k, p3,m_pi));
+    bCand.addUserFloat("jpsikpi_massErr",  bToJpsiKK.massErr());
+    bCand.addUserFloat("jpsipik_hh_mass",  inv_mass2(p2, m_pi, p3, m_k));
+    bCand.addUserFloat("jpsipik_mass",     inv_mass4(p0,m_mu, p1,m_mu, p2,m_pi, p3,m_k));
+    bCand.addUserFloat("jpsipik_massErr",  bToJpsiKK.massErr());
+    bCand.addUserFloat("jpsipipi_hh_mass", inv_mass2(p2, m_pi, p3, m_pi));
+    bCand.addUserFloat("jpsipipi_mass",    inv_mass4(p0,m_mu, p1,m_mu, p2,m_pi, p3,m_pi));
+    bCand.addUserFloat("jpsipipi_massErr", bToJpsiKK.massErr());
+  } else {
+    bCand.addUserFloat("jpsikpi_hh_mass",  -1.0);
+    bCand.addUserFloat("jpsikpi_mass",     -1.0);
+    bCand.addUserFloat("jpsikpi_massErr",  -1.0);
+    bCand.addUserFloat("jpsipik_hh_mass",  -1.0);
+    bCand.addUserFloat("jpsipik_mass",     -1.0);
+    bCand.addUserFloat("jpsipik_massErr",  -1.0);
+    bCand.addUserFloat("jpsipipi_hh_mass", -1.0);
+    bCand.addUserFloat("jpsipipi_mass",    -1.0);
+    bCand.addUserFloat("jpsipipi_massErr", -1.0);
+  }
 
   // Jpsi Ks
 
@@ -1784,7 +1808,7 @@ void DileptonPlusXProducer::fillBtoLLhhInfo(pat::CompositeCandidate& bCand,
   
   // Phi ll
   KinematicFitResult bToPhill;
-  if (fabs((kaon1.p4() + kaon2.p4()).mass() - PhiMass_) < 0.01) { 
+  if (bToKKll.vtxProb() > 0.001 && fabs((kaon1.p4() + kaon2.p4()).mass() - PhiMass_) < 0.01) { 
     bToPhill = fitBToLLhh(lepton1, lepton2, kaon1, kaon2, -1, PhiMass_);
     bToPhill.postprocess(*beamSpot_);
   }
@@ -2699,7 +2723,8 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
 	// FIXME
 	// fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokkllCand,dileptonCand,iEvent,kinematicLLVertexFit,lepton1,lepton2,kaonCand1);
 
-	llkk.push_back(btokkllCand);
+	if (minBhhllVtxProb_ <= 0 || btokkllCand.userFloat("kin_vtx_prob") > minBhhllVtxProb_)
+	  llkk.push_back(btokkllCand);
 	
       }
     }
@@ -2936,6 +2961,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
     nanoGenAssociation_ = nullptr;
     packedGenParticles_ = nullptr;
   }
+
 
   auto nMuons   = muonHandle->size();
   auto nPhotons = photonHandle->size();
