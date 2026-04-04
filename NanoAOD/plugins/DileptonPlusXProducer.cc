@@ -555,6 +555,7 @@ private:
   double maxBhhllMass_;
   double maxTwoTrackDOCA_;
   double minBhhllVtxProb_;
+  double minLLSigLxyForBLLX_;
   bool   injectMatchedBtohh_;
   bool   injectBtohh_;
   bool   injectJpsiTracks_;
@@ -639,6 +640,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   maxBhhllMass_(    iConfig.getParameter<double>( "maxBKKllMass" ) ),
   maxTwoTrackDOCA_( iConfig.getParameter<double>( "maxTwoTrackDOCA" ) ),
   minBhhllVtxProb_( iConfig.getParameter<double>( "minBhhllVtxProb" ) ),
+  minLLSigLxyForBLLX_( iConfig.getParameter<double>( "minLLSigLxyForBLLX" ) ),
   injectMatchedBtohh_( iConfig.getParameter<bool>( "injectMatchedBtohh" ) ),
   injectBtohh_(        iConfig.getParameter<bool>( "injectBtohh" ) ),
   injectJpsiTracks_(  iConfig.getParameter<bool>( "injectJpsiTracks" ) ),
@@ -3103,8 +3105,10 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	}
 
 	// mmK and mmKK
-	buildLLXCandidates(*btokmm, *btokkmm, iEvent, kinematicLLVertexFit, dimuonCand, 
-			   mm_index, muon1, muon2);
+	if (minLLSigLxyForBLLX_ <= 0 || kinematicLLVertexFit.sigLxy() >= minLLSigLxyForBLLX_) {
+	  buildLLXCandidates(*btokmm, *btokkmm, iEvent, kinematicLLVertexFit, dimuonCand, 
+			     mm_index, muon1, muon2);
+	}
 
 	// Dstar->D0pi->mmpi
 	if (recoDstar_){
