@@ -1355,7 +1355,7 @@ void DileptonPlusXProducer::fillBtoKllInfo(pat::CompositeCandidate& btokllCand,
   auto bToKJPsiLL_NoMassConstraint = fitBToKLL(lepton1, lepton2, kaon, -1.0);
   bToKJPsiLL_NoMassConstraint.postprocess(*beamSpot_);
   auto bToKJPsiLL_NoMassConstraint_displacement = compute3dDisplacement(bToKJPsiLL_NoMassConstraint);
-  addFitInfo(btokllCand, bToKJPsiLL_NoMassConstraint, "nomc", bToKJPsiLL_NoMassConstraint_displacement, -1, -1, 1);
+  addFitInfo(btokllCand, bToKJPsiLL_NoMassConstraint, "nomc", bToKJPsiLL_NoMassConstraint_displacement, 0, 1, 2);
 
   // JpsiK
   KinematicFitResult bToKJPsiLL_MassConstraint;
@@ -1364,7 +1364,7 @@ void DileptonPlusXProducer::fillBtoKllInfo(pat::CompositeCandidate& btokllCand,
     bToKJPsiLL_MassConstraint.postprocess(*beamSpot_);
   }
   auto bToKJPsiLL_MassConstraint_displacement = compute3dDisplacement(bToKJPsiLL_MassConstraint);
-  addFitInfo(btokllCand, bToKJPsiLL_MassConstraint, "jpsimc", bToKJPsiLL_MassConstraint_displacement,-1,-1,1);
+  addFitInfo(btokllCand, bToKJPsiLL_MassConstraint, "jpsimc", bToKJPsiLL_MassConstraint_displacement, 0, 1, 2);
 
   // Psi(2S)K
   KinematicFitResult bToKPsi2SLL_MassConstraint;
@@ -1373,7 +1373,7 @@ void DileptonPlusXProducer::fillBtoKllInfo(pat::CompositeCandidate& btokllCand,
     bToKPsi2SLL_MassConstraint.postprocess(*beamSpot_);
   }
   auto bToKPsi2SLL_MassConstraint_displacement = compute3dDisplacement(bToKPsi2SLL_MassConstraint);
-  addFitInfo(btokllCand, bToKPsi2SLL_MassConstraint, "psimc", bToKPsi2SLL_MassConstraint_displacement,-1,-1,1);
+  addFitInfo(btokllCand, bToKPsi2SLL_MassConstraint, "psimc", bToKPsi2SLL_MassConstraint_displacement, 0, 1, 2);
   
   // broken pointing constraint
   // auto bToKJPsiLL_MC_PC = refitWithPointingConstraint(bToKJPsiLL_MC.refitTree, primaryVertex);
@@ -3619,54 +3619,49 @@ DileptonPlusXProducer::fitBToKLL(const bmm::Candidate& lepton1,
 				 const pat::PackedCandidate& kaon,
 				 float mass_constraint)
 {
-  // Rebuild ll vertex to ensure that the KinematicTree remains self
-  // consistent and no elements get out of scope or get deleted
-  // when the tree is used in subsequent fits
-  auto llVertexFit = vertexLeptonsWithKinematicFitter(lepton1, lepton2);
-  auto tree = llVertexFit.tree();
-  
   KinematicFitResult result;
   if (lepton1.track()) result.tracks.push_back(lepton1.track());
   if (lepton2.track()) result.tracks.push_back(lepton2.track());
   if (kaon.bestTrack()) result.tracks.push_back(kaon.bestTrack());
 
-  if ( not llVertexFit.valid()) return result;
+  if (!lepton1.track() || !lepton2.track()) return result;
+  if (!kaon.bestTrack()) return result;
 
-  KinematicConstraint* mc(0);
-  if (mass_constraint > 0){
-    ParticleMass mass = mass_constraint;
-    // mass constraint fit
-    KinematicParticleFitter csFitter;
-    float mass_sigma = JPsiMassErr_;
-    // FIXME: memory leak
-    mc = new MassKinematicConstraint(mass, mass_sigma);
-    try {
-      tree = csFitter.fit(mc, tree);
-    } catch (const std::exception& e) {
-      return result;
-    }
-  }
-
-  const reco::TransientTrack kaonTT = theTTBuilder_->build(kaon.bestTrack());
+  auto mu1 = theTTBuilder_->build(lepton1.track());
+  auto mu2 = theTTBuilder_->build(lepton2.track());
+  auto kaonTT = theTTBuilder_->build(kaon.bestTrack());
 
   KinematicParticleFactoryFromTransientTrack partFactory;
-  KinematicParticleVertexFitter fitter;
+
+  float muMass = MuonMass_;
+  float muSigma = 1.e-7f;
+  float kaonMassErr = KaonMassErr_;
+  float chi = 0.f;
+  float ndf = 0.f;
 
   std::vector<RefCountedKinematicParticle> particles;
-  double chi = 0.;
-  double ndf = 0.;
+  particles.reserve(3);
 
-  tree->movePointerToTheTop();
-  particles.push_back(tree->currentParticle());
-  float kaonMassErr(KaonMassErr_);
-  particles.push_back(partFactory.particle(kaonTT,KaonMass_,chi,ndf,kaonMassErr));
+  particles.push_back(partFactory.particle(mu1, muMass, chi, ndf, muSigma));
+  particles.push_back(partFactory.particle(mu2, muMass, chi, ndf, muSigma));
+  particles.push_back(partFactory.particle(kaonTT, KaonMass_, chi, ndf, kaonMassErr));
 
   RefCountedKinematicTree vertexFitTree;
   try {
-    vertexFitTree = fitter.fit(particles);
-  } catch (const std::exception& e) {
+    if (mass_constraint > 0.f) {
+      ParticleMass pMass = mass_constraint;
+      TwoTrackMassKinematicConstraint llConstraint(pMass);
+      KinematicConstrainedVertexFitter fitter;
+      vertexFitTree = fitter.fit(particles, &llConstraint);
+    } else {
+      KinematicParticleVertexFitter fitter;
+      vertexFitTree = fitter.fit(particles);
+    }
+  } catch (const std::exception&) {
     return result;
   }
+
+  if (!vertexFitTree.get() || vertexFitTree->isEmpty()) return result;
 
   result.set_tree(vertexFitTree);
   return result;
@@ -3705,7 +3700,7 @@ DileptonPlusXProducer::fitBToJpsiKs(const bmm::Candidate& lepton1,
   KinematicParticleFactoryFromTransientTrack partFactory;
 
   float muMass = MuonMass_;
-  float muSigma = muMass * 1.e-6f;
+  float muSigma = 1.e-7f;
   float chi = 0.f;
   float ndf = 0.f;
 
@@ -3915,12 +3910,15 @@ DileptonPlusXProducer::fitBToLLhh( const bmm::Candidate& lepton1,
 
   KinematicParticleFactoryFromTransientTrack partFactory;
 
+  // Mass sigma values following BPHNano conventions. Values too small
+  // (e.g. mass*1e-6) make the covariance matrix ill-conditioned and
+  // cause heap corruption in CLHEP's matrix inversion.
   float muMass = MuonMass_;
-  float muSigma = muMass * 1.e-6f;
+  float muSigma = 1.e-7f;
   float h1Mass = had1.mass();
-  float h1Sigma = h1Mass * 1.e-6f;
+  float h1Sigma = 1.6e-5f;
   float h2Mass = had2.mass();
-  float h2Sigma = h2Mass * 1.e-6f;
+  float h2Sigma = 1.6e-5f;
   float chi = 0.f;
   float ndf = 0.f;
 
