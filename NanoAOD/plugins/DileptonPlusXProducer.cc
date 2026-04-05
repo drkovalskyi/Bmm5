@@ -3425,7 +3425,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   // - let individual studies fill hh_collection
   // - no check for duplicate entries
   // - allows PF muons (used for Ks decays)
-  if (nPFCands > 1){
+  if (nPFCands > 1 && (recoDstar_ || recoD0pipi_ || recoD0Kpi_ || recoKspipi_ || recoKstar_)){
     for (unsigned int i=0; i < nPFCands - 1; ++i){
       const auto& cand1 = pfCandHandle_->at(i);
       if (not isGoodHadron(cand1) and not isGoodMuonCandidate(cand1)) continue;
