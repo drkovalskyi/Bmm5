@@ -1,3 +1,5 @@
+#include <chrono>
+#include <atomic>
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -62,6 +64,11 @@
 //
 
 typedef reco::Candidate::LorentzVector LorentzVector;
+
+using PerfClock = std::chrono::steady_clock;
+inline void perfTimer(std::atomic<long long>& acc, PerfClock::time_point start) {
+  acc += std::chrono::duration_cast<std::chrono::microseconds>(PerfClock::now() - start).count();
+}
 
 typedef std::pair<pat::CompositeCandidate, KinematicFitResult> FitCandidate;
 
@@ -173,6 +180,33 @@ public:
 private:
     
   virtual void produce(edm::Event&, const edm::EventSetup&);
+  void endStream() override {
+    if (!enableTimingReport_ || n_events_ == 0) return;
+    std::cerr << "\nDileptonPlusXProducer::timing"
+      << " events=" << n_events_.load()
+      << " fillDileptonInfo=" << t_fillDileptonInfo_.load()
+      << " mmGamma=" << t_mmGamma_.load()
+      << " buildLLXCandidates=" << t_buildLLXCandidates_.load()
+      << " fillBtoKllInfo=" << t_fillBtoKllInfo_.load()
+      << " fillBtoLLhhInfo=" << t_fillBtoLLhhInfo_.load()
+      << " buildKsCandidate=" << t_buildKsCandidate_.load()
+      << " fit_kin=" << t_fit_kin_.load()
+      << " fit_jpsikk=" << t_fit_jpsikk_.load()
+      << " fit_phill=" << t_fit_phill_.load()
+      << " fit_jpsiks=" << t_fit_jpsiks_.load()
+      << " displacement=" << t_displacement_.load()
+      << " dstar=" << t_dstar_.load()
+      << " kstar=" << t_kstar_.load()
+      << " mmm=" << t_mmm_.load()
+      << " isolation=" << t_isolation_.load()
+      << " tnp=" << t_tnp_.load()
+      << " ee=" << t_ee_.load()
+      << " emu=" << t_emu_.load()
+      << " hh=" << t_hh_.load()
+      << " n_fillBtoKllInfo=" << n_fillBtoKllInfo_.load()
+      << " n_fillBtoLLhhInfo=" << n_fillBtoLLhhInfo_.load()
+      << std::endl;
+  }
 
   void fill_basic_information(pat::CompositeCandidate& candidate,
 			      const edm::Event& iEvent,
@@ -505,6 +539,15 @@ private:
   
 
   // ----------member data ---------------------------
+
+  mutable std::atomic<long long> t_fillDileptonInfo_{0}, t_buildLLXCandidates_{0};
+  mutable std::atomic<long long> t_fillBtoKllInfo_{0}, t_fillBtoLLhhInfo_{0};
+  mutable std::atomic<long long> t_buildKsCandidate_{0}, t_other_{0};
+  mutable std::atomic<long long> t_mmGamma_{0}, t_dstar_{0}, t_kstar_{0}, t_mmm_{0};
+  mutable std::atomic<long long> t_fit_kin_{0}, t_fit_jpsikk_{0}, t_fit_phill_{0}, t_fit_jpsiks_{0};
+  mutable std::atomic<long long> t_fit_kll_{0}, t_displacement_{0};
+  mutable std::atomic<long long> t_isolation_{0}, t_tnp_{0}, t_ee_{0}, t_emu_{0}, t_hh_{0};
+  mutable std::atomic<long long> n_events_{0}, n_fillBtoKllInfo_{0}, n_fillBtoLLhhInfo_{0};
   
     
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
@@ -557,6 +600,7 @@ private:
   double minBhhllVtxProb_;
   double minLLSigLxyForBLLX_;
   double minHadIPSigBSForBLLX_;
+  bool   enableTimingReport_;
   bool   injectMatchedBtohh_;
   bool   injectBtohh_;
   bool   injectJpsiTracks_;
@@ -643,6 +687,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   minBhhllVtxProb_( iConfig.getParameter<double>( "minBhhllVtxProb" ) ),
   minLLSigLxyForBLLX_( iConfig.getParameter<double>( "minLLSigLxyForBLLX" ) ),
   minHadIPSigBSForBLLX_( iConfig.getParameter<double>( "minHadIPSigBSForBLLX" ) ),
+  enableTimingReport_( iConfig.getParameter<bool>( "enableTimingReport" ) ),
   injectMatchedBtohh_( iConfig.getParameter<bool>( "injectMatchedBtohh" ) ),
   injectBtohh_(        iConfig.getParameter<bool>( "injectBtohh" ) ),
   injectJpsiTracks_(  iConfig.getParameter<bool>( "injectJpsiTracks" ) ),
@@ -1681,10 +1726,12 @@ void DileptonPlusXProducer::fillBtoLLhhInfo(pat::CompositeCandidate& bCand,
   }
 
   // Inclusive
+  auto t0_kin = PerfClock::now();
   auto bToKKll = fitBToLLhh(lepton1, lepton2, kaon1, kaon2);
   bToKKll.postprocess(*beamSpot_);
   auto bToKKll_displacement = compute3dDisplacement(bToKKll);
   addFitInfo(bCand, bToKKll, "kin", bToKKll_displacement, 0, 1, 2, 3);
+  if (enableTimingReport_) perfTimer(t_fit_kin_, t0_kin);
   bCand.addUserFloat("kin_kk_mass",    bToKKll.refit_mass(2,3));
 
   // Jpsi hh
@@ -1693,11 +1740,15 @@ void DileptonPlusXProducer::fillBtoLLhhInfo(pat::CompositeCandidate& bCand,
   // the JPsi constraint acts on the dimuon pair and barely affects hadron momenta.
   KinematicFitResult bToJpsiKK;
   if (bToKKll.vtxProb() > 0.001 && fabs((lepton1.p4() + lepton2.p4()).mass() - JPsiMass_) < 0.2) { 
+    auto t0_jkk = PerfClock::now();
     bToJpsiKK = fitBToLLhh(lepton1, lepton2, kaon1, kaon2, JPsiMass_);
     bToJpsiKK.postprocess(*beamSpot_);
+    if (enableTimingReport_) perfTimer(t_fit_jpsikk_, t0_jkk);
   }
+  { auto t0_d = PerfClock::now();
   auto bToJpsiKK_displacement = compute3dDisplacement(bToJpsiKK);
   addFitInfo(bCand, bToJpsiKK, "jpsikk", bToJpsiKK_displacement, 0, 1, 2, 3);
+  if (enableTimingReport_) perfTimer(t_displacement_, t0_d); }
   bCand.addUserFloat("jpsikk_kk_mass",        bToJpsiKK.refit_mass(2,3));
 
   // Recompute masses under alternative hadron hypotheses from JpsiKK refitted momenta
@@ -1760,8 +1811,10 @@ void DileptonPlusXProducer::fillBtoLLhhInfo(pat::CompositeCandidate& bCand,
 
   KinematicFitResult bToJpsiKs;
   if (ksCand and fabs((lepton1.p4() + lepton2.p4()).mass() - JPsiMass_) < 0.2) {
+    auto t0_jks = PerfClock::now();
     bToJpsiKs = fitBToJpsiKs(lepton1, lepton2, ksCand, true, true);
     bToJpsiKs.postprocess(*beamSpot_);
+    if (enableTimingReport_) perfTimer(t_fit_jpsiks_, t0_jks);
   }
   auto bToJpsiKs_displacement = compute3dDisplacement(bToJpsiKs);
   addFitInfo(bCand, bToJpsiKs, "jpsiks", bToJpsiKs_displacement, -1, -1, 1, 2);
@@ -1813,8 +1866,10 @@ void DileptonPlusXProducer::fillBtoLLhhInfo(pat::CompositeCandidate& bCand,
   // Phi ll
   KinematicFitResult bToPhill;
   if (bToKKll.vtxProb() > 0.001 && fabs((kaon1.p4() + kaon2.p4()).mass() - PhiMass_) < 0.01) { 
+    auto t0_phi = PerfClock::now();
     bToPhill = fitBToLLhh(lepton1, lepton2, kaon1, kaon2, -1, PhiMass_);
     bToPhill.postprocess(*beamSpot_);
+    if (enableTimingReport_) perfTimer(t_fit_phill_, t0_phi);
   }
   auto bToPhill_displacement = compute3dDisplacement(bToPhill);
   addFitInfo(bCand, bToPhill, "phill", bToPhill_displacement, 2, 3, 0, 1);
@@ -2647,7 +2702,9 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
       btokllCand.addUserFloat("kaon_l1_doca", l1_kaon_doca);
       btokllCand.addUserFloat("kaon_l2_doca", l2_kaon_doca);
       
+      { auto t0 = PerfClock::now(); n_fillBtoKllInfo_++;
       fillBtoKllInfo(btokllCand, iEvent, lepton1, lepton2, kaonCand1);
+      if (enableTimingReport_) perfTimer(t_fillBtoKllInfo_, t0); }
       fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokllCand, dileptonCand, iEvent, 
 						   kinematicLLVertexFit, lepton1, lepton2, kaonCand1);
 
@@ -2680,7 +2737,9 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
 	if (maxTwoTrackDOCA_>0 and l2_kaon2_doca > maxTwoTrackDOCA_) good4ProngVtx = false;
       }
 
+      auto t0_ks = PerfClock::now();
       auto ksCand = buildKsCandidate(iEvent, pionCand1, pionCand2, NominalKsSelection);
+      if (enableTimingReport_) perfTimer(t_buildKsCandidate_, t0_ks);
       
       // make sure that all hypothese fit within the B mass window to avoid biasing the selection
       bool goodBtoLLhh = false;
@@ -2717,7 +2776,7 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
       }
 
       // fill BtoLLhh candidate info
-      if (goodBtoLLhh or goodBtoLLKs or goodBsToDsmunu){
+      if ((goodBtoLLhh && good4ProngVtx) or goodBtoLLKs or goodBsToDsmunu){
 	pat::CompositeCandidate btokkllCand;
 	btokkllCand.addUserInt(dileptonCand.name() + "_index", ll_index);
 	btokkllCand.addUserFloat("kaon1_l1_doca", l1_kaon_doca);
@@ -2725,7 +2784,9 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
 	btokkllCand.addUserFloat("kaon2_l1_doca", l1_kaon2_doca);
 	btokkllCand.addUserFloat("kaon2_l2_doca", l2_kaon2_doca);
 	
+	{ auto t0 = PerfClock::now(); n_fillBtoLLhhInfo_++;
 	fillBtoLLhhInfo(btokkllCand, iEvent, lepton1, lepton2, kaonCand1, kaonCand2, pionCand1, pionCand2, ksCand);
+	if (enableTimingReport_) perfTimer(t_fillBtoLLhhInfo_, t0); }
 	// FIXME
 	// fillMvaInfoForBtoJpsiKCandidatesEmulatingBmm(btokkllCand,dileptonCand,iEvent,kinematicLLVertexFit,lepton1,lepton2,kaonCand1);
 
@@ -2969,6 +3030,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
   }
 
 
+  if (enableTimingReport_) n_events_++;
   auto nMuons   = muonHandle->size();
   auto nPhotons = photonHandle->size();
   auto nConversions = conversionHandle->size();
@@ -3055,7 +3117,9 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	if (not preprocess(dimuonCand, iEvent, muon1, muon2)) continue;
 	  
 	// Kinematic Fits
+	auto t0_fdi = PerfClock::now();
 	auto kinematicLLVertexFit = fillDileptonInfo(dimuonCand, iEvent, muon1, muon2);
+	if (enableTimingReport_) perfTimer(t_fillDileptonInfo_, t0_fdi);
 
 	// dimuon + X
 	int mm_index = mm_collection->size();
@@ -3064,6 +3128,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 						    kinematicLLVertexFit.p3().y(),
 						    kinematicLLVertexFit.p3().z(),
 						    kinematicLLVertexFit.mass()));
+	auto t0_mmg = PerfClock::now();
 	// MuMuGamma
 	if (recoMuMuGamma_ && kinematicLLVertexFit.valid()){
 	  for (unsigned int k=0; k < nPhotons; ++k){
@@ -3108,12 +3173,17 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	  }
 	}
 
+	if (enableTimingReport_) perfTimer(t_mmGamma_, t0_mmg);
+
 	// mmK and mmKK
 	if (minLLSigLxyForBLLX_ <= 0 || kinematicLLVertexFit.sigLxy() >= minLLSigLxyForBLLX_) {
+	  { auto t0 = PerfClock::now();
 	  buildLLXCandidates(*btokmm, *btokkmm, iEvent, kinematicLLVertexFit, dimuonCand, 
 			     mm_index, muon1, muon2);
+	  perfTimer(t_buildLLXCandidates_, t0); }
 	}
 
+	{ auto t0_ds = PerfClock::now();
 	// Dstar->D0pi->mmpi
 	if (recoDstar_){
 	  for (unsigned int k = 0; k < nPFCands; ++k) {
@@ -3136,6 +3206,9 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	  }
 	}
 	
+	if (enableTimingReport_) perfTimer(t_dstar_, t0_ds); }
+
+	{ auto t0_ks = PerfClock::now();
 	// Kstar->Kspi->mmpi
 	if (recoKstar_){
 	  for (unsigned int k = 0; k < nPFCands; ++k) {
@@ -3159,6 +3232,9 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	  }
 	}
 
+	perfTimer(t_kstar_, t0_ks); }
+
+	{ auto t0_mmm = PerfClock::now();
 	// mmm
 	for (unsigned int imu3 = 0; imu3 < good_muon_candidates.size(); ++imu3) {
 	  if (i == imu3) continue;
@@ -3176,9 +3252,14 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
 	  mmm_collection->push_back(mmmCand);
 	}
 	
+	if (enableTimingReport_) perfTimer(t_mmm_, t0_mmm); }
+
+	{ auto t0_iso = PerfClock::now();
 	// fill isolation information for dimuon candidate
 	fillIsolationInfo(dimuonCand, kinematicLLVertexFit, mm_index, -1,
 			  *iso_collection, interestingTracks, iEvent, muon1.track(), muon2.track());
+
+	if (enableTimingReport_) perfTimer(t_isolation_, t0_iso); }
 
 	// save dimuon
 	mm_collection->push_back(dimuonCand);
@@ -3186,6 +3267,7 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
     } 
   }
 
+  { auto t0_tnp = PerfClock::now();
   // Build TnP candidates
   unsigned int n_loose_muon_candidates = loose_muon_candidates.size();
   if (n_loose_muon_candidates > 1) {
@@ -3272,6 +3354,9 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
     }
   }
 
+  if (enableTimingReport_) perfTimer(t_tnp_, t0_tnp); }
+
+  { auto t0_ee = PerfClock::now();
   // Build dielectron candidates
   if ( recoElElX_ && good_electron_candidates.size() > 1 ){
     for (unsigned int i = 0; i < good_electron_candidates.size(); ++i) {
@@ -3306,6 +3391,9 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
     } 
   }
 
+  if (enableTimingReport_) perfTimer(t_ee_, t0_ee); }
+
+  { auto t0_emu = PerfClock::now();
   // Build emu candidates
   if ( recoElMu_ ){
     for (unsigned int i = 0; i < good_electron_candidates.size(); ++i) {
@@ -3329,6 +3417,9 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
     } 
   }
   
+  if (enableTimingReport_) perfTimer(t_emu_, t0_emu); }
+
+  { auto t0_hh = PerfClock::now();
   // Build hh candidates
   // - loop over all hh combinations
   // - let individual studies fill hh_collection
@@ -3382,6 +3473,8 @@ void DileptonPlusXProducer::produce(edm::Event& iEvent, const edm::EventSetup& i
       }
     }
   }
+
+  if (enableTimingReport_) perfTimer(t_hh_, t0_hh); }
 
   iEvent.put(std::move(mm_collection),     "MuMu");
   iEvent.put(std::move(iso_collection),    "Iso");
