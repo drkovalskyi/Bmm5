@@ -556,6 +556,7 @@ private:
   double maxTwoTrackDOCA_;
   double minBhhllVtxProb_;
   double minLLSigLxyForBLLX_;
+  double minHadIPSigBSForBLLX_;
   bool   injectMatchedBtohh_;
   bool   injectBtohh_;
   bool   injectJpsiTracks_;
@@ -641,6 +642,7 @@ DileptonPlusXProducer::DileptonPlusXProducer(const edm::ParameterSet &iConfig):
   maxTwoTrackDOCA_( iConfig.getParameter<double>( "maxTwoTrackDOCA" ) ),
   minBhhllVtxProb_( iConfig.getParameter<double>( "minBhhllVtxProb" ) ),
   minLLSigLxyForBLLX_( iConfig.getParameter<double>( "minLLSigLxyForBLLX" ) ),
+  minHadIPSigBSForBLLX_( iConfig.getParameter<double>( "minHadIPSigBSForBLLX" ) ),
   injectMatchedBtohh_( iConfig.getParameter<bool>( "injectMatchedBtohh" ) ),
   injectBtohh_(        iConfig.getParameter<bool>( "injectBtohh" ) ),
   injectJpsiTracks_(  iConfig.getParameter<bool>( "injectJpsiTracks" ) ),
@@ -2622,6 +2624,7 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
     if (abs(kaonCand1.pdgId()) != 211) continue;
     if (kaonCand1.pt() < ptMinHad_ or fabs(kaonCand1.eta()) > etaMaxHad_) continue;
     if (overlap(lepton1, kaonCand1) || overlap(lepton2, kaonCand1)) continue;
+    if (minHadIPSigBSForBLLX_ > 0 && trackIPSwrtBS(*kaonCand1.bestTrack()) < minHadIPSigBSForBLLX_) continue;
     double l1_kaon_doca = distanceOfClosestApproach(lepton1.track(),
 						    kaonCand1.bestTrack());
     double l2_kaon_doca = distanceOfClosestApproach(lepton2.track(),
@@ -2666,6 +2669,7 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
       if (abs(kaonCand2.pdgId()) != 211) continue;
       if (kaonCand2.pt() < ptMinHad_ || fabs(kaonCand2.eta()) > etaMaxHad_) continue;
       if (overlap(lepton1, kaonCand2) || overlap(lepton2, kaonCand2)) continue;
+      if (minHadIPSigBSForBLLX_ > 0 && trackIPSwrtBS(*kaonCand2.bestTrack()) < minHadIPSigBSForBLLX_) continue;
       double l1_kaon2_doca = distanceOfClosestApproach(lepton1.track(),
 						       kaonCand2.bestTrack());
       double l2_kaon2_doca = distanceOfClosestApproach(lepton2.track(),
