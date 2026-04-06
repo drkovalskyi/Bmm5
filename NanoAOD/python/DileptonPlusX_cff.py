@@ -179,6 +179,8 @@ Dileptons = cms.EDProducer(
     recoD0Kpi = cms.bool(False),
     recoKspipi = cms.bool(False),
     recoKstar = cms.bool(False),
+    recoJpsiKsSlimmed = cms.bool(True),
+    ksVertices = cms.InputTag("slimmedKshortVertices"),
     minBhhHadronPt = cms.double(4.0),
     maxBhhHadronEta = cms.double(1.4),
     minDhhHadronPt = cms.double(3.0),
@@ -976,7 +978,7 @@ DileptonsKKmumuMcTableVariables = merge_psets(
         gen_l3d         = Var("userFloat('gen_l3d')",         float, doc = "Gen match: kkmm decay legnth 3D"),
         gen_lxy         = Var("userFloat('gen_lxy')",         float, doc = "Gen match: kkmm decay legnth XY"),
         gen_tau         = Var("userFloat('gen_tau')",         float, doc = "Gen match: kkmm decay time 3D"),
-        jpsiks_gen_ks_pdgId = Var("userInt('jpsiks_gen_ks_pdgId')", float, doc = "Ks MC match"),
+        jpsiks_ks_gen_pdgId = Var("userInt('jpsiks_ks_gen_pdgId')", float, doc = "Ks MC match"),
     )
 )
 
@@ -1388,6 +1390,68 @@ prescaleTable = cms.EDProducer("TriggerPrescaleProducer",
                                   'HLT_DoubleMu4_LowMass_Displaced')
 )
 
+
+##################################################################################
+###
+###                              B to Jpsi Ks (from V0)
+###
+##################################################################################
+
+BToJpsiKsTableVariables = merge_psets(
+    kinematic_pset,
+    cms.PSet(
+        mm_index        = Var("userInt('mm_index')",           int,   doc = "Index of dimuon pair"),
+        ks_index        = Var("userInt('ks_index')",           int,   doc = "Index of Ks in slimmedKshortVertices"),
+        pion1_pt        = Var("userFloat('pion1_pt')",         float, doc = "Ks pion1 pt"),
+        pion1_eta       = Var("userFloat('pion1_eta')",        float, doc = "Ks pion1 eta"),
+        pion1_phi       = Var("userFloat('pion1_phi')",        float, doc = "Ks pion1 phi"),
+        pion2_pt        = Var("userFloat('pion2_pt')",         float, doc = "Ks pion2 pt"),
+        pion2_eta       = Var("userFloat('pion2_eta')",        float, doc = "Ks pion2 eta"),
+        pion2_phi       = Var("userFloat('pion2_phi')",        float, doc = "Ks pion2 phi"),
+        pion1_isGoodTrack = Var("userInt('pion1_isGoodTrack')", int, doc = "Ks pion1 passes isGoodTrack"),
+        pion2_isGoodTrack = Var("userInt('pion2_isGoodTrack')", int, doc = "Ks pion2 passes isGoodTrack"),
+        ks_decay_length = Var("userFloat('ks_decay_length')", float, doc = "Decay length of Ks wrt B vertex"),
+        ks_decay_length_significance = Var("userFloat('ks_decay_length_significance')", float, doc = "Ks decay length significance"),
+        ks_mass         = Var("userFloat('ks_mass')",          float, doc = "Ks fitted mass"),
+        ks_massErr      = Var("userFloat('ks_massErr')",       float, doc = "Ks fitted mass uncertainty"),
+    )
+)
+
+BToJpsiKsMcTableVariables = merge_psets(
+    BToJpsiKsTableVariables,
+    cms.PSet(
+        gen_pdgId        = Var("userInt('gen_pdgId')",        int,   doc = "B MC match pdgId"),
+        gen_mass         = Var("userFloat('gen_mass')",       float, doc = "Gen B mass"),
+        gen_pt           = Var("userFloat('gen_pt')",         float, doc = "Gen B pt"),
+        gen_prod_x       = Var("userFloat('gen_prod_x')",     float, doc = "Gen B production vertex x"),
+        gen_prod_y       = Var("userFloat('gen_prod_y')",     float, doc = "Gen B production vertex y"),
+        gen_prod_z       = Var("userFloat('gen_prod_z')",     float, doc = "Gen B production vertex z"),
+        gen_l3d          = Var("userFloat('gen_l3d')",        float, doc = "Gen B decay length 3D"),
+        gen_lxy          = Var("userFloat('gen_lxy')",        float, doc = "Gen B decay length XY"),
+        ks_gen_pdgId     = Var("userInt('ks_gen_pdgId')",     int,   doc = "Ks MC match pdgId"),
+    )
+)
+
+BToJpsiKsTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer",
+    src=cms.InputTag("Dileptons","BToJpsiKs"),
+    cut=cms.string(""),
+    name=cms.string("bjpsiks"),
+    doc=cms.string("B to JpsiKs Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = BToJpsiKsTableVariables
+)
+
+BToJpsiKsMcTable = cms.EDProducer("SimpleCompositeCandidateFlatTableProducer",
+    src=cms.InputTag("DileptonsMc","BToJpsiKs"),
+    cut=cms.string(""),
+    name=cms.string("bjpsiks"),
+    doc=cms.string("B to JpsiKs Variables"),
+    singleton=cms.bool(False),
+    extension=cms.bool(False),
+    variables = BToJpsiKsMcTableVariables
+)
+
 DileptonPlusXSequence   = cms.Sequence(Dileptons * PrimaryVertexInfo)
 DileptonPlusXMcSequence = cms.Sequence(DileptonsMc * PrimaryVertexInfoMc * BxToMuMuGen * DstarGen )
 DileptonPlusXTables     = cms.Sequence(DileptonsDiMuonTable   * DileptonsHHTable    * DileptonsElElTable     *
@@ -1395,7 +1459,7 @@ DileptonPlusXTables     = cms.Sequence(DileptonsDiMuonTable   * DileptonsHHTable
                                        DileptonsKKmumuTable   * DileptonsKKeeTable  * DileptonsDstarTable    *
                                        Dileptons3MuTable      * DileptonsKstarTable * DileptonTrackTable     *
                                        DileptonIsoTable       * DileptonsTnPTable   * DileptonsMetaTable     *
-                                       DileptonsMuMuGammaTable * PrimaryVertexInfoTable * prescaleTable)
+                                       DileptonsMuMuGammaTable * BToJpsiKsTable * PrimaryVertexInfoTable * prescaleTable)
 
 DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTable     * DileptonsElElMcTable *
                                        DileptonsElMuMcTable   * DileptonsKmumuMcTable  * DileptonsKeeMcTable  *
@@ -1403,4 +1467,4 @@ DileptonPlusXMcTables   = cms.Sequence(DileptonsDiMuonMcTable * DileptonsHHMcTab
                                        PrimaryVertexInfoMcTable * DileptonsMuMuGammaMcTable * BxToMuMuGenTable *
                                        Dileptons3MuMcTable    * DileptonsKstarMcTable  * DileptonTrackMcTable *
                                        DileptonIsoMcTable     * DileptonsTnPMcTable    * DileptonsMetaMcTable *
-                                       BxToMuMuGenSummaryTable * DstarGenTable * prescaleTable)
+                                       BxToMuMuGenSummaryTable * DstarGenTable * BToJpsiKsMcTable * prescaleTable)
