@@ -2,6 +2,11 @@ from PhysicsTools.NanoAOD.common_cff import *
 import FWCore.ParameterSet.Config as cms
 import re
 
+# Precision settings (mantissa bits, -1 = full float32)
+full_precision   = -1   # mass, pt, eta, phi, vtx_prob
+medium_precision = 12   # vertex pos/err, angles, DCA, isolation
+low_precision    =  6   # not critical variables
+
 # NOTE: 
 #    All instances of FlatTableProducers must end with Table in their
 #    names so that their product match the keep patterns in the default
@@ -79,30 +84,30 @@ run2_muon_2016.toModify(BmmMuonId,
 BmmMuonIdMc = BmmMuonId.clone( isMC = cms.bool(True) ) 
 
 BmmMuonIdVariables = cms.PSet(
-    trkKink             = Var("userFloat('trkKink')",             float, doc = "Inner track kink chi2"),
-    glbTrackProbability = Var("userFloat('glbTrackProbability')", float, doc = "Log probability of the global fit"),
-    chi2LocalPosition   = Var("userFloat('chi2LocalPosition')",   float, doc = "chi2 for STA-TK matching by local position"),
-    chi2LocalMomentum   = Var("userFloat('chi2LocalMomentum')",   float, doc = "chi2 for STA-TK matching by momentum"),
-    trkRelChi2          = Var("userFloat('trkRelChi2')",          float, doc = "chi2 value for the inner track stub with respect to the global track"),
-    staRelChi2          = Var("userFloat('staRelChi2')",          float, doc = "chi2 value for the outer track stub with respect to the global track"),
-    glbNormChi2         = Var("userFloat('glbNormChi2')",         float, doc = "Normalized chi2 of the global fit"),
-    staNormChi2         = Var("userFloat('staNormChi2')",         float, doc = "Normalized chi2 of the outter fit"),
-    staNdof             = Var("userFloat('staNdof')",             float, doc = "Number of degrees of freedom of the outter fit"),
-    trkNormChi2         = Var("userFloat('trkNormChi2')",         float, doc = "Normalized chi2 of the inner fit"),
-    trkValidFrac        = Var("userFloat('trkValidFrac')",        float, doc = "Fraction of valid hits for inner track"),
-    ewkMvaId               = Var("userFloat('mvaId')",               float, doc = "EWK POG MVA id for muons with pt>10GeV"),
-    match1_dX           = Var("userFloat('match1_dX')",           float, doc = "Station 1 local segment-track dX"),
-    match1_pullX        = Var("userFloat('match1_pullX')",        float, doc = "Station 1 local segment-track dX/dErr"),
-    match1_pullDxDz     = Var("userFloat('match1_pullDxDz')",     float, doc = "Station 1 local segment-track direction matching in x"),
-    match1_dY           = Var("userFloat('match1_dY')",           float, doc = "Station 1 local segment-track dY"),
-    match1_pullY        = Var("userFloat('match1_pullY')",        float, doc = "Station 1 local segment-track dY/dErr"),
-    match1_pullDyDz     = Var("userFloat('match1_pullDyDz')",     float, doc = "Station 1 local segment-track direction matching in y"),
-    match2_dX           = Var("userFloat('match2_dX')",           float, doc = "Station 2 local segment-track dX"),
-    match2_pullX        = Var("userFloat('match2_pullX')",        float, doc = "Station 2 local segment-track dX/dErr"),
-    match2_pullDxDz     = Var("userFloat('match2_pullDxDz')",     float, doc = "Station 2 local segment-track direction matching in x"),
-    match2_dY           = Var("userFloat('match2_dY')",           float, doc = "Station 2 local segment-track dY"),
-    match2_pullY        = Var("userFloat('match2_pullY')",        float, doc = "Station 2 local segment-track dY/dErr"),
-    match2_pullDyDz     = Var("userFloat('match2_pullDyDz')",     float, doc = "Station 2 local segment-track direction matching in y"),
+    trkKink             = Var("userFloat('trkKink')",             float, doc = "Inner track kink chi2", precision = medium_precision),
+    glbTrackProbability = Var("userFloat('glbTrackProbability')", float, doc = "Log probability of the global fit", precision = medium_precision),
+    chi2LocalPosition   = Var("userFloat('chi2LocalPosition')",   float, doc = "chi2 for STA-TK matching by local position", precision = medium_precision),
+    chi2LocalMomentum   = Var("userFloat('chi2LocalMomentum')",   float, doc = "chi2 for STA-TK matching by momentum", precision = medium_precision),
+    trkRelChi2          = Var("userFloat('trkRelChi2')",          float, doc = "chi2 value for the inner track stub with respect to the global track", precision = medium_precision),
+    staRelChi2          = Var("userFloat('staRelChi2')",          float, doc = "chi2 value for the outer track stub with respect to the global track", precision = medium_precision),
+    glbNormChi2         = Var("userFloat('glbNormChi2')",         float, doc = "Normalized chi2 of the global fit", precision = medium_precision),
+    staNormChi2         = Var("userFloat('staNormChi2')",         float, doc = "Normalized chi2 of the outter fit", precision = medium_precision),
+    staNdof             = Var("userFloat('staNdof')",             float, doc = "Number of degrees of freedom of the outter fit", precision = medium_precision),
+    trkNormChi2         = Var("userFloat('trkNormChi2')",         float, doc = "Normalized chi2 of the inner fit", precision = low_precision),
+    trkValidFrac        = Var("userFloat('trkValidFrac')",        float, doc = "Fraction of valid hits for inner track", precision = low_precision),
+    ewkMvaId               = Var("userFloat('mvaId')",               float, doc = "EWK POG MVA id for muons with pt>10GeV", precision = low_precision),
+    match1_dX           = Var("userFloat('match1_dX')",           float, doc = "Station 1 local segment-track dX", precision = medium_precision),
+    match1_pullX        = Var("userFloat('match1_pullX')",        float, doc = "Station 1 local segment-track dX/dErr", precision = medium_precision),
+    match1_pullDxDz     = Var("userFloat('match1_pullDxDz')",     float, doc = "Station 1 local segment-track direction matching in x", precision = medium_precision),
+    match1_dY           = Var("userFloat('match1_dY')",           float, doc = "Station 1 local segment-track dY", precision = medium_precision),
+    match1_pullY        = Var("userFloat('match1_pullY')",        float, doc = "Station 1 local segment-track dY/dErr", precision = medium_precision),
+    match1_pullDyDz     = Var("userFloat('match1_pullDyDz')",     float, doc = "Station 1 local segment-track direction matching in y", precision = medium_precision),
+    match2_dX           = Var("userFloat('match2_dX')",           float, doc = "Station 2 local segment-track dX", precision = medium_precision),
+    match2_pullX        = Var("userFloat('match2_pullX')",        float, doc = "Station 2 local segment-track dX/dErr", precision = medium_precision),
+    match2_pullDxDz     = Var("userFloat('match2_pullDxDz')",     float, doc = "Station 2 local segment-track direction matching in x", precision = medium_precision),
+    match2_dY           = Var("userFloat('match2_dY')",           float, doc = "Station 2 local segment-track dY", precision = medium_precision),
+    match2_pullY        = Var("userFloat('match2_pullY')",        float, doc = "Station 2 local segment-track dY/dErr", precision = medium_precision),
+    match2_pullDyDz     = Var("userFloat('match2_pullDyDz')",     float, doc = "Station 2 local segment-track direction matching in y", precision = medium_precision),
 
     pixelPattern        = Var("userInt('pixelPattern')",            int, doc = "Masks: barrel 0b1111, endcap 0b1110000"),
     nPixels             = Var("userInt('nPixels')",                 int, doc = "Number of valid pixel hits"),
@@ -112,7 +117,7 @@ BmmMuonIdVariables = cms.PSet(
     nLostHitsOn         = Var("userInt('nLostHitsOn')",             int, doc = "Number of lost hits on tracker track"),
     nLostHitsOuter      = Var("userInt('nLostHitsOuter')",          int, doc = "Number of lost hits after tracker track"),
     chargeProduct       = Var("userInt('chargeProduct')",           int, doc = "Product of the inner fit charge and outter fit charge"),
-    
+
     trkLayers           = Var("userInt('trkLayers')",               int, doc = "Number of layers with measurements in tracker track"),
     trkLostLayersInner  = Var("userInt('trkLostLayersInner')",      int, doc = "Number of lost layers befor tracker track"),
     trkLostLayersOn     = Var("userInt('trkLostLayersOn')",         int, doc = "Number of lost layers on tracker track"),
@@ -120,16 +125,16 @@ BmmMuonIdVariables = cms.PSet(
 
     highPurity          = Var("userInt('highPurity')",              int, doc = "High purity inner track"),
     algoMask            = Var("userInt('algoMask')",                int, doc = "Inner track algorithm mask (first 31 bits)"),
-    hlt_pt              = Var("userFloat('hlt_pt')",              float, doc = "HLT pt"),
-    hlt_dr              = Var("userFloat('hlt_dr')",              float, doc = "HLT dR"),
-    l1_pt               = Var("userFloat('l1_pt')",               float, doc = "L1 pt"),
-    l1_etaAtVtx         = Var("userFloat('l1_etaAtVtx')",         float, doc = "L1 eta at vertex"),
-    l1_phiAtVtx         = Var("userFloat('l1_phiAtVtx')",         float, doc = "L1 phi at vertex"),
-    l1_eta              = Var("userFloat('l1_eta')",              float, doc = "L1 eta"),
-    l1_phi              = Var("userFloat('l1_phi')",              float, doc = "L1 phi"),
+    hlt_pt              = Var("userFloat('hlt_pt')",              float, doc = "HLT pt", precision = full_precision),
+    hlt_dr              = Var("userFloat('hlt_dr')",              float, doc = "HLT dR", precision = medium_precision),
+    l1_pt               = Var("userFloat('l1_pt')",               float, doc = "L1 pt", precision = full_precision),
+    l1_etaAtVtx         = Var("userFloat('l1_etaAtVtx')",         float, doc = "L1 eta at vertex", precision = full_precision),
+    l1_phiAtVtx         = Var("userFloat('l1_phiAtVtx')",         float, doc = "L1 phi at vertex", precision = full_precision),
+    l1_eta              = Var("userFloat('l1_eta')",              float, doc = "L1 eta", precision = full_precision),
+    l1_phi              = Var("userFloat('l1_phi')",              float, doc = "L1 phi", precision = full_precision),
     l1_quality          = Var("userInt('l1_quality')",              int, doc = "L1 quality"),
     pv_index            = Var("userInt('pv_index')",                int, doc = "Index of associated PV"),
-    pv_z                = Var("userFloat('pv_z')",                float, doc = "z position of associated PV"),
+    pv_z                = Var("userFloat('pv_z')",                float, doc = "z position of associated PV", precision = medium_precision),
 )
 
 for trigger in triggers:
@@ -138,7 +143,7 @@ for trigger in triggers:
 for entry in xgboost_models:
     setattr(BmmMuonIdVariables,
             "xgb_%s" % entry[1],
-            Var("userFloat('xgb_%s')" % entry[1], float, doc = "New XGBoost MVA id")
+            Var("userFloat('xgb_%s')" % entry[1], float, doc = "New XGBoost MVA id", precision = medium_precision)
             )
 
 BmmMuonIdMcVariables = merge_psets(
@@ -148,8 +153,8 @@ BmmMuonIdMcVariables = merge_psets(
         simExtType          = Var("userInt('simExtType')",     int, doc = "reco::ExtendedMuonSimType"),
         simPdgId            = Var("userInt('simPdgId')",       int, doc = "SIM particle pdgId"),
         simMotherPdgId      = Var("userInt('simMotherPdgId')", int, doc = "SIM particle mother pdgId"),
-        simProdRho          = Var("userFloat('simProdRho')", float, doc = "SIM particle production vertex"),
-        simProdZ            = Var("userFloat('simProdZ')",   float, doc = "SIM particle production vertex"),
+        simProdRho          = Var("userFloat('simProdRho')", float, doc = "SIM particle production vertex", precision = medium_precision),
+        simProdZ            = Var("userFloat('simProdZ')",   float, doc = "SIM particle production vertex", precision = medium_precision),
         ),
 )
 
