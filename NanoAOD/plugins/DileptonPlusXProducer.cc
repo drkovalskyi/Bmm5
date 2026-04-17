@@ -888,14 +888,14 @@ namespace {
 		  int firstMuonDaughterIndex = -1, int secondMuonDaughterIndex = -1,
 		  int firstKaonDaughterIndex = -1, int secondKaonDaughterIndex = -1 ){
     cand.addUserInt(   name+"_valid",       fit.valid() );
-    cand.addUserFloat( name+"_vtx_prob",    fit.vtxProb() );
-    cand.addUserFloat( name+"_vtx_chi2dof", fit.chi2()>0?fit.chi2()/fit.ndof():-1);
-    cand.addUserFloat( name+"_mass",        fit.mass() );
-    cand.addUserFloat( name+"_massErr",     fit.massErr() );
-    cand.addUserFloat( name+"_lxy",         fit.lxy() );
-    cand.addUserFloat( name+"_sigLxy",      fit.sigLxy() );
-    cand.addUserFloat( name+"_alphaBS",     fit.alphaBS() );
-    cand.addUserFloat( name+"_alphaBSErr",  fit.alphaBSErr() );
+    cand.addUserFloat( name+"_vtx_prob",    fit.valid() ? fit.vtxProb() : 0 );
+    cand.addUserFloat( name+"_vtx_chi2dof", fit.valid() && fit.chi2()>0 ? fit.chi2()/fit.ndof() : -1);
+    cand.addUserFloat( name+"_mass",        fit.valid() ? fit.mass() : 0 );
+    cand.addUserFloat( name+"_massErr",     fit.valid() ? fit.massErr() : 0 );
+    cand.addUserFloat( name+"_lxy",         fit.valid() ? fit.lxy() : 0 );
+    cand.addUserFloat( name+"_sigLxy",      fit.valid() ? fit.sigLxy() : 0 );
+    cand.addUserFloat( name+"_alphaBS",     fit.valid() ? fit.alphaBS() : 0 );
+    cand.addUserFloat( name+"_alphaBSErr",  fit.valid() ? fit.alphaBSErr() : 0 );
     auto vtx_position = fit.vtx_position();
     auto vtx_error = fit.vtx_error();
     cand.addUserFloat( name+"_vtx_x",       vtx_position.x() );
@@ -2686,12 +2686,13 @@ DileptonPlusXProducer::buildLLXCandidates(pat::CompositeCandidateCollection& llk
     }
 
     // Build BTohhll
-    for (unsigned int k2 = 0; k2 < nPFCands; ++k2) { 
+    for (unsigned int k2 = 0; k2 < nPFCands; ++k2) {
+      if (k2 == k) continue;
       pat::PackedCandidate kaonCand2((*pfCandHandle_)[k2]);
       kaonCand2.setMass(KaonMass_);
       pat::PackedCandidate pionCand2((*pfCandHandle_)[k2]);
       pionCand2.setMass(PionMass_);
-      
+
       // order kaons by pt
       if (kaonCand1.pt() < kaonCand2.pt()) continue;
       
