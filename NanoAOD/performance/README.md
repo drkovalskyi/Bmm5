@@ -5,13 +5,61 @@ peformance of NanoAOD production in various configurations
 Use Bmm5/NanoAOD/performance/make_report.py to extract results.
 
 ## Results
-Reference machine: vocms0118 (CentOS7), vocms118 (Alma9)
+Reference machine: vocms0118 (CentOS7), vocms118 (Alma9).
 
-### Monte Carlo
+vocms118 was migrated to new hardware on 2026-04-20. Results taken
+on the new machine are kept in a separate section below and are not
+directly comparable to the historical tables that follow.
+
+### Results on vocms118 (new hardware, 2026-04-20+)
+
+#### Monte Carlo - BsToMuMu_BMuonFilter
+
+##### Time per event for the event loop
+| Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
+| -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv15-V02 |     536            |  0.027 sec/event  |       0.176 sec/event    |
+| NanoAODv15-V01 |     535            |  0.027 sec/event  |       0.155 sec/event    |
+
+##### File size per event
+| Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
+| -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv15-V02 |     536            |   1.2 kB/event    |         5.4 kB/event     |
+| NanoAODv15-V01 |     535            |   1.2 kB/event    |         7.4 kB/event     |
+
+##### Memory Usage (RSS)
+| Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
+| -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv15-V02 |     536            |      1740 kB      |         2002 kB          |
+| NanoAODv15-V01 |     535            |      1740 kB      |         1985 kB          |
+
+#### Data - Charmonium Run2018D
+
+##### Time per event for the event loop
+| Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
+| -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv15-V02 |      536           |  0.030 sec/event  |       0.140 sec/event    |
+| NanoAODv15-V01 |      535           |  0.030 sec/event  |       0.125 sec/event    |
+
+##### File size per event
+| Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
+| -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv15-V02 |      536           |   1.4 kB/event    |       6.7 kB/event       |
+| NanoAODv15-V01 |      535           |   1.4 kB/event    |      11.4 kB/event       |
+
+##### Memory Usage (RSS)
+| Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
+| -------------- | ------------------ | ----------------- | ------------------------ |
+| NanoAODv15-V02 |      536           |      2153 kB      |         2404 kB          |
+| NanoAODv15-V01 |      535           |      2153 kB      |         2418 kB          |
+
+### Historical results (pre-migration vocms118 and earlier)
+
+#### Monte Carlo
 
 Dataset: BsToMuMu_BMuonFilter
 
-#### Time per event for the event loop
+##### Time per event for the event loop
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ |
 | NanoAODv15-V01 |     535            |                   |       0.573 sec/event    |
@@ -29,7 +77,7 @@ Dataset: BsToMuMu_BMuonFilter
 | NanoAODv6-V17  |     513            |  0.070 sec/event  |       0.109 sec/event    |
 | NanoAODv6-V14  |     511            |  0.070 sec/event  |       0.135 sec/event    |
 
-#### File size per event 
+##### File size per event
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ | 
 | NanoAODv15-V01 |     535            |                   |         7.7 kB/event     |
@@ -46,7 +94,7 @@ Dataset: BsToMuMu_BMuonFilter
 | NanoAODv6-V17  |     513            |                   |         1.9 kB/event     |
 | NanoAODv6-V14  |     511            |   1.1 kB/event    |         1.7 kB/event     |
 
-#### Memory Usage (RSS)
+##### Memory Usage (RSS)
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ |
 | NanoAODv15-V01 |     535            |                   |         2784 kB          |
@@ -63,8 +111,8 @@ Dataset: BsToMuMu_BMuonFilter
 | NanoAODv6-V17  |     513            |                   |         1886 kB          |
 | NanoAODv6-V14  |     511            |      1630 kB      |         1893 kB          |
 
-### Data: Charmonium Run2018D
-#### Time per event for the event loop
+#### Data: Charmonium Run2018D
+##### Time per event for the event loop
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ |
 | NanoAODv15-V01 |      535           |                   |       0.503 sec/event    |
@@ -74,7 +122,7 @@ Dataset: BsToMuMu_BMuonFilter
 | NanoAODv6-V17  |      513           |  0.076 sec/event  |       0.182 sec/event    |
 | NanoAODv6-V14  |      511           |  0.073 sec/event  |       0.160 sec/event    |
 
-#### File size per event
+##### File size per event
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ |
 | NanoAODv15-V01 |      535           |                   |      11.5 kB/event       |
@@ -84,7 +132,7 @@ Dataset: BsToMuMu_BMuonFilter
 | NanoAODv6-V17  |      513           |                   |       2.5 kB/event       |
 | NanoAODv6-V14  |      511           |   1.0 kB/event    |       2.1 kB/event       |
 
-#### Memory Usage (RSS)
+##### Memory Usage (RSS)
 | Tag            | Production Version | Reference NanoAOD | NanoAOD + Customizations |
 | -------------- | ------------------ | ----------------- | ------------------------ |
 | NanoAODv15-V01 |      535           |                   |         3100 kB          |
