@@ -163,7 +163,6 @@ Dileptons = cms.EDProducer(
     minBhhllVtxProb = cms.double(0.001),
     minLLSigLxyForBLLX = cms.double(-1.0),
     minHadIPSigBSForBLLX = cms.double(-1.0),
-    enableTimingReport = cms.bool(False),
     bdtEvent0 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events0_BDT.weights.xml'),
     bdtEvent1 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events1_BDT.weights.xml'),
     bdtEvent2 = cms.FileInPath('Bmm5/NanoAOD/data/TMVA-100-Events2_BDT.weights.xml'),
