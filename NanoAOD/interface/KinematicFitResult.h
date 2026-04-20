@@ -19,8 +19,14 @@ class KinematicFitResult{
   {}
 
   void set_tree(RefCountedKinematicTree tree);
-  
+
   bool valid() const;
+
+  /// Returns false if any fit output (vertex position/error, mother
+  /// momentum/mass, covariance, daughter momenta/masses) contains
+  /// NaN or Inf. Near-singular fits can "converge" at MaxIter with
+  /// garbage in the state; valid() does not catch this.
+  bool hasFiniteValues() const;
 
   // compute displacement with respect to the beam spot
   void postprocess(const reco::BeamSpot& beamSpot);

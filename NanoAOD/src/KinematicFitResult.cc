@@ -3,6 +3,7 @@
 #include <TVector.h>
 #include <TMatrix.h>
 #include <TMath.h>
+#include <cmath>
 
 
 std::pair<float, float>
@@ -53,6 +54,49 @@ getAlpha(const GlobalPoint& vtx_position, const GlobalError& vtx_error,
 
 bool KinematicFitResult::valid() const {
   return treeIsValid and refitVertex->vertexIsValid();
+}
+
+bool KinematicFitResult::hasFiniteValues() const {
+  if (not valid()) return false;
+
+  // Vertex position
+  auto pos = refitVertex->position();
+  if (!std::isfinite(pos.x()) || !std::isfinite(pos.y()) || !std::isfinite(pos.z()))
+    return false;
+
+  // Vertex covariance (3x3 symmetric)
+  auto vtxErr = refitVertex->error().matrix();
+  for (int i = 0; i < 3; ++i)
+    for (int j = i; j < 3; ++j)
+      if (!std::isfinite(vtxErr(i, j))) return false;
+
+  // Mother kinematic state
+  auto state = refitMother->currentState();
+  if (!state.isValid()) return false;
+
+  auto p = state.globalMomentum();
+  if (!std::isfinite(p.x()) || !std::isfinite(p.y()) || !std::isfinite(p.z()))
+    return false;
+  if (!std::isfinite(state.mass())) return false;
+
+  // Full kinematic parameters covariance (7x7 symmetric)
+  auto paramErr = state.kinematicParametersError().matrix();
+  for (int i = 0; i < 7; ++i)
+    for (int j = i; j < 7; ++j)
+      if (!std::isfinite(paramErr(i, j))) return false;
+
+  // Refitted daughters
+  for (const auto& d : refitDaughters) {
+    if (!d.get()) return false;
+    auto dstate = d->currentState();
+    if (!dstate.isValid()) return false;
+    auto dp = dstate.globalMomentum();
+    if (!std::isfinite(dp.x()) || !std::isfinite(dp.y()) || !std::isfinite(dp.z()))
+      return false;
+    if (!std::isfinite(dstate.mass())) return false;
+  }
+
+  return true;
 }
 
 void KinematicFitResult::postprocess(const reco::BeamSpot& beamSpot)
@@ -205,7 +249,7 @@ void KinematicFitResult::set_tree(RefCountedKinematicTree tree)
 
   treeIsValid = true;
 
-  // extract the re-fitted tracks  
+  // extract the re-fitted tracks
   if ( tree->movePointerToTheFirstChild() ){
     do {
       refitDaughters.push_back(tree->currentParticle());
@@ -216,6 +260,17 @@ void KinematicFitResult::set_tree(RefCountedKinematicTree tree)
   refitVertex = tree->currentDecayVertex();
   refitMother = tree->currentParticle();
   refitTree   = tree;
+
+  // Reject fits that "converged" with NaN/Inf in the state - these
+  // are ill-conditioned fits that would propagate garbage downstream
+  // and have been known to cause heap corruption.
+  if (!hasFiniteValues()) {
+    treeIsValid = false;
+    refitDaughters.clear();
+    refitMother = RefCountedKinematicParticle();
+    refitVertex = RefCountedKinematicVertex();
+    refitTree   = RefCountedKinematicTree();
+  }
 }
 
 GlobalPoint KinematicFitResult::vtx_position() const
