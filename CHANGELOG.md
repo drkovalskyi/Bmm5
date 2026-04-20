@@ -1,5 +1,20 @@
 # Changelog
 
+## [NanoAODv15-V02] - 2026/04/20
+### Major Changes
+	- use multi-track vertex with mass constrains for ll+X fits (previous versions used composite particles, which were allowed to fly)
+	- use the old style composite pre-fit for numerical stability and require valid convergence with vtxProb > 0.001
+	- added B -> J/psi Ks using either reconstructed V0s (slimmedKshortVertices) or build Ks from PF-tracks
+	- introduced reduce precision for floats to save space
+	- switched off hadronic state reconstruction (D0, Dstar, Ks etc)
+	- developed new testing procedure to monitor signal and background efficiency and produce comparison plots
+
+### Other Changes
+	- fixed bug that allowed the same track to be used twice for llhh decays
+	- added new selection options: minBhhllVtxProb (llhh post-fit vtx-prob cut), minLLSigLxyForBLLX (require mumu SV Lxy-sig before X-loop), minHadIPSigBSForBLLX (require hadron IP/sigma).
+	- added performance testing (Default build has zero timing overhead; -DBMM_PROFILING enables profiling)
+	- added detailed documentation
+
 ## [NanoAODv15-V01] - 2025/10/28
 ### Changes
 	- added data certification (muon quality)
@@ -38,7 +53,7 @@
 	- fixed L1 matching
 	- switched to CMSSW_14_0_X
 	- added muon PV association
-	
+
 ## [NanoAODv12-V06] - 2024/05/21
 ### Changes
 	- bug fix for invalid pv index
