@@ -205,6 +205,19 @@ void BmmMuonIdProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetu
       } else {
 	bmm::fill_track_info(mu_cand, nullptr);
       }
+
+      const reco::Track* pixel_status_track = muon.innerTrack().get();
+      if (not pixel_status_track) pixel_status_track = muon.bestTrack();
+      if (pixel_status_track){
+	const reco::HitPattern& hit_pattern = pixel_status_track->hitPattern();
+	mu_cand.addUserInt("pixelL1Status",        bmm::pixel_region_cross_status(hit_pattern, PixelSubdetector::PixelBarrel, 1, -1));
+	mu_cand.addUserInt("pixelStatusWord",      bmm::get_pixel_status_word(hit_pattern));
+	mu_cand.addUserInt("pixelBarrelOffLayers", hit_pattern.pixelBarrelLayersTotallyOffOrBad(reco::HitPattern::TRACK_HITS));
+      } else {
+	mu_cand.addUserInt("pixelL1Status",        4);
+	mu_cand.addUserInt("pixelStatusWord",      0x24924924); // all 10 regions not crossed (0b100 each)
+	mu_cand.addUserInt("pixelBarrelOffLayers", 0);
+      }
 	
       fillMatchInfo(mu_cand, muon);
       fillSoftMva(mu_cand);

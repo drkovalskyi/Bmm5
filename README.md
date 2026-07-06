@@ -63,7 +63,7 @@ Here is a list required cmsDriver options to get analysis specific parts include
       * era: Run2_2018,run2_nanoAOD_106Xv2
       * conditions: auto:phase1_2018_realistic
       * Example:
-      	* ```cmsDriver.py RECO --conditions auto:phase1_2018_realistic --datatier NANOAOD --era Run2_2018,run2_nanoAOD_106Xv2 --eventcontent NANOAODSIM --filein /store/user/dmytro/tmp/store+mc+RunIISummer20UL18MiniAODv2+BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+MINIAODSIM+106X_upgrade2018_realistic_v16_L1v1-v2+120000+B73A72CF-5947-A14A-8686-92D34790C8F7.root --fileout file:/tmp/dmytro/test_mc.root --nThreads 8 -n 1000 --no_exec --python_filename test_mc.py --scenario pp --step NANO --mc --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"```
+      	* ```cmsDriver.py RECO --conditions auto:phase1_2018_realistic --datatier NANOAOD --era Run2_2018,run2_nanoAOD_106Xv2 --eventcontent NANOAODSIM --filein /store/user/dmytro/tmp/store+mc+RunIISummer20UL18MiniAODv2+BsToMuMu_BMuonFilter_SoftQCDnonD_TuneCP5_13TeV-pythia8-evtgen+MINIAODSIM+106X_upgrade2018_realistic_v16_L1v1-v2+120000+B73A72CF-5947-A14A-8686-92D34790C8F7.root --fileout file:/tmp/dmytro/test_mc.root --nThreads 8 -n 1000 --no_exec --python_filename test_mc.py --scenario pp --step NANO --mc --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="from Bmm5.NanoAOD.nano_cff import disable_legacy_tau_reprocessing; disable_legacy_tau_reprocessing(process); process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"```
   * Data
     * **Run2025**
       * era: Run3
@@ -86,7 +86,12 @@ Here is a list required cmsDriver options to get analysis specific parts include
       * conditiongs: auto:run3_data_prompt
       * Example:
       	* ```cmsDriver.py RECO --conditions auto:run3_data_prompt --datatier NANOAOD --era Run3,run3_nanoAOD_pre142X --eventcontent NANOAOD --filein file:/eos/cms/store/user/dmytro/tmp/store+data+Run2022C+ParkingDoubleMuonLowMass0+MINIAOD+PromptReco-v1+000+357+271+00000+ea64a9c2-6b1f-4744-b4ea-41aa0e3c3e1b.root --fileout file:/tmp/dmytro/test_data.root --nThreads 4 -n 10000 --no_exec --python_filename test_data.py --scenario pp --step NANO --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))" --customise=Bmm5/NanoAOD/nano_cff.run3_nanoAOD_124```
-
+    * **Run2018**
+      * era: Run2_2018,run2_nanoAOD_106Xv2
+      * conditions: 106X_dataRun2_v35 (or auto:run2_data)
+      * Example:
+      	* ```cmsDriver.py RECO --conditions 106X_dataRun2_v35 --datatier NANOAOD --era Run2_2018,run2_nanoAOD_106Xv2 --eventcontent NANOAOD --filein /store/user/dmytro/tmp/store+data+Run2018D+Charmonium+MINIAOD+UL2018_MiniAODv2-v1+240000+D9C795D0-EAC3-2A47-A631-E314B7AA9883.root --fileout file:/tmp/dmytro/test_data.root --nThreads 4 -n 10000 --no_exec --python_filename test_data.py --scenario pp --step NANO --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeDileptonPlusX --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeV0ForMuonFake --customise=Bmm5/NanoAOD/nano_cff.nanoAOD_customizeBmmMuonId --customise_commands="from Bmm5.NanoAOD.nano_cff import disable_legacy_tau_reprocessing; disable_legacy_tau_reprocessing(process); process.add_(cms.Service('InitRootHandlers', EnableIMT = cms.untracked.bool(False)))"```
+	
 ## Optional Filtering
 If you want to add event filtering to the commands below you just need to modify the step option the following way
 * Monte Carlo: `--step NANO,FILTER:Bmm5/NanoAOD/BxToMuMuFilter_cff.BxToMuMuFilterSequenceMC`

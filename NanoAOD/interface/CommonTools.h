@@ -55,6 +55,18 @@ namespace bmm
 			 unsigned int max_depth=10);
 
   int get_pixel_pattern(const reco::HitPattern& hit_pattern);
+
+  // Pixel region cross status from the track HitPattern: 0 valid hit,
+  // 1 crossed INACTIVE area, 2 crossed active area without a hit, 3 bad hit,
+  // 4 not crossed. subdet: 1 PXB, 2 PXF. side: -1 for PXB (no side filtering);
+  // for PXF 0 or 1 as returned by reco::HitPattern::getSide()
+  int pixel_region_cross_status(const reco::HitPattern& hit_pattern, int subdet,
+				int layer_or_disk, int side);
+
+  // pixel_region_cross_status packed 3 bits per region:
+  // regions 0-3 BPix L1-L4, 4-6 FPix minus D1-D3, 7-9 FPix plus D1-D3
+  int get_pixel_status_word(const reco::HitPattern& hit_pattern);
+
   void fill_track_info(pat::CompositeCandidate& cand, const reco::Track* track, std::string prefix="");
   
 }

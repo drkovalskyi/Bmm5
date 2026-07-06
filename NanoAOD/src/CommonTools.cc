@@ -176,6 +176,54 @@ int bmm::get_pixel_pattern(const reco::HitPattern& hit_pattern) {
   return pattern;
 }
 
+int bmm::pixel_region_cross_status(const reco::HitPattern& hit_pattern, int subdet,
+				   int layer_or_disk, int side)
+{
+  // 0 valid hit, 1 crossed INACTIVE area, 2 crossed active area without a hit,
+  // 3 bad hit, 4 not crossed
+  using HP = reco::HitPattern;
+  bool has_valid(false), has_inactive(false), has_missing(false), has_bad(false);
+  for (auto category : {HP::TRACK_HITS, HP::MISSING_INNER_HITS}) {
+    for (int i = 0; i < hit_pattern.numberOfAllHits(category); ++i) {
+      uint16_t hit = hit_pattern.getHitPattern(category, i);
+      if (subdet == PixelSubdetector::PixelBarrel) {
+	if (not HP::pixelBarrelHitFilter(hit)) continue;
+      } else {
+	if (not HP::pixelEndcapHitFilter(hit)) continue;
+      }
+      if (int(HP::getLayer(hit)) != layer_or_disk) continue;
+      if (side >= 0 and int(HP::getSide(hit)) != side) continue;
+      switch (HP::getHitType(hit)) {
+      case HP::VALID:    has_valid = true;    break;
+      case HP::INACTIVE: has_inactive = true; break;
+      case HP::MISSING:  has_missing = true;  break;
+      default:           has_bad = true;      break;
+      }
+    }
+  }
+  if (has_valid)    return 0;
+  if (has_inactive) return 1;
+  if (has_bad)      return 3;
+  if (has_missing)  return 2;
+  return 4;
+}
+
+int bmm::get_pixel_status_word(const reco::HitPattern& hit_pattern)
+{
+  int word(0);
+  for (int layer = 1; layer <= 4; ++layer)
+    word |= pixel_region_cross_status(hit_pattern, PixelSubdetector::PixelBarrel, layer, -1) << (3 * (layer - 1));
+  // FPix regions assume HitPattern::getSide() 0=minus, 1=plus (dev-notes
+  // pixel_masking.md 5.5 C-g, to be verified on data). Note: in the
+  // CMSSW_14_0_16 encoding the side bit is the strip stereo flag and is 0 for
+  // every pixel hit (HitPattern::isStereo), so all FPix crossings land in
+  // regions 4-6 and regions 7-9 read 4 (not crossed)
+  for (int side = 0; side <= 1; ++side)
+    for (int disk = 1; disk <= 3; ++disk)
+      word |= pixel_region_cross_status(hit_pattern, PixelSubdetector::PixelEndcap, disk, side) << (3 * (3 + 3 * side + disk));
+  return word;
+}
+
 void bmm::fill_track_info(pat::CompositeCandidate& cand, const reco::Track* track, std::string prefix)
 {
   if (track) {

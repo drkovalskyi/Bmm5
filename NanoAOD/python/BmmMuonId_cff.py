@@ -111,6 +111,9 @@ BmmMuonIdVariables = cms.PSet(
 
     pixelPattern        = Var("userInt('pixelPattern')",            int, doc = "Masks: barrel 0b1111, endcap 0b1110000"),
     nPixels             = Var("userInt('nPixels')",                 int, doc = "Number of valid pixel hits"),
+    pixelL1Status       = Var("userInt('pixelL1Status')",           int, doc = "BPix L1 cross status: 0 valid hit, 1 crossed inactive area, 2 crossed active area without a hit, 3 bad hit, 4 not crossed or no track"),
+    pixelStatusWord     = Var("userInt('pixelStatusWord')",         int, doc = "Pixel cross status packed 3 bits per region: 0-3 BPix L1-L4, 4-6 FPix- D1-D3, 7-9 FPix+ D1-D3; NB HitPattern stores no FPix z-side in Run 3, so all FPix crossings appear in regions 4-6 and regions 7-9 read 4"),
+    pixelBarrelOffLayers = Var("userInt('pixelBarrelOffLayers')",   int, doc = "Number of BPix layers totally off or bad on track"),
     nValidHits          = Var("userInt('nValidHits')",              int, doc = "Number of valid hits"),
     staValidHits        = Var("userInt('staValidHits')",            int, doc = "Number of valid hits for outter track"),
     nLostHitsInner      = Var("userInt('nLostHitsInner')",          int, doc = "Number of lost hits before tracker track"),
